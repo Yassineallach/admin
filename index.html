@@ -1,0 +1,1856 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SchoolMaroc — Éditeur de leçons</title>
+<style>
+  :root{ --mag:#C2185B; --ink:#2d2d33; --bg:#f6f5f7; --line:#e3e0e6; }
+  *{box-sizing:border-box;font-family:system-ui,'Segoe UI',sans-serif;}
+  body{margin:0;background:var(--bg);color:var(--ink);}
+  header{background:var(--mag);color:#fff;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;}
+  header h1{font-size:18px;margin:0;}
+  .wrap{max-width:860px;margin:0 auto;padding:20px;}
+  .card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:18px;}
+  .card h2{font-size:15px;margin:0 0 12px;color:var(--mag);display:flex;justify-content:space-between;align-items:center;}
+  label{display:block;font-size:13px;font-weight:700;margin:10px 0 4px;}
+  input,select,textarea{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:9px;font-size:14px;background:#fff;}
+  textarea{min-height:60px;resize:vertical;line-height:1.5;}
+  .row{display:flex;gap:10px;flex-wrap:wrap;}
+  .row>*{flex:1;min-width:110px;}
+  .hint{font-size:12px;color:#777;margin-top:3px;}
+  button{background:var(--mag);color:#fff;border:none;border-radius:10px;padding:11px 18px;font-weight:700;font-size:14px;cursor:pointer;}
+  button.ghost{background:#fff;color:var(--mag);border:1.5px solid var(--mag);}
+  button.small{padding:6px 12px;font-size:12px;}
+  .block{border:1px solid var(--line);border-radius:11px;padding:14px;margin-bottom:12px;background:#fafafa;position:relative;}
+  .block .rm{position:absolute;top:8px;right:8px;background:#fff;color:#c0392b;border:1px solid #f0d0d0;border-radius:8px;}
+  .status{padding:10px 14px;border-radius:10px;font-size:14px;font-weight:600;margin-top:10px;display:none;}
+  .ok{background:#e8f7ee;color:#1c7a44;display:block;} .err{background:#fdecec;color:#c0392b;display:block;}
+  .uid{font-family:monospace;font-size:12px;background:#fff3;padding:3px 8px;border-radius:6px;}
+  .hidden{display:none;}
+  .chk{display:flex;align-items:center;gap:8px;}.chk input{width:auto;}
+  .thumb{max-width:160px;border-radius:10px;display:block;margin-top:8px;border:1px solid var(--line);}
+  .lesson-row{display:flex;justify-content:space-between;align-items:center;padding:9px 12px;border:1px solid var(--line);border-radius:9px;margin-bottom:6px;background:#fafafa;cursor:pointer;}
+  .lesson-row:hover{background:#fff0f6;}
+  .ll-dropdown-wrap{position:relative;}
+  .ll-chevron{display:inline-block;margin-left:4px;transition:transform .12s ease;}
+  .ll-dropdown-wrap.open .ll-chevron{transform:rotate(180deg);}
+  .ll-menu{position:absolute;top:100%;left:0;z-index:100;background:#fff;border:1px solid var(--line);border-radius:10px;padding:8px;margin-top:6px;box-shadow:0 10px 26px rgba(20,16,24,0.16);width:min(70vw,602px);max-width:calc(100vw - 32px);max-height:330px;overflow-y:auto;}
+  .ll-menu .lesson-row:last-child{margin-bottom:0;}
+  .tag{font-size:11px;color:#fff;background:var(--mag);border-radius:6px;padding:2px 7px;}
+  /* Rich-text fields */
+  .rt{width:100%;min-height:40px;padding:9px 11px;border:1px solid var(--line);border-radius:9px;font-size:14px;background:#fff;line-height:1.5;outline:none;}
+  .rt:focus{border-color:var(--mag);box-shadow:0 0 0 2px #c2185b22;}
+  .rt:empty:before{content:attr(data-ph);color:#aaa;}
+  /* ---- Ribbon-style toolbar (Word-like) ---- */
+  .rt-toolbar-wrap{position:sticky;top:0;z-index:50;margin-bottom:14px;}
+  .rt-toolbar{position:relative;z-index:2;display:flex;align-items:center;gap:2px;flex-wrap:wrap;background:#f8f7f6;border:1px solid #e1dfdd;border-radius:8px;padding:6px 8px;box-shadow:0 1px 2px rgba(0,0,0,0.04);}
+  .rt-toolbar button{display:inline-flex;align-items:center;justify-content:center;gap:5px;background:transparent;color:#3a3740;border:1px solid transparent;border-radius:4px;padding:0 9px;height:32px;min-width:32px;font-size:13px;font-weight:600;line-height:1;cursor:pointer;transition:background .08s ease,border-color .08s ease;}
+  .rt-toolbar button, .rt-palette button{touch-action:manipulation;-webkit-user-select:none;user-select:none;}
+  .rt-toolbar button svg{pointer-events:none;vertical-align:middle;}
+  .rt-toolbar button:hover{background:#eceaea;border-color:#e1dfdd;}
+  .rt-toolbar button:active{background:#e3e0e6;}
+  .rt-toolbar button.on{background:#fae3ee;color:var(--mag);border-color:#f3c9dd;}
+  .rt-toolbar button.on svg{stroke:var(--mag);}
+  .rt-toolbar button.on svg [fill]{fill:var(--mag);}
+  .rt-hint{font-size:11px;color:#9c98a0;align-self:center;margin-left:auto;padding-left:6px;}
+  .rt-toolbar select,.rt-toolbar input[type=color]{width:auto;flex:none;height:32px;box-sizing:border-box;border:1px solid #e1dfdd;border-radius:4px;padding:0 7px;background:#fff;font-weight:600;font-size:13px;color:#3a3740;}
+  .rt-toolbar select:hover,.rt-toolbar input[type=color]:hover{border-color:#cac7cd;}
+  .rt-toolbar input[type=color]{width:32px;height:32px;padding:3px;cursor:pointer;}
+  .rt-toolbar .sep{width:1px;height:20px;background:#dcd9dd;margin:0 5px;flex:none;}
+  /* The rt panel floats over the page below the ribbon, instead of pushing content down */
+  .rt-palette{position:absolute;top:100%;left:0;z-index:100;background:#fff;border:1px solid #e1dfdd;border-radius:8px;padding:12px;margin:6px 0 0;box-shadow:0 10px 26px rgba(20,16,24,0.16);width:max-content;max-width:300px;}
+  .rt-palette-row{display:flex;gap:4px;margin-bottom:10px;border-bottom:1px solid #ece9ec;padding-bottom:10px;}
+  .rt-mode{background:transparent;color:#6b6770;border:1px solid transparent;border-radius:5px;padding:6px 13px;font-size:12.5px;font-weight:700;cursor:pointer;}
+  .rt-mode:hover{background:#f3f1f2;}
+  .rt-mode.active{background:#fae3ee;color:var(--mag);border-color:#f3c9dd;}
+  .rt-swatches{display:grid;grid-template-columns:repeat(8,1fr);gap:5px;}
+  .rt-swatch{width:100%;aspect-ratio:1;border-radius:4px;border:1px solid rgba(0,0,0,0.10);cursor:pointer;padding:0;transition:box-shadow .08s ease;}
+  .rt-swatch:hover{box-shadow:0 0 0 2px #c2185b55;}
+  .rt-sizes{display:flex;flex-wrap:wrap;gap:6px;}
+  .rt-size-btn{background:#fff;color:#3a3740;border:1px solid #e1dfdd;border-radius:5px;padding:7px 12px;font-weight:700;font-size:13px;cursor:pointer;}
+  .rt-size-btn:hover{background:#f6f2f4;border-color:#e9c7d6;}
+  .rt-size-btn .px{color:#999;font-weight:600;font-size:12px;margin-left:4px;}
+  #rtIconSearch{width:100%;box-sizing:border-box;margin-bottom:9px;padding:8px 10px;border:1px solid #e1dfdd;border-radius:6px;font:inherit;font-size:13px;}
+  #rtIconSearch:focus{outline:none;border-color:var(--mag);box-shadow:0 0 0 2px #c2185b1f;}
+  .rt-icons{display:grid;grid-template-columns:repeat(auto-fill,minmax(34px,1fr));gap:5px;max-height:200px;overflow:auto;padding:2px;}
+  .rt-icon-btn{display:flex;align-items:center;justify-content:center;background:#fff;border:1px solid #e1dfdd;border-radius:5px;padding:8px 0;cursor:pointer;color:#3a3740;}
+  .rt-icon-btn:hover{background:#f6f2f4;border-color:#e9c7d6;}
+  .rt-icon-btn svg{width:20px;height:20px;display:block;pointer-events:none;}
+  .rt-icon-btn span{pointer-events:none;}
+  .rt .rt-icon-sel{outline:2px solid #c2185b;outline-offset:2px;border-radius:3px;background:rgba(194,24,91,0.10);}
+  .rt-icon-empty{grid-column:1/-1;color:#999;font-size:13px;text-align:center;padding:12px;}
+  .rt-shape-row{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;}
+  .rt-shape-type{background:#fff;border:1px solid #e1dfdd;border-radius:5px;padding:7px 11px;font-weight:700;font-size:13px;cursor:pointer;color:#3a3740;}
+  .rt-shape-type:hover{background:#f6f2f4;}
+  .rt-shape-type.active{background:#c2185b;color:#fff;border-color:#c2185b;}
+  .rt-shape-swatches{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;}
+  .rt-shape-sw{width:25px;height:25px;border-radius:5px;border:1px solid rgba(0,0,0,0.12);cursor:pointer;}
+  .rt-shape-lab{display:block;font-size:12px;font-weight:700;color:#6b6770;margin-bottom:10px;}
+  .rt-shape-lab input[type=color]{display:block;width:46px;height:28px;border:1px solid #e1dfdd;border-radius:6px;background:none;cursor:pointer;margin-top:5px;}
+  .rt-shape-lab input[type=range]{display:block;width:100%;margin-top:7px;}
+  .rt-shape-lab input[type=text]{display:block;width:100%;box-sizing:border-box;margin-top:5px;padding:7px 9px;border:1px solid #e1dfdd;border-radius:6px;font:inherit;font-size:13px;}
+  .rt-shape-foot{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:6px;border-top:1px solid #ece9ec;padding-top:11px;}
+  .rt-shape-prevwrap{flex:1;display:flex;align-items:center;justify-content:center;min-height:34px;overflow:hidden;}
+  #rtShapeInsert{background:var(--mag);color:#fff;border:none;border-radius:6px;padding:9px 14px;font-weight:700;font-size:13px;cursor:pointer;white-space:nowrap;}
+  .rt-list-opts{display:flex;flex-direction:column;gap:2px;min-width:150px;}
+  .rt-list-opt{background:#fff;color:#3a3740;border:1px solid transparent;border-radius:5px;padding:7px 10px;font-weight:600;font-size:13px;cursor:pointer;text-align:left;}
+  .rt-list-opt:hover{background:#f6f2f4;border-color:#e9c7d6;}
+  #rtIconMenu,#rtShapeMenu{max-width:300px;}
+  #rtShapeMenu .rt-shape-row label{flex:1 1 100px;}
+  /* ---- Equation editor ---- */
+  .rt-eq-menu{width:min(86vw,460px);max-width:460px;}
+  .rt-eq-cats{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px;}
+  .rt-eq-cat{background:#fff;border:1px solid #e1dfdd;border-radius:5px;padding:5px 10px;font-weight:700;font-size:12px;cursor:pointer;color:#3a3740;}
+  .rt-eq-cat:hover{background:#f6f2f4;}
+  .rt-eq-cat.active{background:#c2185b;color:#fff;border-color:#c2185b;}
+  .rt-eq-syms{display:grid;grid-template-columns:repeat(auto-fill,minmax(42px,1fr));gap:5px;max-height:150px;overflow-y:auto;padding:2px;margin-bottom:9px;border-bottom:1px solid #ece9ec;padding-bottom:10px;}
+  .rt-eq-sym{display:flex;align-items:center;justify-content:center;background:#fff;border:1px solid #e1dfdd;border-radius:5px;padding:7px 2px;cursor:pointer;color:#3a3740;font-size:14px;min-height:30px;}
+  .rt-eq-sym:hover{background:#f6f2f4;border-color:#e9c7d6;}
+  .rt-eq-sym img,.rt-eq-sym .katex{pointer-events:none;}
+  .rt-eq-input{width:100%;box-sizing:border-box;min-height:54px;resize:vertical;padding:8px 10px;border:1px solid #e1dfdd;border-radius:6px;font:13px/1.4 'Courier New',monospace;margin-bottom:9px;}
+  .rt-eq-input:focus{outline:none;border-color:var(--mag);box-shadow:0 0 0 2px #c2185b1f;}
+  .rt-eq-prevwrap{min-height:46px;display:flex;align-items:center;justify-content:center;background:#fafafa;border:1px dashed #e1dfdd;border-radius:6px;padding:8px;margin-bottom:9px;overflow-x:auto;}
+  .rt-eq-preview{color:#999;font-size:13px;font-style:italic;}
+  .rt-eq-preview .katex{font-size:1.15em;}
+  /* Match Microsoft Word's default equation font (Cambria Math) for both
+     the inserted equations and the live editor preview. KaTeX assigns its
+     own font-family per glyph class, so we override those classes directly;
+     stretchy/SVG-drawn parts (radicals, big delimiters, sum/int signs) are
+     untouched since they aren't font glyphs. */
+  span[data-rt-eq] .katex,
+  span[data-rt-eq] .katex *,
+  .rt-eq-preview .katex,
+  .rt-eq-preview .katex *{font-family:"Cambria Math","Cambria",serif!important;box-shadow:none!important;filter:none!important;text-shadow:none!important;}
+  .rt-eq-style-row{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:9px;padding-bottom:9px;border-bottom:1px solid #ece9ec;}
+  .rt-eq-style-grp{display:flex;align-items:center;gap:6px;}
+  .rt-eq-style-grp label{font-size:11px;font-weight:800;color:#a99;white-space:nowrap;}
+  #rtEqColor{width:30px;height:28px;padding:0;border:1px solid #e1dfdd;border-radius:6px;cursor:pointer;background:#fff;}
+  .rt-eq-color-clear{background:#fff;border:1px solid #e1dfdd;border-radius:6px;padding:5px 8px;font-size:11px;font-weight:700;cursor:pointer;color:#3a3740;}
+  .rt-eq-color-clear:hover{background:#f6f2f4;}
+  .rt-eq-sizes{display:flex;gap:4px;}
+  .rt-eq-size-btn{background:#fff;border:1px solid #e1dfdd;border-radius:5px;padding:4px 9px;font-size:11px;font-weight:700;cursor:pointer;color:#3a3740;}
+  .rt-eq-size-btn:hover{background:#f6f2f4;border-color:#e9c7d6;}
+  .rt-eq-size-btn.active{background:#c2185b;color:#fff;border-color:#c2185b;}
+  .rt-eq-foot{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+  .rt-eq-hint{font-size:11px;color:#9c98a0;flex:1;min-width:140px;}
+  #rtEqInsert{background:var(--mag);color:#fff;border:none;border-radius:6px;padding:9px 14px;font-weight:700;font-size:13px;cursor:pointer;white-space:nowrap;}
+  #rtEqDelete{border-radius:6px;padding:9px 14px;font-weight:700;font-size:13px;cursor:pointer;white-space:nowrap;}
+  span[data-rt-eq]{display:inline-block;vertical-align:middle;cursor:pointer;padding:0 2px;border-radius:3px;font-style:italic;font-family:"Cambria Math","Cambria","Latin Modern Math",serif;box-shadow:none;filter:none;text-shadow:none;}
+  span[data-rt-eq]:hover{background:#fae3ee;}
+  /* KaTeX renders an invisible MathML copy alongside the visible HTML for
+     accessibility; its own stylesheet normally clips it offscreen. Pin that
+     here too so a slow/blocked CDN stylesheet can never show it as a second,
+     duplicate-looking equation — everywhere KaTeX output appears (inserted
+     equations, the live preview, and the symbol-palette buttons). */
+  .katex-mathml{position:absolute!important;clip:rect(1px,1px,1px,1px)!important;clip-path:inset(50%)!important;width:1px!important;height:1px!important;overflow:hidden!important;white-space:nowrap!important;border:0!important;padding:0!important;margin:-1px!important;}
+  .b-content{display:block;}
+  .b-layout{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-top:10px;padding-top:9px;border-top:1px dashed #e6d6e0;position:relative;z-index:2;clear:both;}
+  .b-layout .b-lab{font-size:11px;font-weight:800;color:#a99;}
+  .b-layout input,.b-layout select{box-sizing:border-box;padding:5px 7px;border:1px solid var(--line);border-radius:7px;font:inherit;font-size:12px;}
+  .b-layout input{width:60px;}
+  .b-layout select{width:auto;}
+
+  /* ================= Dashboard shell ================= */
+  html{scroll-behavior:smooth;}
+  body{display:flex;flex-direction:column;min-height:100vh;padding-top:53px;}
+
+  .topbrand{background:linear-gradient(120deg,var(--mag),#7a2352);color:#fff;
+    padding:12px 22px;display:flex;align-items:center;gap:10px;
+    box-shadow:0 2px 10px rgba(0,0,0,0.14);position:fixed;top:0;left:0;right:0;z-index:60;
+    box-sizing:border-box;height:53px;}
+  .topbrand .logo{font-size:17px;font-weight:800;letter-spacing:.2px;display:flex;align-items:center;gap:8px;}
+  .hamburger-btn{display:none;background:transparent;border:none;padding:6px;margin-right:2px;cursor:pointer;flex:none;}
+  .hamburger-btn span{display:block;width:22px;height:2.5px;background:#fff;border-radius:2px;margin:4px 0;}
+  .sidebar-backdrop{display:none;position:fixed;top:53px;left:0;right:0;bottom:0;background:rgba(0,0,0,0.4);z-index:58;}
+  .sidebar-backdrop.show{display:block;}
+
+  /* Login screen: centered, shown only while logged out */
+  .auth-wrap{flex:1;display:flex;align-items:center;justify-content:center;
+    padding:40px 20px;background:radial-gradient(circle at 15% 10%,#fdeef5 0%,var(--bg) 55%);}
+  .auth-wrap:has(#loginCard.hidden){display:none;}
+  .auth-wrap .card{max-width:380px;width:100%;box-shadow:0 10px 34px rgba(0,0,0,0.09);}
+
+  /* Dashboard: sidebar + main content, shown only once logged in */
+  #editor.dashboard{display:flex;align-items:flex-start;flex:1;min-height:0;margin-left:226px;}
+  #editor.dashboard.hidden{display:none;}
+
+  .sidebar{width:226px;flex:none;background:#241b2e;color:#e8e2ee;
+    display:flex;flex-direction:column;padding:18px 12px;gap:2px;
+    position:fixed;top:53px;left:0;z-index:59;
+    height:calc(100vh - 53px);overflow-y:auto;box-sizing:border-box;}
+  .sidebar .side-title{font-size:10.5px;text-transform:uppercase;letter-spacing:1.2px;
+    color:#a99bb8;margin:12px 10px 6px;font-weight:800;}
+  .sidebar a{color:#e8e2ee;text-decoration:none;padding:9px 11px;border-radius:9px;
+    font-size:13.5px;font-weight:600;display:flex;align-items:center;gap:9px;
+    transition:background .12s ease;}
+  .sidebar a:hover{background:#3a2c47;}
+  .sidebar a:active{background:var(--mag);}
+  .sidebar .who-box{margin-top:auto;padding-top:14px;border-top:1px solid #3a2c47;}
+  .sidebar .who-box .uid{background:#3a2c47;color:#cfc4de;display:inline-block;margin-bottom:8px;}
+  .sidebar .who-box button{width:100%;}
+
+  .main-content{flex:1;min-width:0;padding:24px 26px 96px;max-width:960px;
+    margin:0 auto;width:100%;box-sizing:border-box;}
+  .dash-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start;}
+  .dash-grid .card{margin-bottom:0;}
+  .actionbar-bottom{position:fixed;left:226px;right:0;bottom:0;z-index:55;
+    background:#fff;border-top:1px solid var(--line);padding:12px 16px;
+    display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+    box-shadow:0 -4px 14px rgba(0,0,0,0.06);}
+  .actionbar-bottom .status{margin:0;flex:none;}
+  .card{scroll-margin-top:66px;}
+  .danger-card{border-color:#f0d0d0!important;background:#fff8f8;}
+  .danger-card h2{color:#c0392b;}
+  .main-content .rt-toolbar-wrap{position:fixed;top:53px;left:226px;right:0;z-index:50;
+    margin:0;background:#fff;padding:10px 26px;box-shadow:0 2px 8px rgba(0,0,0,0.05);
+    box-sizing:border-box;}
+  #rtToolbarSpacer{width:100%;}
+  html,body{overflow-x:hidden;}
+
+  /* Sidebar-driven tabs: only one card visible in main content at a time */
+  .tab-section{display:none;}
+  .tab-section.active{display:block;}
+  .sidebar a.active{background:var(--mag);color:#fff;}
+
+  @media (max-width:780px){
+    .hamburger-btn{display:flex;align-items:center;justify-content:center;}
+    .sidebar{position:fixed;top:53px;left:0;width:min(78vw,280px);
+      height:calc(100vh - 53px);flex-direction:column;
+      transform:translateX(-100%);transition:transform .22s ease;
+      z-index:65;box-shadow:4px 0 18px rgba(0,0,0,0.25);}
+    .sidebar.open{transform:translateX(0);}
+    #editor.dashboard{flex-direction:column;margin-left:0;}
+    .dash-grid{grid-template-columns:1fr;}
+    .main-content{padding:16px 16px 90px;}
+    .main-content .rt-toolbar-wrap{position:sticky;top:0;left:auto;right:auto;padding:10px 12px;}
+    #rtToolbarSpacer{display:none;}
+    .actionbar-bottom{left:0;}
+  }
+</style>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.11/katex.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.11/katex.min.js"></script>
+</head>
+<body>
+<div class="topbrand">
+  <button id="hamburgerBtn" class="hamburger-btn" type="button" aria-label="Menu"><span></span><span></span><span></span></button>
+  <span class="logo">📚 SchoolMaroc — Éditeur de leçons</span>
+</div>
+<div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+
+<div class="auth-wrap" id="authWrap">
+  <div class="card" id="loginCard">
+    <h2>Connexion</h2>
+    <div class="hint">Connectez-vous avec un compte email/mot de passe de votre projet Firebase (créez-en un dans la console si besoin).</div>
+    <label>Email</label><input id="email" type="email" autocomplete="username">
+    <label>Mot de passe</label><input id="password" type="password" autocomplete="current-password">
+    <div style="margin-top:12px"><button id="loginBtn">Se connecter</button></div>
+    <div class="status" id="loginStatus"></div>
+  </div>
+</div>
+
+<div id="editor" class="hidden dashboard">
+  <aside class="sidebar">
+    <div class="side-title">Navigation</div>
+    <a href="#examDatesCard" class="nav-link" data-tab="examDatesCard">🗓️ Dates d'examens</a>
+    <a href="#lessonMetaCard" class="nav-link" data-tab="lessonMetaCard">📝 Détails de la leçon</a>
+    <a href="#coursCard" class="nav-link" data-tab="coursCard">📘 Cours</a>
+    <a href="#exercicesCard" class="nav-link" data-tab="exercicesCard">✏️ Exercices</a>
+    <a href="#quizCard" class="nav-link" data-tab="quizCard">❓ Quiz</a>
+    <a href="#retenirCard" class="nav-link" data-tab="retenirCard">⭐ À retenir &amp; Astuce</a>
+    <a href="#dangerCard" class="nav-link" data-tab="dangerCard">🗑️ Supprimer</a>
+    <div class="who-box" id="who"></div>
+  </aside>
+
+  <main class="main-content">
+    <div class="rt-toolbar-wrap" id="rtToolbarWrap">
+    <div class="rt-toolbar" id="rtToolbar">
+      <button type="button" id="rtUndo" title="Annuler">↶</button>
+      <button type="button" id="rtRedo" title="Rétablir">↷</button>
+      <span class="sep"></span>
+      <button type="button" data-cmd="bold" title="Gras">B</button>
+      <button type="button" data-cmd="italic" title="Italique" style="font-style:italic">I</button>
+      <button type="button" data-cmd="underline" title="Souligné" style="text-decoration:underline">U</button>
+      <span class="sep"></span>
+      <button type="button" data-cmd="justifyLeft" title="Aligner à gauche"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="13" y2="12"/><line x1="4" y1="18" x2="17" y2="18"/></svg></button>
+      <button type="button" data-cmd="justifyCenter" title="Centrer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="6" y1="18" x2="18" y2="18"/></svg></button>
+      <button type="button" data-cmd="justifyRight" title="Aligner à droite"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="11" y1="12" x2="20" y2="12"/><line x1="7" y1="18" x2="20" y2="18"/></svg></button>
+      <button type="button" id="rtBulletBtn" title="Liste à puces"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="9" y1="6" x2="20" y2="6"/><line x1="9" y1="12" x2="20" y2="12"/><line x1="9" y1="18" x2="20" y2="18"/><circle cx="4.5" cy="6" r="1.4" fill="currentColor" stroke="none"/><circle cx="4.5" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="4.5" cy="18" r="1.4" fill="currentColor" stroke="none"/></svg> ▾</button>
+      <button type="button" id="rtNumberBtn" title="Liste numérotée"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="10" y1="6" x2="20" y2="6"/><line x1="10" y1="12" x2="20" y2="12"/><line x1="10" y1="18" x2="20" y2="18"/><text x="1.5" y="8.5" font-size="7.5" fill="currentColor" stroke="none" font-weight="800">1</text><text x="1.5" y="14.5" font-size="7.5" fill="currentColor" stroke="none" font-weight="800">2</text><text x="1.5" y="20.5" font-size="7.5" fill="currentColor" stroke="none" font-weight="800">3</text></svg> ▾</button>
+      <span class="sep"></span>
+      <button type="button" id="rtPaletteBtn" title="Palette de couleurs">🎨 Couleurs ▾</button>
+      <input type="color" id="rtColor" value="#000000" title="Couleur personnalisée">
+      <button type="button" data-cmd="removeFormat" title="Effacer la mise en forme">⌫</button>
+      <span class="sep"></span>
+      <select id="rtFont" title="Police">
+        <option value="">Police par défaut</option>
+        <option value="sans-serif">Sans-serif</option>
+        <option value="serif">Serif</option>
+        <option value="monospace">Monospace</option>
+        <option value="cursive">Cursive</option>
+        <option value="'Courier New',monospace">Courier</option>
+        <option value="Georgia,serif">Georgia</option>
+      </select>
+      <span class="sep"></span>
+      <button type="button" id="rtSizeBtn" title="Taille du texte sélectionné">🅣 Taille ▾</button>
+      <button type="button" id="rtIconBtn" title="Insérer une icône scolaire">🏫 Icônes ▾</button>
+      <button type="button" id="rtShapeBtn" title="Insérer une forme (fond coloré pour le texte)">🟨 Formes ▾</button>
+      <button type="button" id="rtEqBtn" title="Insérer une équation">∑ Équation ▾</button>
+      <span class="rt-hint">Sélectionnez du texte, puis choisissez un outil.</span>
+    </div>
+    <div id="rtPalette" class="rt-palette hidden">
+      <div class="rt-palette-row" id="rtPaletteMode">
+        <button type="button" class="rt-mode active" data-target="text">Texte</button>
+        <button type="button" class="rt-mode" data-target="highlight">Surlignage</button>
+      </div>
+      <div class="rt-swatches" id="rtSwatches"></div>
+    </div>
+    <div id="rtSizeMenu" class="rt-palette hidden">
+      <div class="rt-sizes" id="rtSizes"></div>
+    </div>
+    <div id="rtIconMenu" class="rt-palette hidden">
+      <input type="text" id="rtIconSearch" placeholder="Rechercher… (ex. crayon, atome, livre)" />
+      <div class="rt-icons" id="rtIcons"></div>
+    </div>
+    <div id="rtShapeMenu" class="rt-palette hidden">
+      <div class="rt-shape-row">
+        <button type="button" class="rt-shape-type active" data-r="6px">▭ Rectangle</button>
+        <button type="button" class="rt-shape-type" data-r="14px">▢ Arrondi</button>
+        <button type="button" class="rt-shape-type" data-r="999px">⬭ Pilule</button>
+        <button type="button" class="rt-shape-type" data-r="50%">⬤ Cercle</button>
+      </div>
+      <div class="rt-shape-swatches" id="rtShapeSwatches"></div>
+      <label class="rt-shape-lab">Couleur du fond
+        <input type="color" id="rtShapeColor" value="#FDE68A">
+      </label>
+      <label class="rt-shape-lab">Opacité du fond : <span id="rtShapeOpacVal">35%</span>
+        <input type="range" id="rtShapeOpacity" min="5" max="100" value="35">
+      </label>
+      <div class="rt-shape-row">
+        <label class="rt-shape-lab" style="flex:1">Largeur
+          <input type="text" id="rtShapeW" value="auto" placeholder="auto · 200px · 100%">
+        </label>
+        <label class="rt-shape-lab" style="flex:1">Hauteur
+          <input type="text" id="rtShapeH" value="auto" placeholder="auto · 60px">
+        </label>
+      </div>
+      <div class="rt-shape-foot">
+        <div class="rt-shape-prevwrap"><span id="rtShapePreview">Texte</span></div>
+        <button type="button" id="rtShapeInsert">Insérer la forme</button>
+      </div>
+    </div>
+    <div id="rtEqMenu" class="rt-palette rt-eq-menu hidden">
+      <div class="rt-eq-cats" id="rtEqCats"></div>
+      <div class="rt-eq-syms" id="rtEqSyms"></div>
+      <div class="rt-eq-style-row">
+        <div class="rt-eq-style-grp">
+          <label>Couleur</label>
+          <input type="color" id="rtEqColor" value="#000000">
+          <button type="button" class="rt-eq-color-clear" id="rtEqColorClear">Auto</button>
+        </div>
+        <div class="rt-eq-style-grp">
+          <label>Taille</label>
+          <div class="rt-eq-sizes" id="rtEqSizes"></div>
+        </div>
+      </div>
+      <textarea id="rtEqInput" class="rt-eq-input" placeholder="Tapez une formule… ex: x^2 + \frac{1}{2} = \sqrt{a+b}" spellcheck="false"></textarea>
+      <div class="rt-eq-prevwrap"><div id="rtEqPreview" class="rt-eq-preview">Aperçu</div></div>
+      <div class="rt-eq-foot">
+        <span class="rt-eq-hint">Style LaTeX. Cliquez sur une équation insérée pour la modifier.</span>
+        <button type="button" id="rtEqDelete" class="ghost hidden">Supprimer</button>
+        <button type="button" id="rtEqInsert">Insérer l'équation</button>
+      </div>
+    </div>
+    <div id="rtBulletMenu" class="rt-palette hidden">
+      <div class="rt-list-opts" id="rtBulletList"></div>
+    </div>
+    <div id="rtNumberMenu" class="rt-palette hidden">
+      <div class="rt-list-opts" id="rtNumberList"></div>
+    </div>
+    </div>
+    <div id="rtToolbarSpacer"></div>
+
+    <div class="card" id="gradeCard">
+      <h2>Niveau & Matière</h2>
+      <div class="row">
+        <div><label>Niveau</label><select id="grade"></select></div>
+        <div><label>Matière</label><select id="subject"></select></div>
+      </div>
+      <div class="row" id="filiereRow" style="margin-top:10px; display:none">
+        <div><label>Filière</label><select id="filiere"></select></div>
+        <div></div>
+      </div>
+      <div style="margin-top:12px" class="row">
+        <div class="ll-dropdown-wrap" id="lessonDropdownWrap">
+          <button class="ghost small" id="listBtn">📋 Mes leçons (ce niveau/matière) <span class="ll-chevron">▾</span></button>
+          <div id="lessonList" class="ll-menu hidden"></div>
+        </div>
+        <button class="ghost small" id="newBtn">＋ Nouvelle leçon</button>
+      </div>
+    </div>
+
+    <div class="card tab-section" id="examDatesCard">
+      <h2>Dates des examens (compte à rebours)</h2>
+      <div class="hint">Ces 4 dates pilotent le compte à rebours affiché en haut à droite dans l'appli pour les élèves de ces niveaux. Laissez vide pour masquer le compte à rebours de ce niveau.</div>
+      <div class="row" style="margin-top:10px">
+        <div><label>6ème Année (Primaire)</label><input type="date" id="examDate6ap"></div>
+        <div><label>3ème Année (Collège)</label><input type="date" id="examDate3ac"></div>
+      </div>
+      <div class="row" style="margin-top:10px">
+        <div><label>1ère Bac</label><input type="date" id="examDate1bac"></div>
+        <div><label>2ème Bac</label><input type="date" id="examDate2bac"></div>
+      </div>
+      <div style="margin-top:12px"><button id="examDatesSaveBtn">💾 Enregistrer les dates d'examen</button></div>
+      <div class="status" id="examDatesStatus"></div>
+    </div>
+
+    <div class="card tab-section" id="lessonMetaCard">
+      <h2>Leçon</h2>
+      <label>Titre de la leçon</label>
+      <input id="title" dir="auto" placeholder="Titre…">
+      <div class="hint">Vous choisissez librement le titre. Il sert d'identifiant — ne le changez pas après coup, sinon une nouvelle leçon est créée.</div>
+      <label>Titre « Objectif » (optionnel — laissez vide pour cacher le titre)</label>
+      <div class="rt" id="objectiveTitle" contenteditable="true" dir="auto"></div>
+      <input type="hidden" id="objectiveTitleSize" value="16">
+      <label>Objectif (optionnel)</label>
+      <div class="rt" id="objective" contenteditable="true" dir="auto"></div>
+      <input type="hidden" id="objectiveSize" value="13">
+      <label>Titre « Introduction » (optionnel — vide = « Introduction »)</label>
+      <div class="rt" id="introTitle" contenteditable="true" dir="auto"></div>
+      <input type="hidden" id="introTitleSize" value="18">
+      <label>Introduction (optionnel)</label>
+      <div class="rt" id="introduction" contenteditable="true" dir="auto"></div>
+      <input type="hidden" id="introductionSize" value="14">
+    </div>
+
+    <div class="card tab-section" id="coursCard">
+      <h2>Cours — sections <button class="ghost small" id="addSection">+ Section</button></h2>
+      <div id="sections"></div>
+    </div>
+
+    <div class="card tab-section" id="exercicesCard">
+      <h2>Exercices — sections <button class="ghost small" id="addExSection">+ Section</button></h2>
+      <div id="exSections"></div>
+    </div>
+
+    <div class="card tab-section" id="quizCard">
+      <h2>Mon Quiz <button class="ghost small" id="addQuiz">+ Question</button></h2>
+      <label>Titre du quiz (optionnel)</label>
+      <input id="quizTitle" dir="auto" placeholder="Titre du quiz…">
+      <div id="quiz" style="margin-top:12px"></div>
+    </div>
+
+    <div class="card tab-section" id="retenirCard">
+      <h2>À retenir & Astuce (optionnel)</h2>
+      <label>Titre « À retenir » (optionnel — vide = « À retenir »)</label>
+      <div class="rt" id="keyPointsTitle" contenteditable="true" dir="auto"></div>
+      <input type="hidden" id="keyPointsTitleSize" value="14">
+      <label>À retenir</label><div class="rt" id="keyPoints" contenteditable="true" dir="auto"></div>
+      <input type="hidden" id="keyPointsSize" value="14">
+      <label>Titre « Astuce » (optionnel — vide = « Astuce »)</label>
+      <div class="rt" id="astuceTitle" contenteditable="true" dir="auto"></div>
+      <input type="hidden" id="astuceTitleSize" value="14">
+      <label>Astuce</label><div class="rt" id="astuce" contenteditable="true" dir="auto"></div>
+      <input type="hidden" id="astuceSize" value="14">
+    </div>
+
+    <div class="card danger-card tab-section" id="dangerCard">
+      <h2>Zone de danger</h2>
+      <div class="hint">Cette action supprime définitivement la leçon actuellement chargée dans le formulaire.</div>
+      <div style="margin-top:10px">
+        <button id="delBtn" style="background:#fff;color:#c0392b;border:1.5px solid #e8b4b4">🗑 Supprimer cette leçon</button>
+      </div>
+    </div>
+
+    <div class="actionbar-bottom" id="actionbarBottom">
+      <button id="saveBtn">💾 Enregistrer dans le cloud</button>
+      <button class="ghost" id="previewBtn">👁 Aperçu</button>
+      <button class="ghost" id="newBtn2">Nouvelle leçon</button>
+      <div class="status" id="saveStatus"></div>
+    </div>
+
+    <div id="previewModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:200;justify-content:center;align-items:flex-start;padding:18px;overflow:auto;">
+      <div style="background:#F5EFE6;max-width:460px;width:100%;border-radius:18px;overflow:hidden;box-shadow:0 12px 44px rgba(0,0,0,0.35);">
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:#fff;border-bottom:1px solid var(--line);position:sticky;top:0;">
+          <strong style="color:var(--mag)">👁 Aperçu de la leçon</strong>
+          <button class="small" id="previewClose" style="background:#fff;color:#c0392b;border:1px solid #f0d0d0">Fermer ✕</button>
+        </div>
+        <div id="previewBody" style="padding:22px 18px 34px;min-height:120px;"></div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script type="module">
+import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+import { getAuth, setPersistence, browserLocalPersistence, browserSessionPersistence, inMemoryPersistence, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
+import { getFirestore, doc, getDoc, setDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyBThPOyYlHKv7rq_Mw6FfB6gdFFNIKWYNI",
+  authDomain: "school-maroc.firebaseapp.com",
+  projectId: "school-maroc",
+  storageBucket: "school-maroc.firebasestorage.app",
+  messagingSenderId: "1075264997229",
+  appId: "1:1075264997229:web:b1396b8bf60d03f2af7c64",
+};
+const app = getApps().length ? getApp() : initializeApp(FIREBASE_CONFIG);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+const $ = id => document.getElementById(id);
+const status = (el, msg, ok) => { el.textContent = msg; el.className = "status " + (ok ? "ok" : "err"); };
+const esc = v => (v==null?"":String(v)).replace(/"/g,"&quot;").replace(/</g,"&lt;");
+const lines = v => v.split("\n").map(s=>s.trim()).filter(Boolean);
+
+// Reusable font-size options for every text field.
+const SIZE_OPTS = [[13,"Petit"],[14,"Normal"],[16,"Grand"],[19,"Très grand"],[23,"Énorme"],[28,"Géant"]];
+// Quiz text is larger by design, so it gets its own scale (Normal keeps the look).
+const SIZE_OPTS_QUIZ = [[16,"Petit"],[22,"Normal"],[26,"Grand"],[30,"Très grand"],[36,"Énorme"]];
+const sizeOptionsHTML = (cur, def, opts=SIZE_OPTS) => { const v = cur || def; return opts.map(([s,l])=>`<option value="${s}"${s===v?" selected":""}>${l}</option>`).join(""); };
+// Size is now set inline via the toolbar; this just carries the field's base size invisibly.
+const sizeSelect = (cls, cur, def, opts=SIZE_OPTS) => `<input type="hidden" class="${cls}" value="${cur || def}">`;
+const readSize = (el, def) => parseInt(el && el.value) || def;
+// Populate the static .size-sel selects (objective, introduction, à retenir, astuce).
+function initSizeSelects() { document.querySelectorAll(".size-sel").forEach(sel => { sel.innerHTML = sizeOptionsHTML(null, parseInt(sel.dataset.default)||14); }); }
+
+// ---- Rich text (color / bold / italic / underline / font) ----
+let activeRT = null, savedRange = null;
+function saveSel() {
+  const s = window.getSelection();
+  if (s && s.rangeCount && activeRT && activeRT.contains(s.anchorNode)) savedRange = s.getRangeAt(0).cloneRange();
+}
+function restoreSel() {
+  if (savedRange) { const s = window.getSelection(); s.removeAllRanges(); s.addRange(savedRange); }
+}
+function rtExec(cmd, val) {
+  if (!activeRT) return;
+  activeRT.focus(); restoreSel();
+  try { document.execCommand("styleWithCSS", false, true); } catch {}
+  document.execCommand(cmd, false, val == null ? undefined : val);
+  saveSel();
+}
+// If the saved selection is exactly one inserted icon, return that element.
+function selectedIcon() {
+  if (!savedRange) return null;
+  const r = savedRange;
+  if (r.startContainer === r.endContainer && (r.endOffset - r.startOffset) === 1) {
+    const n = r.startContainer.childNodes && r.startContainer.childNodes[r.startOffset];
+    if (n && n.nodeType === 1 && n.matches && (n.matches("[data-rt-icon]") || n.matches("svg"))) return n;
+  }
+  return null;
+}
+// Colour command that also works on a selected icon (icons use currentColor,
+// so setting the element's color recolours the strokes; highlight = background).
+function setColor(c, highlight) {
+  const ic = selectedIcon();
+  if (ic) {
+    if (highlight) ic.style.background = c; else ic.style.color = c;
+    ic.classList.add("rt-icon-sel");
+    histSchedule(activeRT);
+    return;
+  }
+  rtExec(highlight ? "hiliteColor" : "foreColor", c);
+}
+// Apply a pixel font-size to ONLY the selected text (wraps it in a span),
+// leaving the rest of the field untouched.
+function rtFontSize(px) {
+  if (!activeRT) return;
+  activeRT.focus(); restoreSel();
+  const sel = window.getSelection();
+  if (!sel || !sel.rangeCount) return;
+  const range = sel.getRangeAt(0);
+  if (range.collapsed) return; // nothing selected -> do nothing
+  const span = document.createElement("span");
+  span.style.fontSize = px + "px";
+  const frag = range.extractContents();
+  // Clear nested sizes so the chosen size applies uniformly to the selection.
+  frag.querySelectorAll && frag.querySelectorAll("[style*='font-size']").forEach(el => { el.style.fontSize = ""; });
+  frag.querySelectorAll && frag.querySelectorAll("font[size]").forEach(el => el.removeAttribute("size"));
+  span.appendChild(frag);
+  range.insertNode(span);
+  // Keep the affected text selected.
+  const nr = document.createRange();
+  nr.selectNodeContents(span);
+  sel.removeAllRanges(); sel.addRange(nr);
+  saveSel();
+  histSchedule(activeRT);
+}
+// Find the UL/OL that contains the current selection (within the active field).
+function currentListEl() {
+  const sel = window.getSelection();
+  if (!sel || !sel.rangeCount || !activeRT) return null;
+  let n = sel.getRangeAt(0).startContainer;
+  if (n && n.nodeType === 3) n = n.parentNode;
+  while (n && n !== activeRT) {
+    if (n.tagName === "UL" || n.tagName === "OL") return n;
+    n = n.parentNode;
+  }
+  return null;
+}
+// Turn the selection into a list (if needed) and apply a marker style.
+// styleType is a CSS list-style-type value: a keyword ("disc", "lower-alpha"…)
+// or a quoted custom string ('"✓  "').
+function applyList(ordered, styleType) {
+  if (!activeRT) return;
+  activeRT.focus(); restoreSel();
+  const wantTag = ordered ? "OL" : "UL";
+  let list = currentListEl();
+  if (!list || list.tagName !== wantTag) {
+    try { document.execCommand("styleWithCSS", false, true); } catch (e) {}
+    document.execCommand(ordered ? "insertOrderedList" : "insertUnorderedList");
+    list = currentListEl();
+  }
+  if (list) list.style.listStyleType = styleType;
+  saveSel();
+  histSchedule(activeRT);
+}
+// Hide every rich-text popover except the one passed in.
+function closeRtMenus(except) {
+  ["rtPalette","rtSizeMenu","rtIconMenu","rtShapeMenu","rtEqMenu","rtBulletMenu","rtNumberMenu"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el && el !== except) el.classList.add("hidden");
+  });
+}
+// Click anywhere outside the toolbar/dropdown area closes whatever menu is open.
+document.addEventListener("click", e => {
+  if (!e.target.closest("#rtToolbarWrap")) closeRtMenus(null);
+  if (!e.target.closest("#lessonDropdownWrap")) {
+    const wrap = document.getElementById("lessonList"), dropWrap = document.getElementById("lessonDropdownWrap");
+    if (wrap && !wrap.classList.contains("hidden")) { wrap.classList.add("hidden"); dropWrap.classList.remove("open"); }
+  }
+});
+document.addEventListener("focusin", e => { if (e.target.classList && e.target.classList.contains("rt")) { activeRT = e.target; histInit(activeRT); } });
+document.addEventListener("selectionchange", saveSel);
+// Light up B / I / U and alignment buttons to reflect the current selection.
+function updateToolbarState() {
+  const tb = document.getElementById("rtToolbar");
+  if (!tb || !activeRT) return;
+  ["bold","italic","underline","justifyLeft","justifyCenter","justifyRight"].forEach(cmd => {
+    const btn = tb.querySelector('[data-cmd="' + cmd + '"]');
+    if (!btn) return;
+    let on = false; try { on = document.queryCommandState(cmd); } catch (e) {}
+    btn.classList.toggle("on", on);
+  });
+}
+document.addEventListener("selectionchange", updateToolbarState);
+document.addEventListener("focusin", e => { if (e.target.classList && e.target.classList.contains("rt")) updateToolbarState(); });
+// ---- Undo / Redo history (one stack per rich-text field) ----
+// Captures typing & execCommand formatting via the input event, plus explicit
+// snapshots after the custom DOM operations (size, icon, shape, icon colour).
+let _histRestoring = false;
+const _histMap = new WeakMap(), _histTimers = new WeakMap();
+function _histGet(f){ if(!_histMap.has(f)) _histMap.set(f,{stack:[f.innerHTML],idx:0}); return _histMap.get(f); }
+function histInit(f){ if(f) _histGet(f); }
+function histSnap(f){
+  if(!f || _histRestoring) return;
+  const h=_histGet(f), cur=f.innerHTML;
+  if(h.stack[h.idx]===cur) return;
+  h.stack=h.stack.slice(0,h.idx+1);
+  h.stack.push(cur);
+  if(h.stack.length>150) h.stack.shift();
+  h.idx=h.stack.length-1;
+}
+function histSchedule(f){ if(!f) return; clearTimeout(_histTimers.get(f)); _histTimers.set(f, setTimeout(()=>histSnap(f), 320)); }
+function histDo(dir){
+  const f=activeRT; if(!f) return;
+  clearTimeout(_histTimers.get(f)); histSnap(f);          // flush the current state first
+  const h=_histGet(f), ni=h.idx+dir;
+  if(ni<0 || ni>=h.stack.length) return;
+  h.idx=ni; _histRestoring=true;
+  f.focus(); f.innerHTML=h.stack[ni];
+  try { const r=document.createRange(); r.selectNodeContents(f); r.collapse(false); const s=window.getSelection(); s.removeAllRanges(); s.addRange(r); } catch(e){}
+  saveSel();
+  setTimeout(()=>{ _histRestoring=false; }, 0);
+}
+document.addEventListener("input", e => { const f = e.target && e.target.closest && e.target.closest(".rt"); if (f) { histSchedule(f); fixRtDir(f); } });
+// dir="auto" on contenteditable doesn't reliably re-evaluate live while typing in all browsers,
+// so we manually detect the first strong-direction character and set dir/text-align ourselves.
+function fixRtDir(f) {
+  const text = f.textContent || "";
+  const m = text.match(/[\u0590-\u05FF\u0600-\u06FF\u0700-\u074F\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]|[A-Za-z]/);
+  if (!m) return; // no strong char yet, leave as-is
+  const isRtl = /[\u0590-\u05FF\u0600-\u06FF\u0700-\u074F\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/.test(m[0]);
+  f.style.direction = isRtl ? "rtl" : "ltr";
+  f.style.textAlign = isRtl ? "right" : "left";
+}
+// Tap an inserted icon to select it as a whole — then resize with 🅣 Taille,
+// recolour with 🎨, or delete it. Works for new (wrapped) icons and any bare
+// <svg> icons inserted earlier. pointerdown is reliable on mouse and touch.
+document.addEventListener("pointerdown", e => {
+  document.querySelectorAll(".rt .rt-icon-sel").forEach(el => el.classList.remove("rt-icon-sel"));
+  if (!e.target || !e.target.closest) return;
+  let ic = e.target.closest("[data-rt-icon]");
+  if (!ic) { const s = e.target.closest("svg"); if (s && s.closest(".rt")) ic = s; }
+  if (!ic) return;
+  const host = ic.closest(".rt");
+  if (!host) return;            // ignore icons shown in the picker
+  e.preventDefault();           // stop the caret landing inside the icon
+  host.focus();
+  activeRT = host;
+  ic.classList.add("rt-icon-sel");
+  const sel = window.getSelection();
+  const r = document.createRange();
+  r.selectNode(ic);
+  sel.removeAllRanges(); sel.addRange(r);
+  saveSel();
+});
+const ICON_LIB = [
+  {l:"Diplôme",p:"<path d=\"M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z\" /><path d=\"M22 10v6\" /><path d=\"M6 12.5V16a6 3 0 0 0 12 0v-3.5\" />"},
+  {l:"École",p:"<path d=\"M14 21v-3a2 2 0 0 0-4 0v3\" /><path d=\"M18 4.933V21\" /><path d=\"m4 6 7.106-3.79a2 2 0 0 1 1.788 0L20 6\" /><path d=\"m6 11-3.52 2.147a1 1 0 0 0-.48.854V19a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-5a1 1 0 0 0-.48-.853L18 11\" /><path d=\"M6 4.933V21\" /><circle cx=\"12\" cy=\"9\" r=\"2\" />"},
+  {l:"Livre",p:"<path d=\"M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5a1 1 0 0 1 0-5H20\" />"},
+  {l:"Livre ouvert",p:"<path d=\"M12 7v14\" /><path d=\"M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z\" />"},
+  {l:"Lecture",p:"<path d=\"M12 7v14\" /><path d=\"M16 12h2\" /><path d=\"M16 8h2\" /><path d=\"M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z\" /><path d=\"M6 12h2\" /><path d=\"M6 8h2\" />"},
+  {l:"Manuel",p:"<path d=\"M10 2v8l3-3 3 3V2\" /><path d=\"M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5a1 1 0 0 1 0-5H20\" />"},
+  {l:"Bibliothèque",p:"<path d=\"m16 6 4 14\" /><path d=\"M12 6v14\" /><path d=\"M8 8v12\" /><path d=\"M4 4v16\" />"},
+  {l:"Cahier",p:"<path d=\"M2 6h4\" /><path d=\"M2 10h4\" /><path d=\"M2 14h4\" /><path d=\"M2 18h4\" /><rect width=\"16\" height=\"20\" x=\"4\" y=\"2\" rx=\"2\" /><path d=\"M16 2v20\" />"},
+  {l:"Cahier & stylo",p:"<path d=\"M13.4 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7.4\" /><path d=\"M2 6h4\" /><path d=\"M2 10h4\" /><path d=\"M2 14h4\" /><path d=\"M2 18h4\" /><path d=\"M21.378 5.626a1 1 0 1 0-3.004-3.004l-5.01 5.012a2 2 0 0 0-.506.854l-.837 2.87a.5.5 0 0 0 .62.62l2.87-.837a2 2 0 0 0 .854-.506z\" />"},
+  {l:"Crayon",p:"<path d=\"M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z\" /><path d=\"m15 5 4 4\" />"},
+  {l:"Stylo",p:"<path d=\"M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z\" />"},
+  {l:"Plume",p:"<path d=\"M15.707 21.293a1 1 0 0 1-1.414 0l-1.586-1.586a1 1 0 0 1 0-1.414l5.586-5.586a1 1 0 0 1 1.414 0l1.586 1.586a1 1 0 0 1 0 1.414z\" /><path d=\"m18 13-1.375-6.874a1 1 0 0 0-.746-.776L3.235 2.028a1 1 0 0 0-1.207 1.207L5.35 15.879a1 1 0 0 0 .776.746L13 18\" /><path d=\"m2.3 2.3 7.286 7.286\" /><circle cx=\"11\" cy=\"11\" r=\"2\" />"},
+  {l:"Surligneur",p:"<path d=\"m9 11-6 6v3h9l3-3\" /><path d=\"m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4\" />"},
+  {l:"Gomme",p:"<path d=\"M21 21H8a2 2 0 0 1-1.42-.587l-3.994-3.999a2 2 0 0 1 0-2.828l10-10a2 2 0 0 1 2.829 0l5.999 6a2 2 0 0 1 0 2.828L12.834 21\" /><path d=\"m5.082 11.09 8.828 8.828\" />"},
+  {l:"Règle",p:"<path d=\"M21.3 15.3a2.4 2.4 0 0 1 0 3.4l-2.6 2.6a2.4 2.4 0 0 1-3.4 0L2.7 8.7a2.41 2.41 0 0 1 0-3.4l2.6-2.6a2.41 2.41 0 0 1 3.4 0Z\" /><path d=\"m14.5 12.5 2-2\" /><path d=\"m11.5 9.5 2-2\" /><path d=\"m8.5 6.5 2-2\" /><path d=\"m17.5 15.5 2-2\" />"},
+  {l:"Règle & crayon",p:"<path d=\"M13 7 8.7 2.7a2.41 2.41 0 0 0-3.4 0L2.7 5.3a2.41 2.41 0 0 0 0 3.4L7 13\" /><path d=\"m8 6 2-2\" /><path d=\"m18 16 2-2\" /><path d=\"m17 11 4.3 4.3c.94.94.94 2.46 0 3.4l-2.6 2.6c-.94.94-2.46.94-3.4 0L11 17\" /><path d=\"M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z\" /><path d=\"m15 5 4 4\" />"},
+  {l:"Ciseaux",p:"<circle cx=\"6\" cy=\"6\" r=\"3\" /><path d=\"M8.12 8.12 12 12\" /><path d=\"M20 4 8.12 15.88\" /><circle cx=\"6\" cy=\"18\" r=\"3\" /><path d=\"M14.8 14.8 20 20\" />"},
+  {l:"Trombone",p:"<path d=\"m16 6-8.414 8.586a2 2 0 0 0 2.829 2.829l8.414-8.586a4 4 0 1 0-5.657-5.657l-8.379 8.551a6 6 0 1 0 8.485 8.485l8.379-8.551\" />"},
+  {l:"Cartable",p:"<path d=\"M4 10a4 4 0 0 1 4-4h8a4 4 0 0 1 4 4v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z\" /><path d=\"M8 10h8\" /><path d=\"M8 18h8\" /><path d=\"M8 22v-6a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v6\" /><path d=\"M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2\" />"},
+  {l:"Pomme",p:"<path d=\"M12 6.528V3a1 1 0 0 1 1-1h0\" /><path d=\"M18.237 21A15 15 0 0 0 22 11a6 6 0 0 0-10-4.472A6 6 0 0 0 2 11a15.1 15.1 0 0 0 3.763 10 3 3 0 0 0 3.648.648 5.5 5.5 0 0 1 5.178 0A3 3 0 0 0 18.237 21\" />"},
+  {l:"Globe",p:"<circle cx=\"12\" cy=\"12\" r=\"10\" /><path d=\"M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20\" /><path d=\"M2 12h20\" />"},
+  {l:"Carte",p:"<path d=\"M14.106 5.553a2 2 0 0 0 1.788 0l3.659-1.83A1 1 0 0 1 21 4.619v12.764a1 1 0 0 1-.553.894l-4.553 2.277a2 2 0 0 1-1.788 0l-4.212-2.106a2 2 0 0 0-1.788 0l-3.659 1.83A1 1 0 0 1 3 19.381V6.618a1 1 0 0 1 .553-.894l4.553-2.277a2 2 0 0 1 1.788 0z\" /><path d=\"M15 5.764v15\" /><path d=\"M9 3.236v15\" />"},
+  {l:"Boussole",p:"<circle cx=\"12\" cy=\"12\" r=\"10\" /><path d=\"m16.24 7.76-1.804 5.411a2 2 0 0 1-1.265 1.265L7.76 16.24l1.804-5.411a2 2 0 0 1 1.265-1.265z\" />"},
+  {l:"Langues",p:"<path d=\"m5 8 6 6\" /><path d=\"m4 14 6-6 2-3\" /><path d=\"M2 5h12\" /><path d=\"M7 2h1\" /><path d=\"m22 22-5-10-5 10\" /><path d=\"M14 18h6\" />"},
+  {l:"Calculatrice",p:"<rect width=\"16\" height=\"20\" x=\"4\" y=\"2\" rx=\"2\" /><line x1=\"8\" x2=\"16\" y1=\"6\" y2=\"6\" /><line x1=\"16\" x2=\"16\" y1=\"14\" y2=\"18\" /><path d=\"M16 10h.01\" /><path d=\"M12 10h.01\" /><path d=\"M8 10h.01\" /><path d=\"M12 14h.01\" /><path d=\"M8 14h.01\" /><path d=\"M12 18h.01\" /><path d=\"M8 18h.01\" />"},
+  {l:"Somme Σ",p:"<path d=\"M18 7V5a1 1 0 0 0-1-1H6.5a.5.5 0 0 0-.4.8l4.5 6a2 2 0 0 1 0 2.4l-4.5 6a.5.5 0 0 0 .4.8H17a1 1 0 0 0 1-1v-2\" />"},
+  {l:"Pi π",p:"<line x1=\"9\" x2=\"9\" y1=\"4\" y2=\"20\" /><path d=\"M4 7c0-1.7 1.3-3 3-3h13\" /><path d=\"M18 20c-1.7 0-3-1.3-3-3V4\" />"},
+  {l:"Division",p:"<circle cx=\"12\" cy=\"6\" r=\"1\" /><line x1=\"5\" x2=\"19\" y1=\"12\" y2=\"12\" /><circle cx=\"12\" cy=\"18\" r=\"1\" />"},
+  {l:"Plus",p:"<path d=\"M5 12h14\" /><path d=\"M12 5v14\" />"},
+  {l:"Moins",p:"<path d=\"M5 12h14\" />"},
+  {l:"Pourcentage",p:"<line x1=\"19\" x2=\"5\" y1=\"5\" y2=\"19\" /><circle cx=\"6.5\" cy=\"6.5\" r=\"2.5\" /><circle cx=\"17.5\" cy=\"17.5\" r=\"2.5\" />"},
+  {l:"Égal",p:"<line x1=\"5\" x2=\"19\" y1=\"9\" y2=\"9\" /><line x1=\"5\" x2=\"19\" y1=\"15\" y2=\"15\" />"},
+  {l:"Infini",p:"<path d=\"M6 16c5 0 7-8 12-8a4 4 0 0 1 0 8c-5 0-7-8-12-8a4 4 0 1 0 0 8\" />"},
+  {l:"Atome",p:"<circle cx=\"12\" cy=\"12\" r=\"1\" /><path d=\"M20.2 20.2c2.04-2.03.02-7.36-4.5-11.9-4.54-4.52-9.87-6.54-11.9-4.5-2.04 2.03-.02 7.36 4.5 11.9 4.54 4.52 9.87 6.54 11.9 4.5Z\" /><path d=\"M15.7 15.7c4.52-4.54 6.54-9.87 4.5-11.9-2.03-2.04-7.36-.02-11.9 4.5-4.52 4.54-6.54 9.87-4.5 11.9 2.03 2.04 7.36.02 11.9-4.5Z\" />"},
+  {l:"Microscope",p:"<path d=\"M6 18h8\" /><path d=\"M3 22h18\" /><path d=\"M14 22a7 7 0 1 0 0-14h-1\" /><path d=\"M9 14h2\" /><path d=\"M9 12a2 2 0 0 1-2-2V6h6v4a2 2 0 0 1-2 2Z\" /><path d=\"M12 6V3a1 1 0 0 0-1-1H9a1 1 0 0 0-1 1v3\" />"},
+  {l:"Télescope",p:"<path d=\"m10.065 12.493-6.18 1.318a.934.934 0 0 1-1.108-.702l-.537-2.15a1.07 1.07 0 0 1 .691-1.265l13.504-4.44\" /><path d=\"m13.56 11.747 4.332-.924\" /><path d=\"m16 21-3.105-6.21\" /><path d=\"M16.485 5.94a2 2 0 0 1 1.455-2.425l1.09-.272a1 1 0 0 1 1.212.727l1.515 6.06a1 1 0 0 1-.727 1.213l-1.09.272a2 2 0 0 1-2.425-1.455z\" /><path d=\"m6.158 8.633 1.114 4.456\" /><path d=\"m8 21 3.105-6.21\" /><circle cx=\"12\" cy=\"13\" r=\"2\" />"},
+  {l:"Erlenmeyer",p:"<path d=\"M14 2v6a2 2 0 0 0 .245.96l5.51 10.08A2 2 0 0 1 18 22H6a2 2 0 0 1-1.755-2.96l5.51-10.08A2 2 0 0 0 10 8V2\" /><path d=\"M6.453 15h11.094\" /><path d=\"M8.5 2h7\" />"},
+  {l:"Éprouvette",p:"<path d=\"M14.5 2v17.5c0 1.4-1.1 2.5-2.5 2.5c-1.4 0-2.5-1.1-2.5-2.5V2\" /><path d=\"M8.5 2h7\" /><path d=\"M14.5 16h-5\" />"},
+  {l:"Éprouvettes",p:"<path d=\"M9 2v17.5A2.5 2.5 0 0 1 6.5 22A2.5 2.5 0 0 1 4 19.5V2\" /><path d=\"M20 2v17.5a2.5 2.5 0 0 1-2.5 2.5a2.5 2.5 0 0 1-2.5-2.5V2\" /><path d=\"M3 2h7\" /><path d=\"M14 2h7\" /><path d=\"M9 16H4\" /><path d=\"M20 16h-5\" />"},
+  {l:"ADN",p:"<path d=\"m10 16 1.5 1.5\" /><path d=\"m14 8-1.5-1.5\" /><path d=\"M15 2c-1.798 1.998-2.518 3.995-2.807 5.993\" /><path d=\"m16.5 10.5 1 1\" /><path d=\"m17 6-2.891-2.891\" /><path d=\"M2 15c6.667-6 13.333 0 20-6\" /><path d=\"m20 9 .891.891\" /><path d=\"M3.109 14.109 4 15\" /><path d=\"m6.5 12.5 1 1\" /><path d=\"m7 18 2.891 2.891\" /><path d=\"M9 22c1.798-1.998 2.518-3.995 2.807-5.993\" />"},
+  {l:"Cerveau",p:"<path d=\"M12 18V5\" /><path d=\"M15 13a4.17 4.17 0 0 1-3-4 4.17 4.17 0 0 1-3 4\" /><path d=\"M17.598 6.5A3 3 0 1 0 12 5a3 3 0 1 0-5.598 1.5\" /><path d=\"M17.997 5.125a4 4 0 0 1 2.526 5.77\" /><path d=\"M18 18a4 4 0 0 0 2-7.464\" /><path d=\"M19.967 17.483A4 4 0 1 1 12 18a4 4 0 1 1-7.967-.517\" /><path d=\"M6 18a4 4 0 0 1-2-7.464\" /><path d=\"M6.003 5.125a4 4 0 0 0-2.526 5.77\" />"},
+  {l:"Idée",p:"<path d=\"M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5\" /><path d=\"M9 18h6\" /><path d=\"M10 22h4\" />"},
+  {l:"Aimant",p:"<path d=\"m12 15 4 4\" /><path d=\"M2.352 10.648a1.205 1.205 0 0 0 0 1.704l2.296 2.296a1.205 1.205 0 0 0 1.704 0l6.029-6.029a1 1 0 1 1 3 3l-6.029 6.029a1.205 1.205 0 0 0 0 1.704l2.296 2.296a1.205 1.205 0 0 0 1.704 0l6.365-6.367A1 1 0 0 0 8.716 4.282z\" /><path d=\"m5 8 4 4\" />"},
+  {l:"Thermomètre",p:"<path d=\"M14 4v10.54a4 4 0 1 1-4 0V4a2 2 0 0 1 4 0Z\" />"},
+  {l:"Feuille",p:"<path d=\"M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z\" /><path d=\"M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12\" />"},
+  {l:"Pousse",p:"<path d=\"M14 9.536V7a4 4 0 0 1 4-4h1.5a.5.5 0 0 1 .5.5V5a4 4 0 0 1-4 4 4 4 0 0 0-4 4c0 2 1 3 1 5a5 5 0 0 1-1 3\" /><path d=\"M4 9a5 5 0 0 1 8 4 5 5 0 0 1-8-4\" /><path d=\"M5 21h14\" />"},
+  {l:"Insecte",p:"<path d=\"M12 20v-9\" /><path d=\"M14 7a4 4 0 0 1 4 4v3a6 6 0 0 1-12 0v-3a4 4 0 0 1 4-4z\" /><path d=\"M14.12 3.88 16 2\" /><path d=\"M21 21a4 4 0 0 0-3.81-4\" /><path d=\"M21 5a4 4 0 0 1-3.55 3.97\" /><path d=\"M22 13h-4\" /><path d=\"M3 21a4 4 0 0 1 3.81-4\" /><path d=\"M3 5a4 4 0 0 0 3.55 3.97\" /><path d=\"M6 13H2\" /><path d=\"m8 2 1.88 1.88\" /><path d=\"M9 7.13V6a3 3 0 1 1 6 0v1.13\" />"},
+  {l:"Flamme",p:"<path d=\"M12 3q1 4 4 6.5t3 5.5a1 1 0 0 1-14 0 5 5 0 0 1 1-3 1 1 0 0 0 5 0c0-2-1.5-3-1.5-5q0-2 2.5-4\" />"},
+  {l:"Goutte",p:"<path d=\"M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z\" />"},
+  {l:"Fusée",p:"<path d=\"M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5\" /><path d=\"M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09\" /><path d=\"M9 12a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.4 22.4 0 0 1-4 2z\" /><path d=\"M9 12H4s.55-3.03 2-4c1.62-1.08 5 .05 5 .05\" />"},
+  {l:"Palette",p:"<path d=\"M12 22a1 1 0 0 1 0-20 10 9 0 0 1 10 9 5 5 0 0 1-5 5h-2.25a1.75 1.75 0 0 0-1.4 2.8l.3.4a1.75 1.75 0 0 1-1.4 2.8z\" /><circle cx=\"13.5\" cy=\"6.5\" r=\".5\" fill=\"currentColor\" /><circle cx=\"17.5\" cy=\"10.5\" r=\".5\" fill=\"currentColor\" /><circle cx=\"6.5\" cy=\"12.5\" r=\".5\" fill=\"currentColor\" /><circle cx=\"8.5\" cy=\"7.5\" r=\".5\" fill=\"currentColor\" />"},
+  {l:"Musique",p:"<path d=\"M9 18V5l12-2v13\" /><circle cx=\"6\" cy=\"18\" r=\"3\" /><circle cx=\"18\" cy=\"16\" r=\"3\" />"},
+  {l:"Note",p:"<circle cx=\"8\" cy=\"18\" r=\"4\" /><path d=\"M12 18V2l7 4\" />"},
+  {l:"Théâtre",p:"<path d=\"M10 11h.01\" /><path d=\"M14 6h.01\" /><path d=\"M18 6h.01\" /><path d=\"M6.5 13.1h.01\" /><path d=\"M22 5c0 9-4 12-6 12s-6-3-6-12c0-2 2-3 6-3s6 1 6 3\" /><path d=\"M17.4 9.9c-.8.8-2 .8-2.8 0\" /><path d=\"M10.1 7.1C9 7.2 7.7 7.7 6 8.6c-3.5 2-4.7 3.9-3.7 5.6 4.5 7.8 9.5 8.4 11.2 7.4.9-.5 1.9-2.1 1.9-4.7\" /><path d=\"M9.1 16.5c.3-1.1 1.4-1.7 2.4-1.4\" />"},
+  {l:"Horloge",p:"<circle cx=\"12\" cy=\"12\" r=\"10\" /><path d=\"M12 6v6l4 2\" />"},
+  {l:"Réveil",p:"<circle cx=\"12\" cy=\"13\" r=\"8\" /><path d=\"M12 9v4l2 2\" /><path d=\"M5 3 2 6\" /><path d=\"m22 6-3-3\" /><path d=\"M6.38 18.7 4 21\" /><path d=\"M17.64 18.67 20 21\" />"},
+  {l:"Calendrier",p:"<path d=\"M8 2v4\" /><path d=\"M16 2v4\" /><rect width=\"18\" height=\"18\" x=\"3\" y=\"4\" rx=\"2\" /><path d=\"M3 10h18\" />"},
+  {l:"Calendrier (jours)",p:"<path d=\"M8 2v4\" /><path d=\"M16 2v4\" /><rect width=\"18\" height=\"18\" x=\"3\" y=\"4\" rx=\"2\" /><path d=\"M3 10h18\" /><path d=\"M8 14h.01\" /><path d=\"M12 14h.01\" /><path d=\"M16 14h.01\" /><path d=\"M8 18h.01\" /><path d=\"M12 18h.01\" /><path d=\"M16 18h.01\" />"},
+  {l:"Trophée",p:"<path d=\"M10 14.66v1.626a2 2 0 0 1-.976 1.696A5 5 0 0 0 7 21.978\" /><path d=\"M14 14.66v1.626a2 2 0 0 0 .976 1.696A5 5 0 0 1 17 21.978\" /><path d=\"M18 9h1.5a1 1 0 0 0 0-5H18\" /><path d=\"M4 22h16\" /><path d=\"M6 9a6 6 0 0 0 12 0V3a1 1 0 0 0-1-1H7a1 1 0 0 0-1 1z\" /><path d=\"M6 9H4.5a1 1 0 0 1 0-5H6\" />"},
+  {l:"Récompense",p:"<path d=\"m15.477 12.89 1.515 8.526a.5.5 0 0 1-.81.47l-3.58-2.687a1 1 0 0 0-1.197 0l-3.586 2.686a.5.5 0 0 1-.81-.469l1.514-8.526\" /><circle cx=\"12\" cy=\"8\" r=\"6\" />"},
+  {l:"Médaille",p:"<path d=\"M7.21 15 2.66 7.14a2 2 0 0 1 .13-2.2L4.4 2.8A2 2 0 0 1 6 2h12a2 2 0 0 1 1.6.8l1.6 2.14a2 2 0 0 1 .14 2.2L16.79 15\" /><path d=\"M11 12 5.12 2.2\" /><path d=\"m13 12 5.88-9.8\" /><path d=\"M8 7h8\" /><circle cx=\"12\" cy=\"17\" r=\"5\" /><path d=\"M12 18v-2h-.5\" />"},
+  {l:"Étoile",p:"<path d=\"M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z\" />"},
+  {l:"Signet",p:"<path d=\"M17 3a2 2 0 0 1 2 2v15a1 1 0 0 1-1.496.868l-4.512-2.578a2 2 0 0 0-1.984 0l-4.512 2.578A1 1 0 0 1 5 20V5a2 2 0 0 1 2-2z\" />"},
+  {l:"Presse-papiers",p:"<rect width=\"8\" height=\"4\" x=\"8\" y=\"2\" rx=\"1\" ry=\"1\" /><path d=\"M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2\" />"},
+  {l:"Liste",p:"<rect width=\"8\" height=\"4\" x=\"8\" y=\"2\" rx=\"1\" ry=\"1\" /><path d=\"M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2\" /><path d=\"M12 11h4\" /><path d=\"M12 16h4\" /><path d=\"M8 11h.01\" /><path d=\"M8 16h.01\" />"},
+  {l:"Validé",p:"<rect width=\"8\" height=\"4\" x=\"8\" y=\"2\" rx=\"1\" ry=\"1\" /><path d=\"M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2\" /><path d=\"m9 14 2 2 4-4\" />"},
+  {l:"Document",p:"<path d=\"M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z\" /><path d=\"M14 2v5a1 1 0 0 0 1 1h5\" /><path d=\"M10 9H8\" /><path d=\"M16 13H8\" /><path d=\"M16 17H8\" />"},
+  {l:"Fichiers",p:"<path d=\"M15 2h-4a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V8\" /><path d=\"M16.706 2.706A2.4 2.4 0 0 0 15 2v5a1 1 0 0 0 1 1h5a2.4 2.4 0 0 0-.706-1.706z\" /><path d=\"M5 7a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h8a2 2 0 0 0 1.732-1\" />"},
+  {l:"Dossier",p:"<path d=\"M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z\" />"},
+  {l:"Présentation",p:"<path d=\"M2 3h20\" /><path d=\"M21 3v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V3\" /><path d=\"m7 21 5-5 5 5\" />"},
+  {l:"Coche",p:"<path d=\"M20 6 9 17l-5-5\" />"},
+  {l:"Réponse juste",p:"<circle cx=\"12\" cy=\"12\" r=\"10\" /><path d=\"m9 12 2 2 4-4\" />"},
+  {l:"Réponse fausse",p:"<circle cx=\"12\" cy=\"12\" r=\"10\" /><path d=\"m15 9-6 6\" /><path d=\"m9 9 6 6\" />"},
+  {l:"Objectif",p:"<circle cx=\"12\" cy=\"12\" r=\"10\" /><circle cx=\"12\" cy=\"12\" r=\"6\" /><circle cx=\"12\" cy=\"12\" r=\"2\" />"},
+  {l:"Clé",p:"<path d=\"m15.5 7.5 2.3 2.3a1 1 0 0 0 1.4 0l2.1-2.1a1 1 0 0 0 0-1.4L19 4\" /><path d=\"m21 2-9.6 9.6\" /><circle cx=\"7.5\" cy=\"15.5\" r=\"5.5\" />"},
+  {l:"Puzzle",p:"<path d=\"M15.39 4.39a1 1 0 0 0 1.68-.474 2.5 2.5 0 1 1 3.014 3.015 1 1 0 0 0-.474 1.68l1.683 1.682a2.414 2.414 0 0 1 0 3.414L19.61 15.39a1 1 0 0 1-1.68-.474 2.5 2.5 0 1 0-3.014 3.015 1 1 0 0 1 .474 1.68l-1.683 1.682a2.414 2.414 0 0 1-3.414 0L8.61 19.61a1 1 0 0 0-1.68.474 2.5 2.5 0 1 1-3.014-3.015 1 1 0 0 0 .474-1.68l-1.683-1.682a2.414 2.414 0 0 1 0-3.414L4.39 8.61a1 1 0 0 1 1.68.474 2.5 2.5 0 1 0 3.014-3.015 1 1 0 0 1-.474-1.68l1.683-1.682a2.414 2.414 0 0 1 3.414 0z\" />"},
+  {l:"Formes",p:"<path d=\"M8.3 10a.7.7 0 0 1-.626-1.079L11.4 3a.7.7 0 0 1 1.198-.043L16.3 8.9a.7.7 0 0 1-.572 1.1Z\" /><rect x=\"3\" y=\"14\" width=\"7\" height=\"7\" rx=\"1\" /><circle cx=\"17.5\" cy=\"17.5\" r=\"3.5\" />"},
+  {l:"Écran",p:"<rect width=\"20\" height=\"14\" x=\"2\" y=\"3\" rx=\"2\" /><line x1=\"8\" x2=\"16\" y1=\"21\" y2=\"21\" /><line x1=\"12\" x2=\"12\" y1=\"17\" y2=\"21\" />"},
+  {l:"Ordinateur",p:"<path d=\"M18 5a2 2 0 0 1 2 2v8.526a2 2 0 0 0 .212.897l1.068 2.127a1 1 0 0 1-.9 1.45H3.62a1 1 0 0 1-.9-1.45l1.068-2.127A2 2 0 0 0 4 15.526V7a2 2 0 0 1 2-2z\" /><path d=\"M20.054 15.987H3.946\" />"},
+  {l:"Clavier",p:"<path d=\"M10 8h.01\" /><path d=\"M12 12h.01\" /><path d=\"M14 8h.01\" /><path d=\"M16 12h.01\" /><path d=\"M18 8h.01\" /><path d=\"M6 8h.01\" /><path d=\"M7 16h10\" /><path d=\"M8 12h.01\" /><rect width=\"20\" height=\"16\" x=\"2\" y=\"4\" rx=\"2\" />"},
+  {l:"Casque",p:"<path d=\"M3 14h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7a9 9 0 0 1 18 0v7a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3\" />"},
+  {l:"Citation",p:"<path d=\"M16 3a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2 1 1 0 0 1 1 1v1a2 2 0 0 1-2 2 1 1 0 0 0-1 1v2a1 1 0 0 0 1 1 6 6 0 0 0 6-6V5a2 2 0 0 0-2-2z\" /><path d=\"M5 3a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2 1 1 0 0 1 1 1v1a2 2 0 0 1-2 2 1 1 0 0 0-1 1v2a1 1 0 0 0 1 1 6 6 0 0 0 6-6V5a2 2 0 0 0-2-2z\" />"},
+  {l:"Annonce",p:"<path d=\"M11 6a13 13 0 0 0 8.4-2.8A1 1 0 0 1 21 4v12a1 1 0 0 1-1.6.8A13 13 0 0 0 11 14H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z\" /><path d=\"M6 14a12 12 0 0 0 2.4 7.2 2 2 0 0 0 3.2-2.4A8 8 0 0 1 10 14\" /><path d=\"M8 6v8\" />"},
+  {l:"Mallette",p:"<path d=\"M16 20V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16\" /><rect width=\"20\" height=\"14\" x=\"2\" y=\"6\" rx=\"2\" />"},
+  {l:"Mallette pro",p:"<path d=\"M12 12h.01\" /><path d=\"M16 6V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2\" /><path d=\"M22 13a18.15 18.15 0 0 1-20 0\" /><rect width=\"20\" height=\"14\" x=\"2\" y=\"6\" rx=\"2\" />"},
+  {l:"Immeuble",p:"<path d=\"M12 10h.01\" /><path d=\"M12 14h.01\" /><path d=\"M12 6h.01\" /><path d=\"M16 10h.01\" /><path d=\"M16 14h.01\" /><path d=\"M16 6h.01\" /><path d=\"M8 10h.01\" /><path d=\"M8 14h.01\" /><path d=\"M8 6h.01\" /><path d=\"M9 22v-3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v3\" /><rect x=\"4\" y=\"2\" width=\"16\" height=\"20\" rx=\"2\" />"},
+  {l:"Bureau",p:"<path d=\"M10 12h4\" /><path d=\"M10 8h4\" /><path d=\"M14 21v-3a2 2 0 0 0-4 0v3\" /><path d=\"M6 10H4a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-2\" /><path d=\"M6 21V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v16\" />"},
+  {l:"Usine",p:"<path d=\"M12 16h.01\" /><path d=\"M16 16h.01\" /><path d=\"M3 19a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8.5a.5.5 0 0 0-.769-.422l-4.462 2.844A.5.5 0 0 1 15 10.5v-2a.5.5 0 0 0-.769-.422L9.77 10.922A.5.5 0 0 1 9 10.5V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2z\" /><path d=\"M8 16h.01\" />"},
+  {l:"Magasin",p:"<path d=\"M15 21v-5a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v5\" /><path d=\"M17.774 10.31a1.12 1.12 0 0 0-1.549 0 2.5 2.5 0 0 1-3.451 0 1.12 1.12 0 0 0-1.548 0 2.5 2.5 0 0 1-3.452 0 1.12 1.12 0 0 0-1.549 0 2.5 2.5 0 0 1-3.77-3.248l2.889-4.184A2 2 0 0 1 7 2h10a2 2 0 0 1 1.653.873l2.895 4.192a2.5 2.5 0 0 1-3.774 3.244\" /><path d=\"M4 10.95V19a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8.05\" />"},
+  {l:"Entrepôt",p:"<path d=\"M18 21V10a1 1 0 0 0-1-1H7a1 1 0 0 0-1 1v11\" /><path d=\"M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8a2 2 0 0 1 1.132-1.803l7.95-3.974a2 2 0 0 1 1.837 0l7.948 3.974A2 2 0 0 1 22 8z\" /><path d=\"M6 13h12\" /><path d=\"M6 17h12\" />"},
+  {l:"Poignée de main",p:"<path d=\"m11 17 2 2a1 1 0 1 0 3-3\" /><path d=\"m14 14 2.5 2.5a1 1 0 1 0 3-3l-3.88-3.88a3 3 0 0 0-4.24 0l-.88.88a1 1 0 1 1-3-3l2.81-2.81a5.79 5.79 0 0 1 7.06-.87l.47.28a2 2 0 0 0 1.42.25L21 4\" /><path d=\"m21 3 1 11h-2\" /><path d=\"M3 3 2 14l6.5 6.5a1 1 0 1 0 3-3\" /><path d=\"M3 4h8\" />"},
+  {l:"Équipe",p:"<path d=\"M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2\" /><path d=\"M16 3.128a4 4 0 0 1 0 7.744\" /><path d=\"M22 21v-2a4 4 0 0 0-3-3.87\" /><circle cx=\"9\" cy=\"7\" r=\"4\" />"},
+  {l:"Personne",p:"<path d=\"M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2\" /><circle cx=\"12\" cy=\"7\" r=\"4\" />"},
+  {l:"Personne validée",p:"<path d=\"m16 11 2 2 4-4\" /><path d=\"M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2\" /><circle cx=\"9\" cy=\"7\" r=\"4\" />"},
+  {l:"Ajouter personne",p:"<path d=\"M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2\" /><circle cx=\"9\" cy=\"7\" r=\"4\" /><line x1=\"19\" x2=\"19\" y1=\"8\" y2=\"14\" /><line x1=\"22\" x2=\"16\" y1=\"11\" y2=\"11\" />"},
+  {l:"Badge",p:"<path d=\"M16 10h2\" /><path d=\"M16 14h2\" /><path d=\"M6.17 15a3 3 0 0 1 5.66 0\" /><circle cx=\"9\" cy=\"11\" r=\"2\" /><rect x=\"2\" y=\"5\" width=\"20\" height=\"14\" rx=\"2\" />"},
+  {l:"Contact",p:"<path d=\"M16 2v2\" /><path d=\"M17.915 22a6 6 0 0 0-12 0\" /><path d=\"M8 2v2\" /><circle cx=\"12\" cy=\"12\" r=\"4\" /><rect x=\"3\" y=\"4\" width=\"18\" height=\"18\" rx=\"2\" />"},
+  {l:"Téléphone",p:"<path d=\"M13.832 16.568a1 1 0 0 0 1.213-.303l.355-.465A2 2 0 0 1 17 15h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2A18 18 0 0 1 2 4a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v3a2 2 0 0 1-.8 1.6l-.468.351a1 1 0 0 0-.292 1.233 14 14 0 0 0 6.392 6.384\" />"},
+  {l:"Appel",p:"<path d=\"M13 2a9 9 0 0 1 9 9\" /><path d=\"M13 6a5 5 0 0 1 5 5\" /><path d=\"M13.832 16.568a1 1 0 0 0 1.213-.303l.355-.465A2 2 0 0 1 17 15h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2A18 18 0 0 1 2 4a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v3a2 2 0 0 1-.8 1.6l-.468.351a1 1 0 0 0-.292 1.233 14 14 0 0 0 6.392 6.384\" />"},
+  {l:"Smartphone",p:"<rect width=\"14\" height=\"20\" x=\"5\" y=\"2\" rx=\"2\" ry=\"2\" /><path d=\"M12 18h.01\" />"},
+  {l:"E-mail",p:"<path d=\"m22 7-8.991 5.727a2 2 0 0 1-2.009 0L2 7\" /><rect x=\"2\" y=\"4\" width=\"20\" height=\"16\" rx=\"2\" />"},
+  {l:"E-mail ouvert",p:"<path d=\"M21.2 8.4c.5.38.8.97.8 1.6v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V10a2 2 0 0 1 .8-1.6l8-6a2 2 0 0 1 2.4 0l8 6Z\" /><path d=\"m22 10-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 10\" />"},
+  {l:"Envoyer",p:"<path d=\"M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z\" /><path d=\"m21.854 2.147-10.94 10.939\" />"},
+  {l:"Boîte de réception",p:"<polyline points=\"22 12 16 12 14 15 10 15 8 12 2 12\" /><path d=\"M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z\" />"},
+  {l:"Imprimante",p:"<path d=\"M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2\" /><path d=\"M6 9V3a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v6\" /><rect x=\"6\" y=\"14\" width=\"12\" height=\"8\" rx=\"1\" />"},
+  {l:"Souris",p:"<rect x=\"5\" y=\"2\" width=\"14\" height=\"20\" rx=\"7\" /><path d=\"M12 6v4\" />"},
+  {l:"Graphique barres",p:"<path d=\"M3 3v16a2 2 0 0 0 2 2h16\" /><path d=\"M18 17V9\" /><path d=\"M13 17V5\" /><path d=\"M8 17v-3\" />"},
+  {l:"Courbe",p:"<path d=\"M3 3v16a2 2 0 0 0 2 2h16\" /><path d=\"m19 9-5 5-4-4-3 3\" />"},
+  {l:"Camembert",p:"<path d=\"M21 12c.552 0 1.005-.449.95-.998a10 10 0 0 0-8.953-8.951c-.55-.055-.998.398-.998.95v8a1 1 0 0 0 1 1z\" /><path d=\"M21.21 15.89A10 10 0 1 1 8 2.83\" />"},
+  {l:"Tendance hausse",p:"<path d=\"M16 7h6v6\" /><path d=\"m22 7-8.5 8.5-5-5L2 17\" />"},
+  {l:"Tendance baisse",p:"<path d=\"M16 17h6v-6\" /><path d=\"m22 17-8.5-8.5-5 5L2 7\" />"},
+  {l:"Dollar",p:"<line x1=\"12\" x2=\"12\" y1=\"2\" y2=\"22\" /><path d=\"M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6\" />"},
+  {l:"Euro",p:"<path d=\"M4 10h12\" /><path d=\"M4 14h9\" /><path d=\"M19 6a7.7 7.7 0 0 0-5.2-2A7.9 7.9 0 0 0 6 12c0 4.4 3.5 8 7.8 8 2 0 3.8-.8 5.2-2\" />"},
+  {l:"Pièces",p:"<path d=\"M13.744 17.736a6 6 0 1 1-7.48-7.48\" /><path d=\"M15 6h1v4\" /><path d=\"m6.134 14.768.866-.5 2 3.464\" /><circle cx=\"16\" cy=\"8\" r=\"6\" />"},
+  {l:"Billet",p:"<rect width=\"20\" height=\"12\" x=\"2\" y=\"6\" rx=\"2\" /><circle cx=\"12\" cy=\"12\" r=\"2\" /><path d=\"M6 12h.01M18 12h.01\" />"},
+  {l:"Portefeuille",p:"<path d=\"M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1\" /><path d=\"M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4\" />"},
+  {l:"Carte bancaire",p:"<rect width=\"20\" height=\"14\" x=\"2\" y=\"5\" rx=\"2\" /><line x1=\"2\" x2=\"22\" y1=\"10\" y2=\"10\" />"},
+  {l:"Reçu",p:"<path d=\"M12 17V7\" /><path d=\"M16 8h-6a2 2 0 0 0 0 4h4a2 2 0 0 1 0 4H8\" /><path d=\"M4 3a1 1 0 0 1 1-1 1.3 1.3 0 0 1 .7.2l.933.6a1.3 1.3 0 0 0 1.4 0l.934-.6a1.3 1.3 0 0 1 1.4 0l.933.6a1.3 1.3 0 0 0 1.4 0l.933-.6a1.3 1.3 0 0 1 1.4 0l.934.6a1.3 1.3 0 0 0 1.4 0l.933-.6A1.3 1.3 0 0 1 19 2a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1 1.3 1.3 0 0 1-.7-.2l-.933-.6a1.3 1.3 0 0 0-1.4 0l-.934.6a1.3 1.3 0 0 1-1.4 0l-.933-.6a1.3 1.3 0 0 0-1.4 0l-.933.6a1.3 1.3 0 0 1-1.4 0l-.934-.6a1.3 1.3 0 0 0-1.4 0l-.933.6a1.3 1.3 0 0 1-.7.2 1 1 0 0 1-1-1z\" />"},
+  {l:"Tirelire",p:"<path d=\"M11 17h3v2a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1v-3a3.16 3.16 0 0 0 2-2h1a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1h-1a5 5 0 0 0-2-4V3a4 4 0 0 0-3.2 1.6l-.3.4H11a6 6 0 0 0-6 6v1a5 5 0 0 0 2 4v3a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1z\" /><path d=\"M16 10h.01\" /><path d=\"M2 8v1a2 2 0 0 0 2 2h1\" />"},
+  {l:"Banque",p:"<path d=\"M10 18v-7\" /><path d=\"M11.119 2.205a2 2 0 0 1 1.762 0l7.84 3.846A.5.5 0 0 1 20.5 7h-17a.5.5 0 0 1-.22-.949z\" /><path d=\"M14 18v-7\" /><path d=\"M18 18v-7\" /><path d=\"M3 22h18\" /><path d=\"M6 18v-7\" />"},
+  {l:"Tableau de bord",p:"<path d=\"m12 14 4-4\" /><path d=\"M3.34 19a10 10 0 1 1 17.32 0\" />"},
+  {l:"Réglages",p:"<path d=\"M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915\" /><circle cx=\"12\" cy=\"12\" r=\"3\" />"},
+  {l:"Clé à molette",p:"<path d=\"M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.106-3.105c.32-.322.863-.22.983.218a6 6 0 0 1-8.259 7.057l-7.91 7.91a1 1 0 0 1-2.999-3l7.91-7.91a6 6 0 0 1 7.057-8.259c.438.12.54.662.219.984z\" />"},
+  {l:"Marteau",p:"<path d=\"m15 12-9.373 9.373a1 1 0 0 1-3.001-3L12 9\" /><path d=\"m18 15 4-4\" /><path d=\"m21.5 11.5-1.914-1.914A2 2 0 0 1 19 8.172v-.344a2 2 0 0 0-.586-1.414l-1.657-1.657A6 6 0 0 0 12.516 3H9l1.243 1.243A6 6 0 0 1 12 8.485V10l2 2h1.172a2 2 0 0 1 1.414.586L18.5 14.5\" />"},
+  {l:"Casque de chantier",p:"<path d=\"M10 10V5a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v5\" /><path d=\"M14 6a6 6 0 0 1 6 6v3\" /><path d=\"M4 15v-3a6 6 0 0 1 6-6\" /><rect x=\"2\" y=\"15\" width=\"20\" height=\"4\" rx=\"1\" />"},
+  {l:"Camion",p:"<path d=\"M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2\" /><path d=\"M15 18H9\" /><path d=\"M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14\" /><circle cx=\"17\" cy=\"18\" r=\"2\" /><circle cx=\"7\" cy=\"18\" r=\"2\" />"},
+  {l:"Colis",p:"<path d=\"M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z\" /><path d=\"M12 22V12\" /><polyline points=\"3.29 7 12 12 20.71 7\" /><path d=\"m7.5 4.27 9 5.15\" />"},
+  {l:"Boîte",p:"<path d=\"M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z\" /><path d=\"m3.3 7 8.7 5 8.7-5\" /><path d=\"M12 22V12\" />"},
+  {l:"Panier",p:"<circle cx=\"8\" cy=\"21\" r=\"1\" /><circle cx=\"19\" cy=\"21\" r=\"1\" /><path d=\"M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12\" />"},
+  {l:"Sac",p:"<path d=\"M16 10a4 4 0 0 1-8 0\" /><path d=\"M3.103 6.034h17.794\" /><path d=\"M3.4 5.467a2 2 0 0 0-.4 1.2V20a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6.667a2 2 0 0 0-.4-1.2l-2-2.667A2 2 0 0 0 17 2H7a2 2 0 0 0-1.6.8z\" />"},
+  {l:"Étiquette",p:"<path d=\"M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z\" /><circle cx=\"7.5\" cy=\"7.5\" r=\".5\" fill=\"currentColor\" />"},
+  {l:"Balance",p:"<path d=\"M12 3v18\" /><path d=\"m19 8 3 8a5 5 0 0 1-6 0zV7\" /><path d=\"M3 7h1a17 17 0 0 0 8-2 17 17 0 0 0 8 2h1\" /><path d=\"m5 8 3 8a5 5 0 0 1-6 0zV7\" /><path d=\"M7 21h10\" />"},
+  {l:"Marteau (juge)",p:"<path d=\"m14 13-8.381 8.38a1 1 0 0 1-3.001-3l8.384-8.381\" /><path d=\"m16 16 6-6\" /><path d=\"m21.5 10.5-8-8\" /><path d=\"m8 8 6-6\" /><path d=\"m8.5 7.5 8 8\" />"},
+  {l:"Tampon",p:"<path d=\"M14 13V8.5C14 7 15 7 15 5a3 3 0 0 0-6 0c0 2 1 2 1 3.5V13\" /><path d=\"M20 15.5a2.5 2.5 0 0 0-2.5-2.5h-11A2.5 2.5 0 0 0 4 15.5V17a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1z\" /><path d=\"M5 22h14\" />"},
+  {l:"Signature",p:"<path d=\"m21 17-2.156-1.868A.5.5 0 0 0 18 15.5v.5a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1c0-2.545-3.991-3.97-8.5-4a1 1 0 0 0 0 5c4.153 0 4.745-11.295 5.708-13.5a2.5 2.5 0 1 1 3.31 3.284\" /><path d=\"M3 21h18\" />"},
+  {l:"Empreinte",p:"<path d=\"M12 10a2 2 0 0 0-2 2c0 1.02-.1 2.51-.26 4\" /><path d=\"M14 13.12c0 2.38 0 6.38-1 8.88\" /><path d=\"M17.29 21.02c.12-.6.43-2.3.5-3.02\" /><path d=\"M2 12a10 10 0 0 1 18-6\" /><path d=\"M2 16h.01\" /><path d=\"M21.8 16c.2-2 .131-5.354 0-6\" /><path d=\"M5 19.5C5.5 18 6 15 6 12a6 6 0 0 1 .34-2\" /><path d=\"M8.65 22c.21-.66.45-1.32.57-2\" /><path d=\"M9 6.8a6 6 0 0 1 9 5.2v2\" />"},
+  {l:"Cadenas",p:"<rect width=\"18\" height=\"11\" x=\"3\" y=\"11\" rx=\"2\" ry=\"2\" /><path d=\"M7 11V7a5 5 0 0 1 10 0v4\" />"},
+  {l:"Sécurité",p:"<path d=\"M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z\" /><path d=\"m9 12 2 2 4-4\" />"},
+  {l:"Base de données",p:"<ellipse cx=\"12\" cy=\"5\" rx=\"9\" ry=\"3\" /><path d=\"M3 5V19A9 3 0 0 0 21 19V5\" /><path d=\"M3 12A9 3 0 0 0 21 12\" />"},
+  {l:"Serveur",p:"<rect width=\"20\" height=\"8\" x=\"2\" y=\"2\" rx=\"2\" ry=\"2\" /><rect width=\"20\" height=\"8\" x=\"2\" y=\"14\" rx=\"2\" ry=\"2\" /><line x1=\"6\" x2=\"6.01\" y1=\"6\" y2=\"6\" /><line x1=\"6\" x2=\"6.01\" y1=\"18\" y2=\"18\" />"},
+  {l:"Nuage",p:"<path d=\"M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z\" />"},
+  {l:"Code",p:"<path d=\"m16 18 6-6-6-6\" /><path d=\"m8 6-6 6 6 6\" />"},
+  {l:"Terminal",p:"<path d=\"M12 19h8\" /><path d=\"m4 17 6-6-6-6\" />"},
+  {l:"Branche Git",p:"<path d=\"M15 6a9 9 0 0 0-9 9V3\" /><circle cx=\"18\" cy=\"6\" r=\"3\" /><circle cx=\"6\" cy=\"18\" r=\"3\" />"},
+  {l:"Flux de travail",p:"<rect width=\"8\" height=\"8\" x=\"3\" y=\"3\" rx=\"2\" /><path d=\"M7 11v4a2 2 0 0 0 2 2h4\" /><rect width=\"8\" height=\"8\" x=\"13\" y=\"13\" rx=\"2\" />"},
+  {l:"Liste de tâches",p:"<path d=\"M13 5h8\" /><path d=\"M13 12h8\" /><path d=\"M13 19h8\" /><path d=\"m3 17 2 2 4-4\" /><path d=\"m3 7 2 2 4-4\" />"},
+  {l:"Notification",p:"<path d=\"M10.268 21a2 2 0 0 0 3.464 0\" /><path d=\"M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326\" />"},
+  {l:"Café",p:"<path d=\"M10 2v2\" /><path d=\"M14 2v2\" /><path d=\"M16 8a1 1 0 0 1 1 1v8a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V9a1 1 0 0 1 1-1h14a4 4 0 1 1 0 8h-1\" /><path d=\"M6 2v2\" />"},
+  {l:"Minuteur",p:"<line x1=\"10\" x2=\"14\" y1=\"2\" y2=\"2\" /><line x1=\"12\" x2=\"15\" y1=\"14\" y2=\"11\" /><circle cx=\"12\" cy=\"14\" r=\"8\" />"},
+  {l:"Sablier",p:"<path d=\"M5 22h14\" /><path d=\"M5 2h14\" /><path d=\"M17 22v-4.172a2 2 0 0 0-.586-1.414L12 12l-4.414 4.414A2 2 0 0 0 7 17.828V22\" /><path d=\"M7 2v4.172a2 2 0 0 0 .586 1.414L12 12l4.414-4.414A2 2 0 0 0 17 6.172V2\" />"},
+  {l:"Archive",p:"<rect width=\"20\" height=\"5\" x=\"2\" y=\"3\" rx=\"1\" /><path d=\"M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8\" /><path d=\"M10 12h4\" />"},
+  {l:"Dossier ouvert",p:"<path d=\"m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2\" />"},
+  {l:"Partager",p:"<circle cx=\"18\" cy=\"5\" r=\"3\" /><circle cx=\"6\" cy=\"12\" r=\"3\" /><circle cx=\"18\" cy=\"19\" r=\"3\" /><line x1=\"8.59\" x2=\"15.42\" y1=\"13.51\" y2=\"17.49\" /><line x1=\"15.41\" x2=\"8.59\" y1=\"6.51\" y2=\"10.49\" />"},
+  {l:"Lien",p:"<path d=\"M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71\" /><path d=\"M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71\" />"},
+  {l:"Localisation",p:"<path d=\"M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0\" /><circle cx=\"12\" cy=\"10\" r=\"3\" />"},
+  {l:"Réunion vidéo",p:"<path d=\"m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5\" /><rect x=\"2\" y=\"6\" width=\"14\" height=\"12\" rx=\"2\" />"},
+  {l:"Micro",p:"<path d=\"M12 19v3\" /><path d=\"M19 10v2a7 7 0 0 1-14 0v-2\" /><rect x=\"9\" y=\"2\" width=\"6\" height=\"13\" rx=\"3\" />"},
+  {l:"Rendez-vous",p:"<path d=\"M8 2v4\" /><path d=\"M16 2v4\" /><rect width=\"18\" height=\"18\" x=\"3\" y=\"4\" rx=\"2\" /><path d=\"M3 10h18\" /><path d=\"m9 16 2 2 4-4\" />"},
+  {l:"Signer",p:"<path d=\"M13 21h8\" /><path d=\"M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z\" />"}
+];
+// Inline-SVG school icons. Sized in `em` so they scale with the surrounding
+// font-size (and the 🅣 Taille button), and use currentColor so they follow
+// the text colour — i.e. they behave like a character of text.
+const ICON_SVG = (p) => `<span data-rt-icon contenteditable="false" style="display:inline-block;vertical-align:-0.125em"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block">${p}</svg></span>`;
+// Insert an icon at the caret of the active rich-text field.
+function insertIcon(p) {
+  if (!activeRT) return;
+  activeRT.focus(); restoreSel();
+  const html = ICON_SVG(p) + "\u00A0";
+  const sel = window.getSelection();
+  if (!sel.rangeCount || !activeRT.contains(sel.getRangeAt(0).startContainer)) {
+    const r = document.createRange(); r.selectNodeContents(activeRT); r.collapse(false);
+    sel.removeAllRanges(); sel.addRange(r);
+  }
+  if (sel && sel.rangeCount) {
+    const range = sel.getRangeAt(0);
+    range.deleteContents();
+    const tmp = document.createElement("div"); tmp.innerHTML = html;
+    const frag = document.createDocumentFragment(); let last;
+    while (tmp.firstChild) last = frag.appendChild(tmp.firstChild);
+    range.insertNode(frag);
+    if (last) { range.setStartAfter(last); range.collapse(true); sel.removeAllRanges(); sel.addRange(range); }
+  }
+  saveSel();
+  histSchedule(activeRT);
+}
+
+// Convert a hex colour + alpha (0..1) to rgba() so only the shape's FILL is
+// translucent — the text sitting on top stays fully opaque.
+function hexToRgba(hex, a) {
+  hex = String(hex).replace("#", "");
+  if (hex.length === 3) hex = hex.split("").map(c => c + c).join("");
+  const n = parseInt(hex, 16);
+  return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
+}
+// Wrap the selected text in a coloured "shape" box that sits behind it.
+function wrapShape(style) {
+  if (!activeRT) return;
+  activeRT.focus(); restoreSel();
+  const sel = window.getSelection();
+  if (!sel || !sel.rangeCount) return;
+  const range = sel.getRangeAt(0);
+  const span = document.createElement("span");
+  span.setAttribute("data-shape", "1");
+  span.style.cssText = style;
+  if (range.collapsed) {
+    span.textContent = "Texte";
+    range.insertNode(span);
+  } else {
+    const frag = range.extractContents();
+    // Don't let nested shapes compound their backgrounds.
+    frag.querySelectorAll && frag.querySelectorAll("[data-shape]").forEach(el => {
+      el.removeAttribute("data-shape");
+      ["background", "borderRadius", "padding", "width", "height", "lineHeight", "textAlign"].forEach(k => el.style[k] = "");
+    });
+    span.appendChild(frag);
+    range.insertNode(span);
+  }
+  const nr = document.createRange(); nr.selectNodeContents(span);
+  sel.removeAllRanges(); sel.addRange(nr);
+  saveSel();
+  histSchedule(activeRT);
+}
+
+// ---- Equation editor (LaTeX, rendered with KaTeX — like Word's equation tool) ----
+const EQ_CATS = [
+  ["Basique", ["\\pm","\\mp","\\times","\\div","\\cdot","=","\\neq","\\approx","\\equiv","<",">","\\leq","\\geq","\\infty","^\\circ","\\%","\\therefore","\\because","\\propto","\\sqrt{x}"]],
+  ["Exposants", ["x^{2}","x^{n}","x_{n}","x_{i}^{2}","\\frac{a}{b}","\\frac{d}{dx}","\\overline{x}","\\vec{x}","\\dot{x}","\\hat{x}","\\binom{n}{k}","\\sqrt[n]{x}"]],
+  ["Grec (min.)", ["\\alpha","\\beta","\\gamma","\\delta","\\epsilon","\\zeta","\\eta","\\theta","\\iota","\\kappa","\\lambda","\\mu","\\nu","\\xi","\\pi","\\rho","\\sigma","\\tau","\\upsilon","\\phi","\\chi","\\psi","\\omega"]],
+  ["Grec (Maj.)", ["\\Gamma","\\Delta","\\Theta","\\Lambda","\\Xi","\\Pi","\\Sigma","\\Upsilon","\\Phi","\\Psi","\\Omega"]],
+  ["Sommes / Intégrales", ["\\sum_{i=1}^{n}","\\prod_{i=1}^{n}","\\int_{a}^{b}","\\iint","\\iiint","\\oint","\\lim_{x \\to 0}","\\partial","\\nabla"]],
+  ["Relations", ["\\rightarrow","\\leftarrow","\\Rightarrow","\\Leftrightarrow","\\in","\\notin","\\subset","\\subseteq","\\cup","\\cap","\\forall","\\exists","\\emptyset","\\setminus","\\mid"]],
+  ["Matrices", ["\\begin{pmatrix}a & b \\\\ c & d\\end{pmatrix}","\\begin{bmatrix}a & b \\\\ c & d\\end{bmatrix}","\\begin{vmatrix}a & b \\\\ c & d\\end{vmatrix}","\\begin{cases}a & x>0 \\\\ b & x \\leq 0\\end{cases}"]]
+];
+function eqRenderHTML(latex, displayMode) {
+  try {
+    if (typeof katex === "undefined") return latex;
+    return katex.renderToString(latex, { throwOnError: false, displayMode: !!displayMode });
+  } catch (e) { return '<span style="color:#c0392b">Erreur de formule</span>'; }
+}
+function eqSpanHTML(latex, color, size) {
+  let style = "";
+  if (color) style += `color:${color};`;
+  if (size) style += `font-size:${size}px;`;
+  const styleAttr = style ? ` style="${style}"` : "";
+  return `<span data-rt-eq="${latex.replace(/"/g, "&quot;")}"${color ? ` data-rt-eq-color="${color}"` : ""}${size ? ` data-rt-eq-size="${size}"` : ""} contenteditable="false"${styleAttr}>${eqRenderHTML(latex, false)}</span>`;
+}
+let eqEditTarget = null; // the existing equation span being edited (null = inserting new)
+// Insert (or replace) an equation at the caret of the active rich-text field.
+function insertEquation(latex, color, size) {
+  if (!latex || !latex.trim() || !activeRT) return;
+  activeRT.focus();
+  if (eqEditTarget && eqEditTarget.isConnected) {
+    const tmp = document.createElement("div");
+    tmp.innerHTML = eqSpanHTML(latex, color, size);
+    eqEditTarget.replaceWith(tmp.firstChild);
+    eqEditTarget = null;
+  } else {
+    restoreSel();
+    const html = eqSpanHTML(latex, color, size) + "\u00A0";
+    const sel = window.getSelection();
+    if (!sel.rangeCount || !activeRT.contains(sel.getRangeAt(0).startContainer)) {
+      const r = document.createRange(); r.selectNodeContents(activeRT); r.collapse(false);
+      sel.removeAllRanges(); sel.addRange(r);
+    }
+    if (sel && sel.rangeCount) {
+      const range = sel.getRangeAt(0);
+      range.deleteContents();
+      const tmp = document.createElement("div"); tmp.innerHTML = html;
+      const frag = document.createDocumentFragment(); let last;
+      while (tmp.firstChild) last = frag.appendChild(tmp.firstChild);
+      range.insertNode(frag);
+      if (last) { range.setStartAfter(last); range.collapse(true); sel.removeAllRanges(); sel.addRange(range); }
+    }
+  }
+  saveSel();
+  histSchedule(activeRT);
+}
+
+function initRichToolbar() {
+  const undoBtn = $("rtUndo"), redoBtn = $("rtRedo");
+  undoBtn.addEventListener("pointerdown", e => e.preventDefault());
+  undoBtn.addEventListener("click", () => histDo(-1));
+  redoBtn.addEventListener("pointerdown", e => e.preventDefault());
+  redoBtn.addEventListener("click", () => histDo(1));
+  document.querySelectorAll("#rtToolbar [data-cmd]").forEach(btn => {
+    btn.addEventListener("pointerdown", e => e.preventDefault()); // keep the field's selection
+    btn.addEventListener("click", () => rtExec(btn.dataset.cmd));
+  });
+  const color = $("rtColor");
+  color.addEventListener("pointerdown", saveSel);
+  color.addEventListener("input", () => setColor(color.value, false));
+  const font = $("rtFont");
+  font.addEventListener("pointerdown", saveSel);
+  font.addEventListener("change", () => { rtExec("fontName", font.value || "inherit"); font.value = ""; });
+
+  const sizeBtn = $("rtSizeBtn"), sizeMenu = $("rtSizeMenu");
+  $("rtSizes").innerHTML = SIZE_OPTS.map(([s,l]) => `<button type="button" class="rt-size-btn" data-px="${s}">${l}<span class="px">${s}px</span></button>`).join("");
+  $("rtSizes").querySelectorAll(".rt-size-btn").forEach(b => {
+    b.addEventListener("pointerdown", e => e.preventDefault()); // keep the field's selection
+    b.addEventListener("click", () => { rtFontSize(parseInt(b.dataset.px)); sizeMenu.classList.add("hidden"); });
+  });
+  sizeBtn.addEventListener("pointerdown", e => e.preventDefault());
+  sizeBtn.addEventListener("click", () => { saveSel(); closeRtMenus(sizeMenu); sizeMenu.classList.toggle("hidden"); });
+
+  // ---- School icon picker ----
+  const iconBtn = $("rtIconBtn"), iconMenu = $("rtIconMenu"), iconWrap = $("rtIcons"), iconSearch = $("rtIconSearch");
+  function renderIcons(filter) {
+    const f = (filter || "").trim().toLowerCase();
+    const list = ICON_LIB.map((ic, i) => ({ ic, i })).filter(({ ic }) => !f || ic.l.toLowerCase().includes(f));
+    iconWrap.innerHTML = list.length
+      ? list.map(({ ic, i }) => `<button type="button" class="rt-icon-btn" data-i="${i}" title="${ic.l}">${ICON_SVG(ic.p)}</button>`).join("")
+      : `<div class="rt-icon-empty">Aucune icône</div>`;
+    iconWrap.querySelectorAll(".rt-icon-btn").forEach(b => {
+      b.addEventListener("pointerdown", e => e.preventDefault()); // keep the field's caret
+      b.addEventListener("click", () => { insertIcon(ICON_LIB[+b.dataset.i].p); iconMenu.classList.add("hidden"); });
+    });
+  }
+  renderIcons("");
+  iconSearch.addEventListener("input", () => renderIcons(iconSearch.value));
+  iconBtn.addEventListener("pointerdown", e => e.preventDefault());
+  iconBtn.addEventListener("click", () => {
+    saveSel();
+    closeRtMenus(iconMenu);
+    const willShow = iconMenu.classList.contains("hidden");
+    if (willShow) { iconSearch.value = ""; renderIcons(""); }
+    iconMenu.classList.toggle("hidden");
+  });
+
+
+  // ---- Shape (coloured background for text) tool ----
+  const shapeBtn = $("rtShapeBtn"), shapeMenu = $("rtShapeMenu");
+  const shapeColor = $("rtShapeColor"), shapeOpac = $("rtShapeOpacity"), shapeOpacVal = $("rtShapeOpacVal");
+  const shapeW = $("rtShapeW"), shapeH = $("rtShapeH"), shapePrev = $("rtShapePreview");
+  let shapeRadius = "6px";
+  const shapeFills = ["#FDE68A","#FCA5A5","#A7F3D0","#BFDBFE","#DDD6FE","#FBCFE8","#FED7AA","#E5E7EB","#FEF08A","#99F6E4"];
+  $("rtShapeSwatches").innerHTML = shapeFills.map(c => `<button type="button" class="rt-shape-sw" data-c="${c}" style="background:${c}"></button>`).join("");
+  function buildShapeStyle() {
+    const a = (parseInt(shapeOpac.value, 10) || 100) / 100;
+    let s = `display:inline-block;background:${hexToRgba(shapeColor.value, a)};border-radius:${shapeRadius};padding:3px 10px;vertical-align:middle;`;
+    const w = shapeW.value.trim(), h = shapeH.value.trim();
+    if (w && w !== "auto") s += `width:${w};text-align:center;`;
+    if (h && h !== "auto") s += `height:${h};line-height:${h};`;
+    return s;
+  }
+  function updateShapePreview() {
+    shapePrev.style.cssText = buildShapeStyle();
+    shapeOpacVal.textContent = shapeOpac.value + "%";
+  }
+  shapeMenu.querySelectorAll(".rt-shape-type").forEach(b => {
+    b.addEventListener("pointerdown", e => e.preventDefault());
+    b.addEventListener("click", () => {
+      shapeMenu.querySelectorAll(".rt-shape-type").forEach(x => x.classList.remove("active"));
+      b.classList.add("active"); shapeRadius = b.dataset.r; updateShapePreview();
+    });
+  });
+  $("rtShapeSwatches").querySelectorAll(".rt-shape-sw").forEach(b => {
+    b.addEventListener("pointerdown", e => e.preventDefault());
+    b.addEventListener("click", () => { shapeColor.value = b.dataset.c; updateShapePreview(); });
+  });
+  shapeColor.addEventListener("input", updateShapePreview);
+  shapeOpac.addEventListener("input", updateShapePreview);
+  shapeW.addEventListener("input", updateShapePreview);
+  shapeH.addEventListener("input", updateShapePreview);
+  $("rtShapeInsert").addEventListener("pointerdown", e => e.preventDefault());
+  $("rtShapeInsert").addEventListener("click", () => { wrapShape(buildShapeStyle()); shapeMenu.classList.add("hidden"); });
+  shapeBtn.addEventListener("pointerdown", e => e.preventDefault());
+  shapeBtn.addEventListener("click", () => {
+    saveSel();
+    closeRtMenus(shapeMenu);
+    shapeMenu.classList.toggle("hidden");
+    updateShapePreview();
+  });
+  updateShapePreview();
+
+  // ---- Equation tool (LaTeX, KaTeX-rendered — every equation Word can build) ----
+  const eqBtn = $("rtEqBtn"), eqMenu = $("rtEqMenu"), eqCatsWrap = $("rtEqCats"), eqSymsWrap = $("rtEqSyms");
+  const eqInput = $("rtEqInput"), eqPreview = $("rtEqPreview"), eqInsertBtn = $("rtEqInsert"), eqDeleteBtn = $("rtEqDelete");
+  const eqColor = $("rtEqColor"), eqColorClear = $("rtEqColorClear"), eqSizesWrap = $("rtEqSizes");
+  const EQ_SIZE_OPTS = [[14,"P"],[18,"N"],[24,"G"],[32,"TG"],[42,"Énorme"]];
+  let eqCurColor = ""; // "" = auto/inherit
+  let eqCurSize = 24;  // default equation size in px
+  function renderEqSizes() {
+    eqSizesWrap.innerHTML = EQ_SIZE_OPTS.map(([s]) => `<button type="button" class="rt-eq-size-btn${s === eqCurSize ? " active" : ""}" data-px="${s}">${s}</button>`).join("");
+    eqSizesWrap.querySelectorAll(".rt-eq-size-btn").forEach(b => {
+      b.addEventListener("pointerdown", e => e.preventDefault());
+      b.addEventListener("click", () => { eqCurSize = parseInt(b.dataset.px); renderEqSizes(); updateEqPreview(); });
+    });
+  }
+  renderEqSizes();
+  eqColor.addEventListener("pointerdown", e => e.stopPropagation());
+  eqColor.addEventListener("input", () => { eqCurColor = eqColor.value; updateEqPreview(); });
+  eqColorClear.addEventListener("pointerdown", e => e.preventDefault());
+  eqColorClear.addEventListener("click", () => { eqCurColor = ""; updateEqPreview(); });
+  let eqCatIdx = 0;
+  function renderEqCats() {
+    eqCatsWrap.innerHTML = EQ_CATS.map((c, i) => `<button type="button" class="rt-eq-cat${i === eqCatIdx ? " active" : ""}" data-i="${i}">${c[0]}</button>`).join("");
+    eqCatsWrap.querySelectorAll(".rt-eq-cat").forEach(b => {
+      b.addEventListener("pointerdown", e => e.preventDefault());
+      b.addEventListener("click", () => { eqCatIdx = +b.dataset.i; renderEqCats(); renderEqSyms(); });
+    });
+  }
+  function renderEqSyms() {
+    const items = EQ_CATS[eqCatIdx][1];
+    eqSymsWrap.innerHTML = items.map((ltx, i) => `<button type="button" class="rt-eq-sym" data-i="${i}" title="${ltx.replace(/"/g, "&quot;")}"></button>`).join("");
+    eqSymsWrap.querySelectorAll(".rt-eq-sym").forEach(b => {
+      const ltx = items[+b.dataset.i];
+      b.innerHTML = eqRenderHTML(ltx, false);
+      b.addEventListener("pointerdown", e => e.preventDefault());
+      b.addEventListener("click", () => eqInsertAtCursor(ltx));
+    });
+  }
+  function eqInsertAtCursor(text) {
+    const start = eqInput.selectionStart ?? eqInput.value.length;
+    const end = eqInput.selectionEnd ?? eqInput.value.length;
+    const val = eqInput.value;
+    eqInput.value = val.slice(0, start) + text + val.slice(end);
+    eqInput.focus();
+    const pos = start + text.length;
+    eqInput.setSelectionRange(pos, pos);
+    updateEqPreview();
+  }
+  function updateEqPreview() {
+    const v = eqInput.value.trim();
+    if (!v) { eqPreview.innerHTML = ""; eqPreview.textContent = "Aperçu"; eqPreview.style.color = "#999"; eqPreview.style.fontSize = ""; return; }
+    eqPreview.style.color = eqCurColor || "";
+    eqPreview.style.fontSize = eqCurSize ? eqCurSize + "px" : "";
+    eqPreview.innerHTML = eqRenderHTML(v, true);
+  }
+  eqInput.addEventListener("input", updateEqPreview);
+  eqInput.addEventListener("keydown", e => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); eqInsertBtn.click(); } });
+  renderEqCats(); renderEqSyms();
+  eqBtn.addEventListener("pointerdown", e => e.preventDefault());
+  eqBtn.addEventListener("click", () => {
+    saveSel();
+    closeRtMenus(eqMenu);
+    const willShow = eqMenu.classList.contains("hidden");
+    if (willShow) {
+      eqEditTarget = null; eqInput.value = "";
+      eqCurColor = ""; eqColor.value = "#000000"; eqCurSize = 24; renderEqSizes();
+      updateEqPreview(); eqDeleteBtn.classList.add("hidden");
+      eqInsertBtn.textContent = "Insérer l'équation";
+    }
+    eqMenu.classList.toggle("hidden");
+    if (willShow) setTimeout(() => eqInput.focus(), 0);
+  });
+  eqInsertBtn.addEventListener("pointerdown", e => e.preventDefault());
+  eqInsertBtn.addEventListener("click", () => {
+    const v = eqInput.value.trim();
+    if (!v) { eqMenu.classList.add("hidden"); return; }
+    insertEquation(v, eqCurColor, eqCurSize);
+    eqMenu.classList.add("hidden");
+  });
+  // Click an existing equation in the text to re-open it for editing.
+  document.addEventListener("click", e => {
+    const span = e.target.closest("[data-rt-eq]");
+    if (!span) return;
+    const host = span.closest(".rt");
+    if (host) {
+      activeRT = host;
+      const r = document.createRange(); r.selectNode(span);
+      const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(r);
+      saveSel();
+    }
+    eqEditTarget = span;
+    eqInput.value = span.getAttribute("data-rt-eq") || "";
+    eqCurColor = span.getAttribute("data-rt-eq-color") || "";
+    eqColor.value = eqCurColor || "#000000";
+    eqCurSize = parseInt(span.getAttribute("data-rt-eq-size")) || 24;
+    renderEqSizes();
+    updateEqPreview();
+    eqDeleteBtn.classList.remove("hidden");
+    eqInsertBtn.textContent = "Modifier l'équation";
+    closeRtMenus(eqMenu);
+    eqMenu.classList.remove("hidden");
+    eqInput.focus();
+    e.preventDefault();
+  });
+  eqDeleteBtn.addEventListener("pointerdown", e => e.preventDefault());
+  eqDeleteBtn.addEventListener("click", () => {
+    if (eqEditTarget && eqEditTarget.isConnected) {
+      const host = eqEditTarget.closest(".rt");
+      eqEditTarget.remove();
+      if (host) { activeRT = host; histSchedule(host); }
+    }
+    eqEditTarget = null;
+    eqMenu.classList.add("hidden");
+  });
+
+  // ---- List style (bullets / numbering) ----
+  const bulletBtn = $("rtBulletBtn"), bulletMenu = $("rtBulletMenu");
+  const numberBtn = $("rtNumberBtn"), numberMenu = $("rtNumberMenu");
+  const BULLET_STYLES = [["disc","●  Disque"],["circle","○  Cercle"],["square","■  Carré"],['"–  "',"–  Tiret"],['"✓  "',"✓  Coche"],['"★  "',"★  Étoile"],['"➤  "',"➤  Flèche"]];
+  const NUMBER_STYLES = [["decimal","1.  1 2 3"],["decimal-leading-zero","01.  01 02 03"],["lower-alpha","a.  a b c"],["upper-alpha","A.  A B C"],["lower-roman","i.  i ii iii"],["upper-roman","I.  I II III"]];
+  function buildListMenu(wrapId, styles, ordered) {
+    $(wrapId).innerHTML = styles.map(([v, l], i) => `<button type="button" class="rt-list-opt" data-i="${i}">${l}</button>`).join("");
+    $(wrapId).querySelectorAll(".rt-list-opt").forEach(b => {
+      b.addEventListener("pointerdown", e => e.preventDefault());
+      b.addEventListener("click", () => { applyList(ordered, styles[+b.dataset.i][0]); closeRtMenus(null); });
+    });
+  }
+  buildListMenu("rtBulletList", BULLET_STYLES, false);
+  buildListMenu("rtNumberList", NUMBER_STYLES, true);
+  bulletBtn.addEventListener("pointerdown", e => e.preventDefault());
+  bulletBtn.addEventListener("click", () => { saveSel(); closeRtMenus(bulletMenu); bulletMenu.classList.toggle("hidden"); });
+  numberBtn.addEventListener("pointerdown", e => e.preventDefault());
+  numberBtn.addEventListener("click", () => { saveSel(); closeRtMenus(numberMenu); numberMenu.classList.toggle("hidden"); });
+
+  // ---- Full colour chart ----
+  let paletteMode = "text";
+  const applyColor = (c) => setColor(c, paletteMode === "highlight");
+  const colors = [];
+  for (let i = 0; i < 12; i++) colors.push(`hsl(0,0%,${Math.round(i*100/11)}%)`);      // grayscale row
+  [90,80,68,56,44,32,20].forEach(L => { for (let h = 0; h < 360; h += 30) colors.push(`hsl(${h},85%,${L}%)`); });
+  $("rtSwatches").innerHTML = colors.map(c => `<button type="button" class="rt-swatch" data-color="${c}" style="background:${c}"></button>`).join("");
+  $("rtSwatches").querySelectorAll(".rt-swatch").forEach(b => {
+    b.addEventListener("pointerdown", e => e.preventDefault());
+    b.addEventListener("click", () => applyColor(b.dataset.color));
+  });
+  const palBtn = $("rtPaletteBtn");
+  palBtn.addEventListener("pointerdown", e => e.preventDefault());
+  palBtn.addEventListener("click", () => { saveSel(); closeRtMenus($("rtPalette")); $("rtPalette").classList.toggle("hidden"); });
+  $("rtPaletteMode").querySelectorAll(".rt-mode").forEach(b => {
+    b.addEventListener("pointerdown", e => e.preventDefault());
+    b.addEventListener("click", () => { paletteMode = b.dataset.target; $("rtPaletteMode").querySelectorAll(".rt-mode").forEach(x => x.classList.toggle("active", x === b)); });
+  });
+}
+// A contentEditable rich-text field. Reads/writes innerHTML (HTML).
+const richField = (cls, html, ph) => { const h = Array.isArray(html) ? html.map(esc).join("<br>") : (html || ""); return `<div class="rt ${cls}" contenteditable="true" dir="auto" data-ph="${esc(ph||"")}">${h}</div>`; };
+const rtHTML = el => { if (!el) return ""; let h = (el.innerHTML || "").trim(); if (/^(<br\s*\/?>|&nbsp;|\s)*$/i.test(h)) return ""; return h; };
+// Removes a leading number marker (e.g. "1", "1.", "1)") from a section name so Arabic flips RTL.
+const stripHeadingMarker = (v) => {
+  let s = (v == null ? "" : String(v));
+  const open = (s.match(/^(\s*<[^>]+>\s*)*/) || [""])[0];
+  let rest = s.slice(open.length);
+  rest = rest.replace(/^\s*[0-9\u0660-\u0669]{1,3}\s*[.\)\-–—:]?\s+(?=\S)/, "");
+  return open + rest;
+};
+// Set a rich field's HTML. Old lessons stored points/astuce as arrays → join lines.
+const setRT = (id, v) => { const el = $(id); if (el) el.innerHTML = Array.isArray(v) ? v.map(esc).join("<br>") : (v || ""); };
+
+const GRADES = [["1ap","1AP"],["2ap","2AP"],["3ap","3AP"],["4ap","4AP"],["5ap","5AP"],["6ap","6AP"],
+                ["1ac","1AC"],["2ac","2AC"],["3ac","3AC"],["tc","Tronc Commun"],["1bac","1Bac"],["2bac","2Bac"]];
+const SUBJECTS = [["maths","Maths"],["eveil","Éveil scientifique"],["arabe","Arabe"],["islam","Éducation islamique"],
+                  ["francais","Français"],["social","Social / Histoire-Géo"],["fartist","Arts plastiques"],
+                  ["sport","Sport / EPS"],["competences","Compétences / Vie"],["physique","Physique-Chimie"],
+                  ["svt","SVT"],["anglais","Anglais"],["philo","Philosophie"]];
+GRADES.forEach(([v,l])=>$("grade").insertAdjacentHTML("beforeend",`<option value="${v}">${l}</option>`));
+SUBJECTS.forEach(([v,l])=>$("subject").insertAdjacentHTML("beforeend",`<option value="${v}">${l}</option>`));
+$("grade").value="6ap"; $("subject").value="maths";
+
+// Filières per high-school level — MUST match the app's ids exactly.
+const FILIERES_BY_GRADE = {
+  tc:   [["scientifique","Scientifique"],["adab","الآداب والعلوم الإنسانية"]],
+  "1bac":[["sci-maths","Sciences Mathématiques"],["sci-exp","Sciences Expérimentales"],["adab","الآداب والعلوم الإنسانية"]],
+  "2bac":[["sci-maths","Sciences Mathématiques"],["sci-phys","Sciences Physiques et Chimiques"],["svt","Sciences de la Vie et de la Terre"],["sci-hum","العلوم الإنسانية"],["arabe","اللغة العربية"],["adab","الآداب"]],
+};
+const isLycee = g => ["tc","1bac","2bac"].includes(g);
+function refreshFiliere() {
+  const g = $("grade").value;
+  const list = FILIERES_BY_GRADE[g];
+  if (list) {
+    $("filiere").innerHTML = list.map(([v,l])=>`<option value="${v}">${l}</option>`).join("");
+    $("filiereRow").style.display = "";
+  } else {
+    $("filiere").innerHTML = "";
+    $("filiereRow").style.display = "none";
+  }
+}
+$("grade").addEventListener("change", refreshFiliere);
+refreshFiliere();
+initSizeSelects();
+initRichToolbar();
+
+// Pick a persistence that the browser actually allows. Mobile browsers in
+// private / tracking-protection modes often block IndexedDB and localStorage,
+// which makes the default Firebase Auth persistence fail and the sign-in never
+// complete. Try the durable options, then fall back to in-memory (sign-in still
+// works for the session). Returns once one succeeds.
+async function ensurePersistence() {
+  for (const p of [browserLocalPersistence, browserSessionPersistence, inMemoryPersistence]) {
+    try { await setPersistence(auth, p); return; } catch (e) {}
+  }
+}
+
+$("loginBtn").onclick = async () => {
+  const email = $("email").value.trim(), pass = $("password").value;
+  if (!email || !pass) { status($("loginStatus"), "Entrez l'email et le mot de passe.", false); return; }
+  status($("loginStatus"), "Connexion…", true);
+  $("loginBtn").disabled = true;
+  try {
+    await ensurePersistence();
+    await signInWithEmailAndPassword(auth, email, pass);
+  } catch (e) {
+    status($("loginStatus"), "Échec : " + (e && e.code ? e.code : "") + (e && e.message ? " — " + e.message : ""), false);
+  } finally {
+    $("loginBtn").disabled = false;
+  }
+};
+// Let the keyboard "Go"/Enter submit on mobile too.
+$("password").addEventListener("keydown", e => { if (e.key === "Enter") $("loginBtn").click(); });
+$("email").addEventListener("keydown", e => { if (e.key === "Enter") $("loginBtn").click(); });
+// ── Exam countdown dates ──────────────────────────────────────────────
+// Stored once, globally, at config/examDates so every user of the app sees
+// the same countdown. Keys must match the grade ids used across the app.
+const EXAM_DATE_FIELDS = [["6ap","examDate6ap"],["3ac","examDate3ac"],["1bac","examDate1bac"],["2bac","examDate2bac"]];
+async function loadExamDates() {
+  try {
+    const snap = await getDoc(doc(db, "config", "examDates"));
+    const data = snap.exists() ? snap.data() : {};
+    EXAM_DATE_FIELDS.forEach(([k, id]) => { $(id).value = data[k] || ""; });
+  } catch (e) {
+    status($("examDatesStatus"), "Impossible de charger les dates : " + (e && e.message ? e.message : e), false);
+  }
+}
+$("examDatesSaveBtn").onclick = async () => {
+  $("examDatesSaveBtn").disabled = true;
+  status($("examDatesStatus"), "Enregistrement…", true);
+  try {
+    const data = {};
+    EXAM_DATE_FIELDS.forEach(([k, id]) => { const v = $(id).value; if (v) data[k] = v; });
+    await setDoc(doc(db, "config", "examDates"), data);
+    status($("examDatesStatus"), "✅ Dates d'examen enregistrées.", true);
+  } catch (e) {
+    status($("examDatesStatus"), "Échec : " + (e && e.message ? e.message : e), false);
+  } finally {
+    $("examDatesSaveBtn").disabled = false;
+  }
+};
+
+onAuthStateChanged(auth, user => {
+  if (user) {
+    $("loginCard").classList.add("hidden"); $("editor").classList.remove("hidden");
+    $("who").innerHTML = `<span class="uid">UID: ${user.uid}</span> &nbsp; <button class="small ghost" id="out" style="background:#fff">Déconnexion</button>`;
+    $("out").onclick = () => signOut(auth);
+    if (!$("sections").children.length) newLesson();
+    loadExamDates();
+  } else {
+    $("editor").classList.add("hidden"); $("loginCard").classList.remove("hidden"); $("who").innerHTML="";
+  }
+});
+
+function compress(file, maxDim=800, quality=0.65) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      let { width, height } = img;
+      if (width > height && width > maxDim) { height = Math.round(height*maxDim/width); width = maxDim; }
+      else if (height > maxDim) { width = Math.round(width*maxDim/height); height = maxDim; }
+      const c = document.createElement("canvas"); c.width = width; c.height = height;
+      c.getContext("2d").drawImage(img, 0, 0, width, height);
+      resolve(c.toDataURL("image/jpeg", quality));
+      URL.revokeObjectURL(img.src);
+    };
+    img.onerror = reject;
+    img.src = URL.createObjectURL(file);
+  });
+}
+function wireImage(fileInput, thumb, onData) {
+  fileInput.onchange = async () => {
+    const f = fileInput.files[0]; if (!f) return;
+    const data = await compress(f);
+    onData(data); thumb.src = data; thumb.classList.remove("hidden");
+  };
+}
+const rmBtn = node => { const b=document.createElement("button"); b.className="rm small"; b.textContent="✕"; b.onclick=()=>node.remove(); return b; };
+
+// Per-block layout: side-by-side disposition + size.
+function layoutBar(L) {
+  L = L || {};
+  return `<div class="b-layout">
+    <span class="b-lab">Disposition</span>
+    <select class="b-float">
+      <option value=""${L.float ? "" : " selected"}>Pleine largeur</option>
+      <option value="left"${L.float === "left" ? " selected" : ""}>◧ Côte à côte (gauche)</option>
+      <option value="right"${L.float === "right" ? " selected" : ""}>◨ Côte à côte (droite)</option>
+    </select>
+    <span class="b-lab">L</span><input type="text" class="b-w" value="${L.w || ""}" placeholder="auto · 45%" title="Largeur (auto · 200px · 45%)">
+    <span class="b-lab">H</span><input type="text" class="b-h" value="${L.h || ""}" placeholder="auto" title="Hauteur (optionnel)">
+  </div>`;
+}
+// Wire the layout bar (live hint of the chosen width/side in the editor).
+function wireLayout(d) {
+  const content = d.querySelector(".b-content");
+  const fEl = d.querySelector(".b-float"), wEl = d.querySelector(".b-w"), hEl = d.querySelector(".b-h");
+  function apply() {
+    const fl = fEl.value, w = wEl.value.trim(), h = hEl.value.trim();
+    content.style.float = fl || "";
+    content.style.width = (w && w !== "auto") ? w : (fl ? "45%" : "");
+    content.style.height = (h && h !== "auto") ? h : "";
+    content.style.marginRight = fl === "left" ? "14px" : "";
+    content.style.marginLeft = fl === "right" ? "14px" : "";
+  }
+  [wEl, hEl].forEach(el => el.addEventListener("input", apply));
+  fEl.addEventListener("change", apply);
+  apply();
+}
+// Read the layout values off a block element.
+function readLayout(b) {
+  const o = {};
+  const fl = b.querySelector(".b-float");
+  if (fl && fl.value) o.float = fl.value;
+  const g = s => { const el = b.querySelector(s); return el ? String(el.value).trim() : ""; };
+  const w = g(".b-w"), h = g(".b-h");
+  if (w && w !== "auto") o.w = w;
+  if (h && h !== "auto") o.h = h;
+  return o;
+}
+function addBlock(container, type, value, size, layout) {
+  const d = document.createElement("div"); d.className = "block-item"; d.dataset.type = type;
+  d.style.cssText = "border:1px dashed #cdb4c4;border-radius:9px;padding:10px 12px;margin:8px 0;position:relative;background:#fff;overflow:hidden;";
+  let inner = "";
+  if (type === "text") {
+    inner = `<label>Texte</label>${richField("b-text", value, "")}<input type="hidden" class="b-size" value="${size || 14}">`;
+  }
+  else if (type === "points") inner = `<label>Points (Entrée = nouveau point)</label>${richField("b-points", value, "")}${sizeSelect("b-size", size, 14)}`;
+  else inner = `<label>Image</label><input type="file" class="b-file" accept="image/*"><img class="thumb b-thumb ${value?"":"hidden"}" ${value?`src="${value}"`:""}>`;
+  d.innerHTML = `<div class="b-content">${inner}</div>${layoutBar(layout)}`;
+  const rm = document.createElement("button"); rm.className = "small"; rm.textContent = "✕";
+  rm.style.cssText = "position:absolute;top:6px;right:6px;background:#fff;color:#c0392b;border:1px solid #f0d0d0;border-radius:8px;padding:2px 8px;z-index:2;";
+  rm.onclick = () => d.remove(); d.appendChild(rm);
+  container.appendChild(d);
+  if (type === "image") { d._image = value || ""; wireImage(d.querySelector(".b-file"), d.querySelector(".b-thumb"), data => { d._image = data; }); }
+  wireLayout(d);
+}
+
+function addSection(s = {}, container, isEx = false) {
+  container = container || $("sections");
+  const d = document.createElement("div"); d.className = "block section";
+  d.innerHTML = `
+    <label>Nom de la section</label>${richField("s-heading", s.heading, "")}
+    ${sizeSelect("s-size", s.headingSize, 18)}
+    <div class="s-blocks"></div>
+    <div class="row" style="margin-top:8px">
+      <button type="button" class="ghost small add-text">+ Texte</button>
+      <button type="button" class="ghost small add-points">+ Points</button>
+      <button type="button" class="ghost small add-image">+ Image</button>
+    </div>
+    ${isEx ? `<label style="margin-top:10px;display:block">Solution (optionnel)</label>${richField("s-solution", s.solution, "")}` : ``}`;
+  d.appendChild(rmBtn(d)); container.appendChild(d);
+  const blocks = d.querySelector(".s-blocks");
+  d.querySelector(".add-text").onclick = () => addBlock(blocks, "text", "");
+  d.querySelector(".add-points").onclick = () => addBlock(blocks, "points", []);
+  d.querySelector(".add-image").onclick = () => addBlock(blocks, "image", "");
+  if (s.blocks && s.blocks.length) {
+    s.blocks.forEach(b => addBlock(blocks, b.type, b.type==="text"?b.text:(b.type==="points"?b.points:b.image), b.size, { float:b.float, w:b.w, h:b.h }));
+  } else if (s.content || (s.bullets && s.bullets.length) || s.image) {
+    if (s.content) addBlock(blocks, "text", s.content);
+    if (s.bullets && s.bullets.length) addBlock(blocks, "points", s.bullets);
+    if (s.image) addBlock(blocks, "image", s.image);
+  } else {
+    addBlock(blocks, "text", "");
+  }
+}
+
+// Read a container of sections (used by both Cours and Exercices)
+function readSections(container) {
+  return [...container.querySelectorAll(".section")].map(s => {
+    const o = { heading: stripHeadingMarker(rtHTML(s.querySelector(".s-heading"))), headingSize: readSize(s.querySelector(".s-size"), 18) };
+    const blocks = [...s.querySelector(".s-blocks").children].map(b => {
+      const t = b.dataset.type;
+      if (t === "text") { const v = rtHTML(b.querySelector(".b-text")); const sz = readSize(b.querySelector(".b-size"), 14); return v ? { type:"text", text:v, size:sz, ...readLayout(b) } : null; }
+      if (t === "points") { const v = rtHTML(b.querySelector(".b-points")); const sz = readSize(b.querySelector(".b-size"), 14); return v ? { type:"points", points:v, size:sz, ...readLayout(b) } : null; }
+      if (t === "image") { return b._image ? { type:"image", image:b._image, ...readLayout(b) } : null; }
+      return null;
+    }).filter(Boolean);
+    if (blocks.length) o.blocks = blocks;
+    const sol = s.querySelector(".s-solution"); if (sol) { const sv = rtHTML(sol); if (sv) o.solution = sv; }
+    return o;
+  }).filter(s => s.heading || (s.blocks && s.blocks.length) || s.solution);
+}
+$("addSection").onclick = () => addSection();
+
+function mkQuestion(container, e = {}) {
+  const o = e.opts || ["","","",""];
+  const d = document.createElement("div"); d.className = "block question";
+  d.innerHTML = `
+    <label>Question</label>${richField("e-q", e.q, "")}
+    <div class="row">
+      <div><label>Option 1</label>${richField("e-o", o[0], "")}</div>
+      <div><label>Option 2</label>${richField("e-o", o[1], "")}</div>
+      <div><label>Option 3</label>${richField("e-o", o[2], "")}</div>
+      <div><label>Option 4</label>${richField("e-o", o[3], "")}</div>
+    </div>
+    <label>Bonne réponse</label>
+    <select class="e-ans"><option value="0">Option 1</option><option value="1">Option 2</option><option value="2">Option 3</option><option value="3">Option 4</option></select>
+    <label>Explication</label>${richField("e-exp", e.exp, "")}
+    ${sizeSelect("e-size", e.size, 22, SIZE_OPTS_QUIZ)}`;
+  d.appendChild(rmBtn(d)); container.appendChild(d);
+  if (e.ans != null) { const ix = o.indexOf(e.ans); if (ix>=0) d.querySelector(".e-ans").value = String(ix); }
+}
+$("addQuiz").onclick = () => mkQuestion($("quiz"));
+$("addExSection").onclick = () => addSection({}, $("exSections"), true);
+
+function readQuestions(container) {
+  return [...container.querySelectorAll(".question")].map(e => {
+    const opts = [...e.querySelectorAll(".e-o")].map(i => rtHTML(i));
+    const ans = opts[parseInt(e.querySelector(".e-ans").value,10)] || "";
+    return { q: rtHTML(e.querySelector(".e-q")), opts, ans, exp: rtHTML(e.querySelector(".e-exp")), size: readSize(e.querySelector(".e-size"), 22) };
+  }).filter(e => e.q);
+}
+
+function buildLesson() {
+  const lesson = {
+    title: $("title").value.trim(),
+    objectiveTitle: rtHTML($("objectiveTitle")),
+    objectiveTitleSize: readSize($("objectiveTitleSize"), 16),
+    objective: rtHTML($("objective")),
+    objectiveSize: readSize($("objectiveSize"), 13),
+    introTitle: rtHTML($("introTitle")),
+    introTitleSize: readSize($("introTitleSize"), 18),
+    introduction: rtHTML($("introduction")),
+    introductionSize: readSize($("introductionSize"), 14),
+    sections: readSections($("sections")),
+    keyPointsTitle: rtHTML($("keyPointsTitle")),
+    keyPointsTitleSize: readSize($("keyPointsTitleSize"), 14),
+    keyPoints: rtHTML($("keyPoints")),
+    keyPointsSize: readSize($("keyPointsSize"), 14),
+    astuceTitle: rtHTML($("astuceTitle")),
+    astuceTitleSize: readSize($("astuceTitleSize"), 14),
+    astuce: rtHTML($("astuce")),
+    astuceSize: readSize($("astuceSize"), 14),
+    exercises: { sections: readSections($("exSections")) },
+    quiz: { title: $("quizTitle").value.trim(), exercises: readQuestions($("quiz")) },
+    examples: [],
+    _updated: Date.now(),
+  };
+  return lesson;
+}
+
+function fillForm(l) {
+  $("title").value = l.title || "";
+  setRT("objectiveTitle", l.objectiveTitle); $("objectiveTitleSize").value = l.objectiveTitleSize || 16;
+  setRT("objective", l.objective); $("objectiveSize").value = l.objectiveSize || 13;
+  setRT("introTitle", l.introTitle); $("introTitleSize").value = l.introTitleSize || 18;
+  setRT("introduction", l.introduction); $("introductionSize").value = l.introductionSize || 14;
+  setRT("keyPointsTitle", l.keyPointsTitle); $("keyPointsTitleSize").value = l.keyPointsTitleSize || 14;
+  setRT("keyPoints", l.keyPoints); $("keyPointsSize").value = l.keyPointsSize || 14;
+  setRT("astuceTitle", l.astuceTitle); $("astuceTitleSize").value = l.astuceTitleSize || 14;
+  setRT("astuce", l.astuce); $("astuceSize").value = l.astuceSize || 14;
+  $("quizTitle").value = l.quiz?.title || "";
+  $("sections").innerHTML=""; (l.sections||[]).forEach(s=>addSection(s)); if(!(l.sections||[]).length) addSection();
+  $("exSections").innerHTML=""; (l.exercises?.sections||[]).forEach(s=>addSection(s,$("exSections"),true)); if(!(l.exercises?.sections||[]).length) addSection({},$("exSections"),true);
+  $("quiz").innerHTML=""; (l.quiz?.exercises||[]).forEach(e=>mkQuestion($("quiz"),e)); if(!(l.quiz?.exercises||[]).length) mkQuestion($("quiz"));
+  // New content loaded — drop any per-field undo history so undo can't reach
+  // across into a previously edited lesson.
+  if (typeof _histMap !== "undefined") document.querySelectorAll(".rt").forEach(f => { _histMap.delete(f); clearTimeout(_histTimers.get(f)); });
+}
+
+function newLesson() { fillForm({ sections:[{}] }); $("title").value=""; status($("saveStatus"),"Nouvelle leçon vide. Remplissez puis enregistrez.",true); }
+$("newBtn").onclick = newLesson; $("newBtn2").onclick = newLesson;
+
+// For high-school levels the address includes the filière, so each filière keeps
+// its own separate lessons. Primaire/Collège keep the plain grade__subject key.
+const gradeKey = () => {
+  const g = $("grade").value;
+  return (isLycee(g) && $("filiere").value) ? `${g}__${$("filiere").value}` : g;
+};
+const docId = () => `${gradeKey()}__${$("subject").value}__${$("title").value.trim()}`;
+const indexId = () => `${gradeKey()}__${$("subject").value}`;
+
+// Delete a lesson doc AND remove its title from the index
+async function deleteLesson(title) {
+  const id = `${gradeKey()}__${$("subject").value}__${title}`;
+  await deleteDoc(doc(db, "lessons", id));
+  const iref = doc(db, "indexes", indexId());
+  let titles = [];
+  try { const s = await getDoc(iref); if (s.exists()) titles = s.data().titles || []; } catch {}
+  titles = titles.filter(t => t !== title);
+  await setDoc(iref, { titles });
+}
+
+$("delBtn").onclick = async () => {
+  const t = $("title").value.trim();
+  if (!t) { status($("saveStatus"), "❌ Aucun titre — rien à supprimer.", false); return; }
+  if (!confirm(`Supprimer définitivement la leçon « ${t} » ?`)) return;
+  try {
+    await deleteLesson(t);
+    newLesson();
+    status($("saveStatus"), `🗑 « ${t} » supprimée.`, true);
+  } catch (e) {
+    status($("saveStatus"), "❌ " + (e.code || e.message) + " — vérifiez les règles Firestore.", false);
+  }
+};
+
+$("saveBtn").onclick = async () => {
+  const lesson = buildLesson();
+  if (!lesson.title) { status($("saveStatus"), "❌ Titre manquant.", false); return; }
+  for (const e of lesson.quiz.exercises)
+    if (!e.opts.includes(e.ans) || !e.ans) { status($("saveStatus"), `❌ Réponse invalide: "${e.q}"`, false); return; }
+  const sizeKB = Math.round(JSON.stringify(lesson).length/1024);
+  if (sizeKB > 950) { status($("saveStatus"), `❌ Leçon trop lourde (${sizeKB} Ko, max ~1000). Réduisez le nombre/poids des images.`, false); return; }
+  try {
+    await setDoc(doc(db, "lessons", docId()), lesson);
+    const iref = doc(db, "indexes", indexId());
+    let titles = [];
+    try { const s = await getDoc(iref); if (s.exists()) titles = s.data().titles || []; } catch {}
+    if (!titles.includes(lesson.title)) titles.push(lesson.title);
+    await setDoc(iref, { titles });
+    status($("saveStatus"), `✅ Enregistré (${sizeKB} Ko). La leçon est dans le cloud.`, true);
+  } catch (e) {
+    status($("saveStatus"), "❌ " + (e.code||e.message) + " — vérifiez les règles Firestore (lessons & indexes).", false);
+  }
+};
+
+$("listBtn").onclick = async () => {
+  const wrap = $("lessonList"), dropWrap = $("lessonDropdownWrap");
+  const isOpen = !wrap.classList.contains("hidden");
+  if (isOpen) { wrap.classList.add("hidden"); dropWrap.classList.remove("open"); return; }
+  wrap.classList.remove("hidden"); dropWrap.classList.add("open");
+  wrap.innerHTML = "Chargement…";
+  try {
+    const s = await getDoc(doc(db, "indexes", indexId()));
+    const titles = s.exists() ? (s.data().titles||[]) : [];
+    if (!titles.length) { wrap.innerHTML = `<div class="hint">Aucune leçon enregistrée pour ce niveau/matière.</div>`; return; }
+    wrap.innerHTML = "";
+    titles.forEach(t => {
+      const row = document.createElement("div"); row.className = "lesson-row";
+      row.innerHTML = `<span style="flex:1">${esc(t)}</span>
+        <button class="small open" style="margin-right:6px">Modifier</button>
+        <button class="small del" style="background:#fff;color:#c0392b;border:1px solid #f0d0d0">Supprimer</button>`;
+      row.querySelector(".open").onclick = async () => {
+        $("title").value = t;
+        const ls = await getDoc(doc(db, "lessons", docId()));
+        if (ls.exists()) { fillForm(ls.data()); status($("saveStatus"), `Leçon « ${t} » chargée.`, true); window.scrollTo(0,0); }
+        wrap.classList.add("hidden"); dropWrap.classList.remove("open");
+      };
+      row.querySelector(".del").onclick = async () => {
+        if (!confirm(`Supprimer définitivement la leçon « ${t} » ?`)) return;
+        try { await deleteLesson(t); row.remove(); status($("saveStatus"), `🗑 « ${t} » supprimée.`, true); }
+        catch (e) { status($("saveStatus"), "❌ " + (e.code || e.message), false); }
+      };
+      wrap.appendChild(row);
+    });
+  } catch (e) { wrap.innerHTML = `<div class="status err" style="display:block">${e.code||e.message}</div>`; }
+};
+
+// ---- Preview (renders the current lesson roughly like the app) ----
+function stripTags(html){ const d=document.createElement("div"); d.innerHTML=html||""; return d.textContent||""; }
+function asPv(v){ return Array.isArray(v) ? v.map(x=>x==null?"":String(x)).join("<br>") : (v==null?"":String(v)); }
+function previewRTL(l){
+  const parts=[]; const push=v=>{ if(Array.isArray(v)) v.forEach(push); else if(v) parts.push(stripTags(String(v))); };
+  push(l.objectiveTitle);push(l.objective);push(l.introTitle);push(l.introduction);
+  (l.sections||[]).forEach(s=>{push(s.heading);(s.blocks||[]).forEach(b=>{push(b.text);push(b.points);});});
+  push(l.keyPointsTitle);push(l.keyPoints);push(l.astuceTitle);push(l.astuce);
+  (l.quiz?.exercises||[]).forEach(q=>{push(q.q);push(q.opts);});
+  const t=parts.join(" ");
+  const ar=(t.match(/[\u0600-\u06FF\u0750-\u077F\uFB50-\uFDFF\uFE70-\uFEFF]/g)||[]).length;
+  const la=(t.match(/[A-Za-zÀ-ÿ]/g)||[]).length;
+  return ar>la;
+}
+function buildPreview(l){
+  const rtl=previewRTL(l), dir=rtl?"rtl":"ltr", ta=rtl?"right":"left", acc="#9B59B6";
+  // Per-section direction: a section's own heading + body decide its direction,
+  // so an Arabic section inside a mostly-French lesson (or vice versa) still
+  // flips correctly instead of following the whole-lesson majority vote.
+  const sectionRTL=(s)=>{
+    const parts=[]; const push=v=>{ if(Array.isArray(v)) v.forEach(push); else if(v) parts.push(stripTags(String(v))); };
+    push(stripHeadingMarker(s.heading)); (s.blocks||[]).forEach(b=>{push(b.text);push(b.points);});
+    const t=parts.join(" ");
+    const ar=(t.match(/[\u0600-\u06FF\u0750-\u077F\uFB50-\uFDFF\uFE70-\uFEFF]/g)||[]).length;
+    const la=(t.match(/[A-Za-zÀ-ÿ]/g)||[]).length;
+    if(ar===0 && la===0) return rtl;
+    return ar>la;
+  };
+  const para=(html,sz)=>`<p style="font-size:${sz}px;color:#2D2D3A;line-height:1.75;margin:0 0 8px;direction:${dir};text-align:${ta}">${asPv(html)}</p>`;
+  const head=(html,sz)=>`<div style="font-weight:800;color:#2D2D3A;margin:14px 0 8px;direction:${dir};text-align:${ta};font-size:${sz}px">${asPv(html)}</div>`;
+  const divider=()=>`<div style="height:1px;background:#0001;margin:18px 0"></div>`;
+  const renderBlock=(b,bDir,bTa)=>{
+    let inner="";
+    if(b.type==="text") inner=`<p style="font-size:${b.size||14}px;color:#2D2D3A;line-height:1.75;margin:0 0 8px;direction:${bDir};text-align:${bTa}">${asPv(b.text)}</p>`;
+    else if(b.type==="image") inner=b.image?`<div style="text-align:center;margin:12px 0"><img src="${b.image}" style="max-width:100%;border-radius:12px"></div>`:"";
+    else if(b.type==="points"){ if(Array.isArray(b.points)) inner=b.points.map(p=>`<div style="display:flex;gap:8px;direction:${bDir};margin:6px 0"><span style="color:${acc}">•</span><span style="flex:1;font-size:${b.size||14}px;text-align:${bTa}">${asPv(p)}</span></div>`).join(""); else inner=`<div style="font-size:${b.size||14}px;direction:${bDir};text-align:${bTa};line-height:1.7">${asPv(b.points)}</div>`; }
+    if(!inner) return "";
+    if(b.float||b.w||b.h){
+      let st="max-width:100%;box-sizing:border-box;";
+      if(b.float) st+=`float:${b.float};`;
+      st+=`width:${b.w||(b.float?"45%":"auto")};`;
+      if(b.h) st+=`height:${b.h};`;
+      if(b.float==="left") st+="margin-right:14px;margin-bottom:8px;";
+      if(b.float==="right") st+="margin-left:14px;margin-bottom:8px;";
+      return `<div style="${st}">${inner}</div>`;
+    }
+    return inner;
+  };
+  let h="";
+  if(l.title) h+=`<div style="font-size:22px;font-weight:800;color:#2D2D3A;margin-bottom:6px;direction:${dir};text-align:${ta}">${esc(l.title)}</div>`;
+  if(l.objectiveTitle) h+=head(l.objectiveTitle,l.objectiveTitleSize||16);
+  if(l.objective) h+=`<div style="background:${acc}14;border:1px solid ${acc}33;border-radius:12px;padding:10px 14px;margin:8px 0 16px;direction:${dir};text-align:${ta};font-weight:700;color:${acc};font-size:${l.objectiveSize||13}px">${asPv(l.objective)}</div>`;
+  if(l.introduction){ h+=head(l.introTitle||(rtl?"مقدمة":"Introduction"),l.introTitleSize||18); h+=para(l.introduction,l.introductionSize||14); }
+  (l.sections||[]).forEach((s,i)=>{ h+=divider(); const sRtl=sectionRTL(s), sDir=sRtl?"rtl":"ltr", sTa=sRtl?"right":"left"; h+=`<div style="font-weight:800;font-size:${s.headingSize||18}px;direction:${sDir};text-align:${sTa};margin-bottom:8px">${asPv(stripHeadingMarker(s.heading))}</div>`; (s.blocks||[]).forEach(b=>h+=renderBlock(b,sDir,sTa)); h+=`<div style="clear:both"></div>`; });
+  const kp=l.keyPoints, hasKp=Array.isArray(kp)?kp.length:!!kp;
+  if(hasKp){ h+=divider(); h+=`<div style="display:inline-block;background:#eee;color:#444;border-radius:20px;padding:4px 12px;font-weight:800;margin-bottom:8px;font-size:${l.keyPointsTitleSize||14}px">${asPv(l.keyPointsTitle||(rtl?"ما يجب حفظه":"À retenir"))}</div>`; if(Array.isArray(kp)) h+=kp.map(p=>`<div style="display:flex;gap:8px;direction:${dir};margin:4px 0"><span>✓</span><span style="flex:1;font-size:${l.keyPointsSize||14}px;text-align:${ta}">${asPv(p)}</span></div>`).join(""); else h+=`<div style="font-size:${l.keyPointsSize||14}px;direction:${dir};text-align:${ta};line-height:1.7">${asPv(kp)}</div>`; }
+  const az=l.astuce, hasAz=Array.isArray(az)?az.length:!!az;
+  if(hasAz){ h+=divider(); h+=`<div style="display:inline-block;background:#F59E0B;color:#fff;border-radius:20px;padding:4px 12px;font-weight:800;margin-bottom:8px;font-size:${l.astuceTitleSize||14}px">${asPv(l.astuceTitle||(rtl?"ملاحظة":"Astuce"))}</div>`; h+=`<div style="background:#FFFBEB;border:1.5px solid #FDE68A;border-radius:14px;padding:14px 16px;direction:${dir};text-align:${ta};font-size:${l.astuceSize||14}px;line-height:1.7">${asPv(az)}</div>`; }
+  const exs=l.exercises?.sections||[];
+  if(exs.length){ h+=divider(); h+=`<div style="font-size:18px;font-weight:800;color:${acc};margin:6px 0 4px;direction:${dir};text-align:${ta}">📝 Exercices</div>`; exs.forEach(s=>{ const sRtl=sectionRTL(s), sDir=sRtl?"rtl":"ltr", sTa=sRtl?"right":"left"; h+=`<div style="font-weight:800;margin:10px 0 4px;direction:${sDir};text-align:${sTa};font-size:${s.headingSize||18}px">${asPv(stripHeadingMarker(s.heading))}</div>`; (s.blocks||[]).forEach(b=>h+=renderBlock(b,sDir,sTa)); h+=`<div style="clear:both"></div>`; }); }
+  const qs=l.quiz?.exercises||[];
+  if(qs.length){ h+=divider(); h+=`<div style="font-size:18px;font-weight:800;color:#7C6FCD;margin:6px 0 6px;direction:${dir};text-align:${ta}">❓ ${esc(l.quiz?.title||"Quiz")}</div>`; qs.forEach((q,qi)=>{ h+=`<div style="background:#fff;border:1px solid #eee;border-radius:12px;padding:12px;margin-bottom:10px;direction:${dir};text-align:${ta}"><div style="font-weight:800;margin-bottom:8px;font-size:${q.size||18}px">${qi+1}. ${asPv(q.q)}</div>`; (q.opts||[]).forEach(o=>{ const ok=(o===q.ans && o); h+=`<div style="padding:7px 10px;border-radius:8px;margin:4px 0;border:2px solid ${ok?"#4CAF50":"#eee"};background:${ok?"#E8F5E9":"#fafafa"};font-size:${Math.round((q.size||22)*0.72)}px">${asPv(o)}${ok?" ✓":""}</div>`; }); h+=`</div>`; }); }
+  return h || `<div style="color:#888;text-align:center;padding:34px 20px;line-height:1.7">La leçon est encore vide.<br>Ajoutez un titre, une section ou du texte dans le formulaire, puis rouvrez l'aperçu.</div>`;
+}
+$("previewBtn").onclick = () => { $("previewBody").innerHTML = buildPreview(buildLesson()); $("previewModal").style.display = "flex"; };
+$("previewClose").onclick = () => { $("previewModal").style.display = "none"; };
+$("previewModal").addEventListener("click", e => { if (e.target.id === "previewModal") $("previewModal").style.display = "none"; });
+
+// ---- Sidebar tabs: show exactly one card in main content at a time ----
+const TAB_IDS = ["examDatesCard","lessonMetaCard","coursCard","exercicesCard","quizCard","retenirCard","dangerCard"];
+const navLinks = Array.from(document.querySelectorAll(".sidebar a.nav-link"));
+function showTab(id) {
+  TAB_IDS.forEach(tid => {
+    const el = document.getElementById(tid);
+    if (el) el.classList.toggle("active", tid === id);
+  });
+  navLinks.forEach(a => a.classList.toggle("active", a.dataset.tab === id));
+  $("editor").scrollTop = 0;
+  window.scrollTo({ top: 0, behavior: "instant" });
+}
+navLinks.forEach(a => {
+  a.addEventListener("click", e => {
+    e.preventDefault();
+    showTab(a.dataset.tab);
+    closeSidebarDrawer();
+  });
+});
+showTab(TAB_IDS[0]);
+
+// ---- Mobile hamburger drawer ----
+// On narrow screens the sidebar becomes an off-canvas drawer instead of a
+// row of chips, so it never eats into the content width. The hamburger
+// button toggles it; a backdrop and outside taps/nav clicks close it again.
+const sidebarEl = document.querySelector(".sidebar");
+const sidebarBackdrop = $("sidebarBackdrop");
+const hamburgerBtn = $("hamburgerBtn");
+function openSidebarDrawer() { sidebarEl.classList.add("open"); sidebarBackdrop.classList.add("show"); }
+function closeSidebarDrawer() { sidebarEl.classList.remove("open"); sidebarBackdrop.classList.remove("show"); }
+if (hamburgerBtn) {
+  hamburgerBtn.addEventListener("click", () => {
+    sidebarEl.classList.contains("open") ? closeSidebarDrawer() : openSidebarDrawer();
+  });
+}
+if (sidebarBackdrop) sidebarBackdrop.addEventListener("click", closeSidebarDrawer);
+window.addEventListener("resize", () => { if (window.innerWidth > 780) closeSidebarDrawer(); });
+
+// ---- Keep the bottom action bar from ever covering page content ----
+// "Enregistrer dans le cloud / Aperçu / Nouvelle leçon" are fixed to the
+// bottom of the screen. Their combined width can wrap to two lines on
+// narrow phones, so a fixed CSS padding guess isn't reliable — this measures
+// the bar's real rendered height and reserves exactly that much space below
+// the page content.
+function syncActionbarSpacer() {
+  const bar = $("actionbarBottom"), main = document.querySelector(".main-content");
+  if (!bar || !main) return;
+  if (getComputedStyle(bar).position === "fixed") {
+    main.style.paddingBottom = (bar.offsetHeight + 24) + "px";
+  } else {
+    main.style.paddingBottom = "";
+  }
+}
+window.addEventListener("load", syncActionbarSpacer);
+window.addEventListener("resize", syncActionbarSpacer);
+new MutationObserver(syncActionbarSpacer)
+  .observe($("actionbarBottom"), { childList: true, subtree: true, characterData: true, attributes: true });
+new MutationObserver(syncActionbarSpacer)
+  .observe($("editor"), { attributes: true, attributeFilter: ["class"] });
+
+// The toolbar is fixed under the header so it never scrolls away; this keeps
+// a matching spacer below it so page content doesn't slide underneath it.
+function syncToolbarSpacer() {
+  const wrap = $("rtToolbarWrap"), spacer = $("rtToolbarSpacer");
+  if (!wrap || !spacer) return;
+  spacer.style.height = getComputedStyle(wrap).position === "fixed" ? wrap.offsetHeight + "px" : "0px";
+}
+window.addEventListener("load", syncToolbarSpacer);
+window.addEventListener("resize", syncToolbarSpacer);
+
+// ---- Keep every floating dropdown/palette fully on-screen ----
+// All of these menus render as position:absolute boxes that hang below their
+// trigger button. When the button sits low on the page, the box could spill
+// past the bottom of the viewport or get hidden behind the fixed bottom
+// action bar. This clamps each menu's height (with internal scrolling) so
+// the whole box always stays above the bottom nav bar and the screen edge.
+(function () {
+  const FLOATING_MENU_IDS = [
+    "rtPalette", "rtSizeMenu", "rtIconMenu", "rtShapeMenu",
+    "rtEqMenu", "rtBulletMenu", "rtNumberMenu", "lessonList"
+  ];
+  const EDGE_MARGIN = 10; // breathing room from the boundary
+  const MIN_HEIGHT = 120; // never shrink a menu smaller than this
+
+  function getBottomBoundary() {
+    const bar = document.querySelector(".actionbar-bottom");
+    if (bar) {
+      const cs = getComputedStyle(bar);
+      if (cs.display !== "none" && cs.visibility !== "hidden") {
+        const r = bar.getBoundingClientRect();
+        if (r.height > 0 && r.top > 0 && r.top <= window.innerHeight) {
+          return r.top;
+        }
+      }
+    }
+    // No usable fixed bottom bar found — reserve a safe margin anyway so
+    // menus never rely solely on detecting it correctly.
+    return window.innerHeight - 70;
+  }
+
+  function clampMenu(el) {
+    if (!el || el.classList.contains("hidden")) return;
+    // Reset horizontal offset before measuring natural position.
+    el.style.left = "";
+    const boundary = getBottomBoundary() - EDGE_MARGIN;
+    const rect = el.getBoundingClientRect();
+    const available = Math.max(MIN_HEIGHT, boundary - rect.top);
+    // Always set an explicit cap (don't just clamp when overflow is
+    // detected) so this can't silently fail to apply.
+    el.style.maxHeight = available + "px";
+    el.style.overflowY = "auto";
+
+    // Horizontal: keep the menu clear of the fixed sidebar on the left and
+    // the screen edge on the right.
+    const sidebar = document.querySelector(".sidebar");
+    let leftLimit = 8;
+    if (sidebar) {
+      const sr = sidebar.getBoundingClientRect();
+      const cs = getComputedStyle(sidebar);
+      if (cs.position === "fixed" && sr.width > 0 && sr.right > 0) leftLimit = sr.right + 8;
+    }
+    const rightLimit = window.innerWidth - 8;
+    const r2 = el.getBoundingClientRect();
+    let shift = 0;
+    if (r2.left < leftLimit) shift = leftLimit - r2.left;
+    else if (r2.right > rightLimit) shift = rightLimit - r2.right;
+    if (shift) el.style.left = shift + "px";
+  }
+
+  function clampAllOpenMenus() {
+    FLOATING_MENU_IDS.forEach(id => clampMenu(document.getElementById(id)));
+  }
+
+  FLOATING_MENU_IDS.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    // Watch both visibility (class="hidden" toggling) AND content changes.
+    // "Mes leçons" in particular shows a small "Chargement…" placeholder
+    // first, then swaps in the real (taller) list once Firestore replies —
+    // that content swap needs its own re-clamp, not just the initial open.
+    const mo = new MutationObserver(() => {
+      if (!el.classList.contains("hidden")) requestAnimationFrame(() => clampMenu(el));
+    });
+    mo.observe(el, { attributes: true, attributeFilter: ["class"], childList: true, subtree: true, characterData: true });
+  });
+  window.addEventListener("resize", clampAllOpenMenus);
+  window.addEventListener("scroll", clampAllOpenMenus, true);
+})();
+
+</script>
+</body>
+</html>
