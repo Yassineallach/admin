@@ -56,6 +56,11 @@ func rebuild() -> void:
 		if not sol.collide:
 			continue
 		if sol.shape_cache == null:
+			# Paper-thin pieces (rugs, slivers left over from photo cuts) get no
+			# collision: degenerate convex hulls upset the physics engine.
+			var bb := sol.bounds().size
+			if minf(bb.x, minf(bb.y, bb.z)) < 0.03:
+				continue
 			var pts := sol.points()
 			if pts.size() < 4:
 				continue

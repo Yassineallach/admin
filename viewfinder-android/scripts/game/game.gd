@@ -110,7 +110,7 @@ func _ready() -> void:
 	_photo_vp = SubViewport.new()
 	_photo_vp.size = Vector2i(PHOTO_PX, PHOTO_PX)
 	_photo_vp.render_target_update_mode = SubViewport.UPDATE_DISABLED
-	_photo_vp.msaa_3d = Viewport.MSAA_2X
+	_photo_vp.msaa_3d = Viewport.MSAA_2X if Progress.quality() >= 2 else Viewport.MSAA_DISABLED
 	add_child(_photo_vp)
 	_photo_cam = Camera3D.new()
 	_photo_cam.fov = rad_to_deg(2.0 * atan(Photo.T))
@@ -224,6 +224,15 @@ func _build_environment() -> void:
 	Game.make_environment(self)
 
 
+## Resolution / anti-aliasing per quality level (cheaper on phones).
+static func apply_quality(vp: Viewport, q: int) -> void:
+	if vp == null:
+		return
+	vp.msaa_3d = Viewport.MSAA_2X if q >= 2 else Viewport.MSAA_DISABLED
+	vp.scaling_3d_scale = [0.7, 0.85, 1.0][clampi(q, 0, 2)]
+	RenderingServer.directional_shadow_atlas_set_size(2048 if q >= 2 else 1024, true)
+
+
 ## Sky, ambient light, fog, glow and the sun. Shared with the menu backdrop.
 static func make_environment(parent: Node) -> void:
 	var env := Environment.new()
@@ -231,8 +240,11 @@ static func make_environment(parent: Node) -> void:
 	var sm := ShaderMaterial.new()
 	sm.shader = load("res://shaders/sky.gdshader")
 	sky.sky_material = sm
-	sky.process_mode = Sky.PROCESS_MODE_REALTIME
-	sky.radiance_size = Sky.RADIANCE_SIZE_64
+	var q := Progress.quality()
+	# The ambient-light cubemap is rendered once, not every frame: re-rendering
+	# the animated sky into it each frame is far too heavy for phone GPUs.
+	sky.process_mode = Sky.PROCESS_MODE_INCREMENTAL if q >= 2 else Sky.PROCESS_MODE_AUTOMATIC
+	sky.radiance_size = Sky.RADIANCE_SIZE_64 if q >= 2 else Sky.RADIANCE_SIZE_32
 	env.background_mode = Environment.BG_SKY
 	env.sky = sky
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
@@ -241,7 +253,7 @@ static func make_environment(parent: Node) -> void:
 	env.ambient_light_color = Color(1.0, 0.92, 0.9)
 	env.tonemap_mode = Environment.TONE_MAPPER_AGX
 	env.tonemap_exposure = 1.05
-	env.glow_enabled = true
+	env.glow_enabled = q >= 1
 	env.glow_intensity = 0.55
 	env.glow_bloom = 0.08
 	env.glow_hdr_threshold = 0.9
@@ -258,12 +270,15 @@ static func make_environment(parent: Node) -> void:
 	sun.rotation = Vector3(deg_to_rad(-48), deg_to_rad(28), 0)
 	sun.light_energy = 1.25
 	sun.light_color = Color(1.0, 0.95, 0.88)
-	sun.shadow_enabled = true
+	sun.shadow_enabled = q >= 1
 	sun.shadow_bias = 0.06
 	sun.shadow_normal_bias = 1.5
 	sun.shadow_blur = 1.5
 	sun.directional_shadow_max_distance = 70.0
-	sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS
+	sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS if q >= 2 else DirectionalLight3D.SHADOW_ORTHOGONAL
+	if q < 2:
+		sun.directional_shadow_max_distance = 40.0
+	Game.apply_quality(parent.get_viewport(), q)
 	parent.add_child(sun)
 
 

@@ -15,6 +15,8 @@ var _pollen: CPUParticles3D
 
 func setup(target: Node3D, center: Vector3, butterfly_at: Vector3) -> void:
 	follow = target
+	if Progress.quality() == 0:
+		return  # low quality: skip pollen, birds and butterflies
 	_pollen = CPUParticles3D.new()
 	_pollen.amount = 70
 	_pollen.lifetime = 9.0

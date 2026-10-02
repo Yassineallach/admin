@@ -26,12 +26,12 @@ float vnoise(vec2 p) {
 float fbm(vec2 p) {
 	float a = 0.5;
 	float s = 0.0;
-	for (int i = 0; i < 5; i++) {
+	for (int i = 0; i < 3; i++) {
 		s += a * vnoise(p);
 		p = p * 2.07 + vec2(11.3, 4.7);
 		a *= 0.5;
 	}
-	return s;
+	return s * 1.1;
 }
 
 void sky() {
@@ -48,7 +48,7 @@ void sky() {
 		vec2 p = d.xz / (h + 0.12) * 0.9 + vec2(TIME * 0.004, TIME * 0.002);
 		float n = fbm(p);
 		float cov = smoothstep(cloud_cover, cloud_cover + 0.12, n) * smoothstep(0.02, 0.2, h);
-		float shade = smoothstep(cloud_cover, cloud_cover + 0.45, fbm(p + vec2(0.06, 0.04)));
+		float shade = smoothstep(cloud_cover, cloud_cover + 0.45, n * 1.05 - 0.02);
 		vec3 cc = mix(cloud_color, cloud_shade, shade * 0.6);
 		col = mix(col, cc, cov * 0.95);
 	}

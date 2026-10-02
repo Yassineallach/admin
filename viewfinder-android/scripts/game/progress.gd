@@ -5,7 +5,7 @@ const PATH := "user://progress.cfg"
 
 var unlocked: int = 1
 var completed: Dictionary = {}
-var settings := {"look_sensitivity": 1.0, "invert_y": false}
+var settings := {"look_sensitivity": 1.0, "invert_y": false, "quality": -1}
 
 
 func _ready() -> void:
@@ -20,6 +20,14 @@ func load_progress() -> void:
 	completed = cfg.get_value("progress", "completed", {})
 	for k in settings.keys():
 		settings[k] = cfg.get_value("settings", k, settings[k])
+
+
+## 0 = low, 1 = medium, 2 = high. Phones default to medium.
+func quality() -> int:
+	var q := int(settings.get("quality", -1))
+	if q < 0:
+		q = 1 if OS.has_feature("mobile") else 2
+	return q
 
 
 func save_progress() -> void:

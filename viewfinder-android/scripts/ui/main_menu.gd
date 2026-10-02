@@ -80,6 +80,20 @@ func _ready() -> void:
 	sens_row.add_child(slider)
 	left.add_child(sens_row)
 
+	var q_btn := Button.new()
+	var names := ["Graphics: Low", "Graphics: Medium", "Graphics: High"]
+	q_btn.text = names[Progress.quality()]
+	q_btn.flat = true
+	q_btn.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	q_btn.add_theme_font_size_override("font_size", 20)
+	q_btn.add_theme_color_override("font_color", INK)
+	q_btn.add_theme_color_override("font_hover_color", ACCENT.darkened(0.2))
+	q_btn.pressed.connect(func():
+		Progress.settings["quality"] = (Progress.quality() + 1) % 3
+		Progress.save_progress()
+		q_btn.text = names[Progress.quality()])
+	sens_row.add_child(q_btn)
+
 	var grid := GridContainer.new()
 	grid.columns = 2
 	grid.size_flags_vertical = Control.SIZE_SHRINK_CENTER

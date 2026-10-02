@@ -18,6 +18,10 @@ boot_splash/bg_color=Color(0.96, 0.93, 0.88, 1)
 Progress="*res://scripts/game/progress.gd"
 Sfx="*res://scripts/game/sfx.gd"
 
+[debug]
+
+file_logging/enable_file_logging=true
+
 [display]
 
 window/size/viewport_width=1280

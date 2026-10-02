@@ -34,11 +34,12 @@ float vnoise(vec2 p) {
 float fbm(vec2 p) {
 	float a = 0.5;
 	float s = 0.0;
-	for (int i = 0; i < 4; i++) {
+	for (int i = 0; i < 3; i++) {
 		s += a * vnoise(p);
 		p = p * 2.03 + vec2(17.1, 9.2);
 		a *= 0.5;
 	}
+	s *= 1.14;  // keep the same range as the old 4-octave version
 	return s;
 }
 
@@ -67,14 +68,17 @@ void vertex() {
 
 // Distance in pixels to the nearest real polygon edge of this face.
 float edge_px() {
-	int m = int(v_mask + 0.5);
+	// Edge bits decoded with float maths (some mobile GLSL drivers dislike
+	// integer bit operations).
+	float m = floor(v_mask + 0.5);
+	float b0 = mod(m, 2.0);
+	float b1 = mod(floor(m * 0.5), 2.0);
+	float b2 = mod(floor(m * 0.25), 2.0);
 	vec3 fw = max(fwidth(v_bary), vec3(1e-5));
 	vec3 px = v_bary / fw;
-	float d = 1e4;
-	if ((m & 1) != 0) d = min(d, px.x);
-	if ((m & 2) != 0) d = min(d, px.y);
-	if ((m & 4) != 0) d = min(d, px.z);
-	return d;
+	vec3 big = vec3(1e4);
+	vec3 d3 = mix(big, px, vec3(b0, b1, b2));
+	return min(d3.x, min(d3.y, d3.z));
 }
 
 // Small round "spot" in a jittered grid: returns (mask, cell random).

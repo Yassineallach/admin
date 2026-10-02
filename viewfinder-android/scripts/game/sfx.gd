@@ -11,7 +11,6 @@ var _music: AudioStreamPlayer
 var _ambience: AudioStreamPlayer
 var _loops: Dictionary = {}  # name -> AudioStreamPlayer
 var _rng := RandomNumberGenerator.new()
-var _music_task := -1
 
 
 func _ready() -> void:
@@ -79,18 +78,21 @@ func loop(name: String, on: bool, volume_db: float = -4.0) -> void:
 		p.stop()
 
 
+## Music and ambience are synthesised on the main thread a slice at a time
+## (a few thousand samples per frame) so nothing runs on a background thread
+## and the game never hitches.
 func _build_music() -> void:
-	# ~16 s of audio: synthesise on a worker thread so phones don't hitch.
-	_music_task = WorkerThreadPool.add_task(func():
-		var w := _music_loop()
-		var amb := _ambience_loop()
-		_start_music.call_deferred(w, amb))
+	var w: AudioStreamWAV = await _music_loop()
+	var amb: AudioStreamWAV = await _ambience_loop()
+	if is_inside_tree():
+		_start_music(w, amb)
 
 
-func _exit_tree() -> void:
-	if _music_task >= 0:
-		WorkerThreadPool.wait_for_task_completion(_music_task)
-		_music_task = -1
+const SAMPLES_PER_FRAME := 2500
+
+
+func _yield_now(i: int) -> bool:
+	return i % SAMPLES_PER_FRAME == SAMPLES_PER_FRAME - 1 and is_inside_tree()
 
 
 func _start_music(w: AudioStreamWAV, amb: AudioStreamWAV) -> void:
@@ -297,6 +299,8 @@ func _ambience_loop() -> AudioStreamWAV:
 		lp2 += (lp - lp2) * 0.3
 		var gust := 0.55 + 0.45 * sin(TAU * t / length) * sin(TAU * t * 2.0 / length + 1.0)
 		b[i] = lp2 * 2.2 * gust
+		if _yield_now(i):
+			await get_tree().process_frame
 	# Bird chirps: short frequency sweeps.
 	var calls := [[1.3, 2600.0], [1.45, 3000.0], [4.8, 2200.0], [5.0, 2500.0], [5.15, 2800.0], [8.6, 3200.0], [8.75, 2700.0]]
 	for cl in calls:
@@ -351,4 +355,6 @@ func _music_loop() -> AudioStreamWAV:
 		var pt := at + step
 		v += sin(TAU * prev * pt) * exp(-pt * 3.2) * 0.07
 		b[i] = v
+		if _yield_now(i):
+			await get_tree().process_frame
 	return _wav(b, MUSIC_RATE, true)
