@@ -230,6 +230,14 @@ static func _archive_room(mn: Vector2, mx: Vector2, h: float, door_z: float = IN
 		s.append(_archive(Vector3(mn.x, 0, door_z - t), Vector3(-hw, h, door_z)))
 		s.append(_archive(Vector3(hw, 0, door_z - t), Vector3(mx.x, h, door_z)))
 		s.append(_archive(Vector3(-hw, door_h, door_z - t), Vector3(hw, h, door_z)))
+	# Someone still waters the Archive: potted plants and ferns in the corners.
+	var i := 0
+	for c in [Vector2(mn.x + 0.6, mn.y + 0.6), Vector2(mx.x - 0.6, mn.y + 0.6),
+			Vector2(mn.x + 0.6, mx.y - 0.6), Vector2(mx.x - 0.6, mx.y - 0.6)]:
+		s.append_array(P.potted_plant(Vector3(c.x, 0, c.y), P.LEAF if i % 2 == 0 else P.LEAF_PINK))
+		var off := Vector3(signf(-c.x) * 0.7, 0, 0)
+		s.append(ModelLib.instance(ModelLib.NATURE + "Fern_1.gltf", Vector3(c.x, 0, c.y) + off, c.x * 40.0 + c.y * 7.0, 0.7))
+		i += 1
 	return s
 
 

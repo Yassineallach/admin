@@ -18,6 +18,10 @@ func _ready() -> void:
 	back.mesh = SolidWorld.build_mesh(lv["backdrop"], world.material)
 	back.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(back)
+	var back_props := MeshInstance3D.new()
+	back_props.mesh = SolidWorld.build_props((lv["backdrop"] as Array).filter(func(x): return (x as Solid).is_soup()))
+	back_props.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(back_props)
 	for i in Levels.count():
 		var pad := Teleporter.new()
 		add_child(pad)

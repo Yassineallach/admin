@@ -1,0 +1,5 @@
+Art in this folder is CC0 1.0 (public domain):
+  nature/, village/  - Quaternius (https://quaternius.com): Stylized Nature MegaKit,
+                       Medieval Village MegaKit (standard editions)
+  textures/grass.jpg, textures/cliff.jpg - ambientCG (https://ambientcg.com): Grass005, Rock023
+  other textures/    - Quaternius Medieval Village MegaKit

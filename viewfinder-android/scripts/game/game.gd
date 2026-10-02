@@ -87,6 +87,10 @@ func _ready() -> void:
 	var backdrop := MeshInstance3D.new()
 	backdrop.name = "Backdrop"
 	backdrop.mesh = SolidWorld.build_mesh(level.get("backdrop", []), solid_world.material)
+	var backdrop_props := MeshInstance3D.new()
+	backdrop_props.mesh = SolidWorld.build_props(level.get("backdrop", []).filter(func(x): return (x as Solid).is_soup()))
+	backdrop_props.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(backdrop_props)
 	backdrop.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(backdrop)
 

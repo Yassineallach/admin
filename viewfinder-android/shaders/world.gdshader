@@ -9,6 +9,15 @@ shader_type spatial;
 render_mode cull_back, specular_disabled;
 
 uniform float shadow_floor = 0.42;
+// Hand-painted CC0 textures (Quaternius village kit, ambientCG).
+uniform sampler2D tex_grass : source_color, filter_linear_mipmap, repeat_enable;
+uniform sampler2D tex_cobble : source_color, filter_linear_mipmap, repeat_enable;
+uniform sampler2D tex_brick : source_color, filter_linear_mipmap, repeat_enable;
+uniform sampler2D tex_plaster : source_color, filter_linear_mipmap, repeat_enable;
+uniform sampler2D tex_wood : source_color, filter_linear_mipmap, repeat_enable;
+uniform sampler2D tex_roof : source_color, filter_linear_mipmap, repeat_enable;
+uniform sampler2D tex_rock : source_color, filter_linear_mipmap, repeat_enable;
+uniform float textured = 1.0;
 
 varying vec2 v_uv;
 varying vec3 v_wpos;
@@ -91,7 +100,7 @@ vec2 spots(vec2 uv, float density, float radius) {
 	return vec2(m, hash12(id + 11.7));
 }
 
-vec3 material_color(int m, vec2 uv, vec3 base, out float emit) {
+vec3 procedural_color(int m, vec2 uv, vec3 base, out float emit) {
 	emit = 0.0;
 	vec3 c = base;
 	if (m == 0) { // plaster: soft mottling + faint vertical weathering streaks
@@ -199,6 +208,36 @@ vec3 material_color(int m, vec2 uv, vec3 base, out float emit) {
 		c = mix(c, glow_col, rune * 0.6);
 	}
 	return c;
+}
+
+// Painted texture tinted by the face colour (keeps the pastel palette).
+vec3 painted(sampler2D t, vec2 uv, vec3 base) {
+	vec3 tex = texture(t, uv).rgb;
+	return tex * mix(vec3(1.0), base * 1.3, 0.55);
+}
+
+vec3 material_color(int m, vec2 uv, vec3 base, out float emit) {
+	vec3 proc = procedural_color(m, uv, base, emit);
+	if (textured < 0.5) {
+		return proc;
+	}
+	if (m == 0) return painted(tex_plaster, uv * 0.5, base);
+	if (m == 1) {
+		vec3 g = painted(tex_grass, uv * 0.33, base * vec3(1.05, 1.1, 0.9));
+		// keep the procedural flowers / clover on top of the painted grass
+		return g * (proc / max(base * (0.80 + 0.32 * fbm(uv * 0.8)), vec3(0.05)));
+	}
+	if (m == 2) return painted(tex_cobble, uv * 0.8, base) * 0.86;
+	if (m == 3) return painted(tex_brick, uv * 0.5, base);
+	if (m == 4 || m == 10) {
+		// grain from the texture, colour mostly from the palette
+		vec3 w = texture(tex_wood, vec2(uv.x * 0.5, fract(uv.y * 1.6) * 0.3)).rgb;
+		float l = dot(w, vec3(0.3, 0.55, 0.15));
+		return mix(w, base * l * 2.4, 0.6);
+	}
+	if (m == 6) return painted(tex_roof, uv * 0.5, base);
+	if (m == 9) return painted(tex_rock, uv * 0.25, base);
+	return proc;
 }
 
 void fragment() {

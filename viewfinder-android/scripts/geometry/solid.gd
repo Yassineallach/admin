@@ -32,6 +32,12 @@ var tag: String = ""
 var faces: Array = []
 var _bounds_cached := false
 var _bounds := AABB()
+## Detailed art (imported models) is stored as a triangle "soup" instead of
+## convex faces: Array of chunks { mat: Material, v, n: PackedVector3Array
+## (triangle list), uv: PackedVector2Array }. Soups are cut triangle by
+## triangle, never capped, and never collide (props get invisible convex
+## colliders instead).
+var soup: Array = []
 ## Caches filled lazily by SolidWorld (valid forever: solids never change).
 var mesh_cache: Array = []
 var shape_cache: ConvexPolygonShape3D
@@ -65,10 +71,22 @@ func copy_meta_from(other: Solid) -> void:
 	tag = other.tag
 
 
+func is_soup() -> bool:
+	return not soup.is_empty()
+
+
 ## Returns a copy of this solid transformed by the rigid transform `xf`.
 func transformed(xf: Transform3D) -> Solid:
 	var s := Solid.new()
 	s.copy_meta_from(self)
+	if is_soup():
+		var rot := Transform3D(xf.basis, Vector3.ZERO)
+		for c in soup:
+			s.soup.append({"mat": c["mat"], "v": xf * (c["v"] as PackedVector3Array),
+				"n": rot * (c["n"] as PackedVector3Array), "uv": c["uv"]})
+		s._bounds = xf * bounds()
+		s._bounds_cached = true
+		return s
 	var b := xf.basis
 	for f in faces:
 		var src: PackedVector3Array = f["v"]
@@ -122,6 +140,13 @@ func bounds() -> AABB:
 func get_aabb() -> AABB:
 	var first := true
 	var box := AABB()
+	for c in soup:
+		for p in (c["v"] as PackedVector3Array):
+			if first:
+				box = AABB(p, Vector3.ZERO)
+				first = false
+			else:
+				box = box.expand(p)
 	for f in faces:
 		for p in (f["v"] as PackedVector3Array):
 			if first:
@@ -134,6 +159,8 @@ func get_aabb() -> AABB:
 
 ## Volume via the divergence theorem, using stored outward normals.
 func volume() -> float:
+	if is_soup():
+		return 0.0
 	var vol := 0.0
 	for f in faces:
 		var v: PackedVector3Array = f["v"]

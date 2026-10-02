@@ -158,6 +158,8 @@ static func _classify(s: Solid, planes: Array) -> int:
 			box_inside_all = false
 	if box_inside_all:
 		return 1
+	if s.is_soup():
+		return 2  # decided triangle by triangle
 	var inside_all := true
 	for pl in planes:
 		var all_out := true
@@ -190,10 +192,13 @@ static func capture(solids: Array, cam: Transform3D, t: float) -> Array:
 			continue
 		var piece: Solid = s
 		if cls == 2:
-			for pl in planes:
-				piece = clip(piece, pl)
-				if piece == null:
-					break
+			if s.is_soup():
+				piece = _cut_soup(s, planes, true)
+			else:
+				for pl in planes:
+					piece = clip(piece, pl)
+					if piece == null:
+						break
 		if piece != null:
 			out.append(piece.transformed(inv))
 	return out
@@ -215,6 +220,11 @@ static func carve(solids: Array, cam: Transform3D, t: float) -> Array:
 			continue
 		if cls == 1:
 			continue
+		if s.is_soup():
+			var kept := _cut_soup(s, planes, false)
+			if kept != null:
+				out.append(kept)
+			continue
 		var rest: Solid = s
 		for pl in planes:
 			var parts := split(rest, pl)
@@ -233,3 +243,117 @@ static func place(world: Array, photo_solids: Array, cam: Transform3D, t: float)
 	for s in photo_solids:
 		out.append((s as Solid).transformed(cam))
 	return out
+
+
+# ---------------------------------------------------------------------------
+# Triangle soups (imported art)
+# ---------------------------------------------------------------------------
+
+## Triangles with an edge longer than this are clipped exactly; smaller ones
+## are kept or dropped whole by their centroid (fast, and invisible on dense
+## foliage and props).
+const BIG_TRI_SQ := 0.45 * 0.45
+
+
+## Keeps the part of a soup inside all `planes` (keep_inside) or outside the
+## region they bound (not keep_inside). Returns null when nothing is left.
+static func _cut_soup(s: Solid, planes: Array, keep_inside: bool) -> Solid:
+	var out := Solid.new()
+	out.copy_meta_from(s)
+	var pn: Array = []
+	var pd: Array = []
+	for pl in planes:
+		pn.append((pl as Plane).normal)
+		pd.append((pl as Plane).d)
+	var np := planes.size()
+	for c in s.soup:
+		var v: PackedVector3Array = c["v"]
+		var n: PackedVector3Array = c["n"]
+		var uv: PackedVector2Array = c["uv"]
+		var ov := PackedVector3Array()
+		var on := PackedVector3Array()
+		var ouv := PackedVector2Array()
+		var i := 0
+		var count := v.size()
+		while i < count:
+			var a := v[i]
+			var b := v[i + 1]
+			var d := v[i + 2]
+			var all_in := true
+			var outside := false
+			for k in np:
+				var nn: Vector3 = pn[k]
+				var dd: float = pd[k]
+				var da := nn.dot(a) - dd
+				var db := nn.dot(b) - dd
+				var dc := nn.dot(d) - dd
+				if da < 0.0 and db < 0.0 and dc < 0.0:
+					outside = true
+					break
+				if da < 0.0 or db < 0.0 or dc < 0.0:
+					all_in = false
+			var inside: bool
+			if outside:
+				inside = false
+			elif all_in:
+				inside = true
+			elif maxf(a.distance_squared_to(b), maxf(b.distance_squared_to(d), d.distance_squared_to(a))) > BIG_TRI_SQ:
+				_clip_tri(planes, keep_inside, [[a, n[i], uv[i]], [b, n[i + 1], uv[i + 1]], [d, n[i + 2], uv[i + 2]]], ov, on, ouv)
+				i += 3
+				continue
+			else:
+				var cen := (a + b + d) / 3.0
+				inside = true
+				for k in np:
+					if (pn[k] as Vector3).dot(cen) - float(pd[k]) < 0.0:
+						inside = false
+						break
+			if inside == keep_inside:
+				ov.append(a); ov.append(b); ov.append(d)
+				on.append(n[i]); on.append(n[i + 1]); on.append(n[i + 2])
+				ouv.append(uv[i]); ouv.append(uv[i + 1]); ouv.append(uv[i + 2])
+			i += 3
+		if not ov.is_empty():
+			out.soup.append({"mat": c["mat"], "v": ov, "n": on, "uv": ouv})
+	return out if out.is_soup() else null
+
+
+## Exact clip of one textured triangle, appending the kept fan triangles.
+static func _clip_tri(planes: Array, keep_inside: bool, poly: Array,
+		ov: PackedVector3Array, on: PackedVector3Array, ouv: PackedVector2Array) -> void:
+	var rest := poly
+	for pl in planes:
+		var plane: Plane = pl
+		if not keep_inside:
+			var outside := _clip_poly(rest, Plane(-plane.normal, -plane.d))
+			_emit_fan(outside, ov, on, ouv)
+		rest = _clip_poly(rest, plane)
+		if rest.size() < 3:
+			return
+	if keep_inside:
+		_emit_fan(rest, ov, on, ouv)
+
+
+static func _clip_poly(poly: Array, pl: Plane) -> Array:
+	var out: Array = []
+	var m := poly.size()
+	for i in m:
+		var A: Array = poly[i]
+		var B: Array = poly[(i + 1) % m]
+		var da := pl.distance_to(A[0])
+		var db := pl.distance_to(B[0])
+		if da >= 0.0:
+			out.append(A)
+		if (da >= 0.0) != (db >= 0.0):
+			var t := da / (da - db)
+			out.append([(A[0] as Vector3).lerp(B[0], t), (A[1] as Vector3).lerp(B[1], t).normalized(),
+				(A[2] as Vector2).lerp(B[2], t)])
+	return out
+
+
+static func _emit_fan(poly: Array, ov: PackedVector3Array, on: PackedVector3Array, ouv: PackedVector2Array) -> void:
+	for i in range(1, poly.size() - 1):
+		for p in [poly[0], poly[i], poly[i + 1]]:
+			ov.append(p[0])
+			on.append(p[1])
+			ouv.append(p[2])

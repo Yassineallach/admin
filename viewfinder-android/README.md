@@ -5,8 +5,10 @@ Hold up a photograph, line it up with the world, and it **becomes** the world.
 scratch in Godot 4.7 for Android phones and tablets. Viewfinder has no official
 mobile release.
 
-> **Name & assets.** All code, levels and art here are original. No Viewfinder
-> assets are used. The game is called "Lensfold" because "Viewfinder" is Sad Owl
+> **Name & assets.** All code and levels here are original. No Viewfinder
+> assets are used. Trees, plants, rocks, house pieces and the painted textures
+> are CC0 (public domain) art by Quaternius (Stylized Nature and Medieval Village
+> MegaKits) and ambientCG; see [assets/LICENSES.txt](assets/LICENSES.txt). The game is called "Lensfold" because "Viewfinder" is Sad Owl
 > Studios' / Thunderful's trademark. Don't publish it on a store under that name.
 
 See **[docs/RESEARCH.md](docs/RESEARCH.md)** for the research on the original
@@ -17,6 +19,7 @@ game and how its mechanic works.
 | The Station (hub) | A found photo becomes a real bridge | A tower photographed looking up becomes a tunnel |
 |---|---|---|
 | ![hub](docs/screenshots/hub.png) | ![bridge](docs/screenshots/bridge_placed.png) | ![tunnel](docs/screenshots/tower_tunnel.png) |
+| ![house](docs/screenshots/hub_house.png) | ![found](docs/screenshots/found_photograph.png) | ![gate](docs/screenshots/gate.png) |
 | **A pencil sketch stays a sketch** | **A watercolour stays a painting** | **Holding up a found photo** |
 | ![sketch](docs/screenshots/pencil_stairs.png) | ![painting](docs/screenshots/painted_bridge.png) | ![holding](docs/screenshots/holding_painting.png) |
 | **Main menu over the live island** | **Every level is dressed** | **A keepsake when a memory is restored** |
@@ -127,12 +130,15 @@ project.godot            Godot 4.7, GL Compatibility, landscape, Jolt physics
 export_presets.cfg       Android preset (arm64-v8a, immersive, com.lensfold.game)
 scenes/main.tscn         entry scene (menu <-> level flow in scripts/main.gd)
 scripts/geometry/        Solid (convex polyhedron + texture frames), Slicer (clip/capture/carve/place),
-                         SolidWorld (cached batched mesh + collision), Mat (material & art-style ids)
+                         SolidWorld (cached batched mesh + collision), Mat (material & art-style ids),
+                         ModelLib (imported models -> sliceable triangle-soup solids)
 scripts/game/            Game (photos, rewind, items, hub), Player, Battery, Teleporter, PhotoPickup, Photo,
                          Cat (Miso), Note, Sfx (synthesised audio), Progress (save)
-scripts/levels/          levels.gd (hub + 8 levels), props.gd (trees, arches, stairs, houses, islands…)
+scripts/levels/          levels.gd (hub + 12 levels), props.gd (trees, arches, stairs, houses, islands…)
 scripts/ui/              Hud (touch controls, viewfinder, tray, dialogue, notes), MainMenu
-shaders/world.gdshader   procedural materials + sketch / watercolour / sepia styles + soft lighting
+assets/                  CC0 models (nature/, village/) and painted textures, prepared by tools/prepare_assets.py
+shaders/prop.gdshader    textured models: alpha-cut leaves, wind sway, art styles
+shaders/world.gdshader   painted textures + procedural materials + sketch / watercolour / sepia styles + soft lighting
 shaders/sky.gdshader     painted sky with clouds
 tests/                   slicer unit tests, full scripted playthrough, screenshot harness
 tools/apksigner/         optional apksigner drop-in for headless/CI APK builds

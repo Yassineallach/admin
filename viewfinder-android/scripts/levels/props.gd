@@ -21,32 +21,29 @@ const LAMP := Color(1.0, 0.86, 0.55)
 
 
 static func tree(base: Vector3, height: float = 3.6, leaf: Color = LEAF, seed: int = 0) -> Array:
-	var out: Array = []
-	var trunk := Solid.loft(base, Solid.ngon(7, 0.16), 0.0, height * 0.7, 0.7, TRUNK, Mat.WOOD,
-		Color(0, 0, 0, 0), -1, true)
-	out.append(trunk)
+	# Quaternius stylized trees; pink/gold "leaf" colours pick the pine and
+	# twisted variants so groves still read as varied.
 	var rng := RandomNumberGenerator.new()
 	rng.seed = hash(base) + seed
-	var top := base + Vector3(0, height * 0.72, 0)
-	var main_r := height * 0.32
-	var crown := Solid.sphere(top, Vector3(main_r, main_r * 0.85, main_r), leaf, Mat.FOLIAGE)
-	crown.collide = false
-	out.append(crown)
-	for i in 3:
-		var a := rng.randf() * TAU
-		var r := main_r * rng.randf_range(0.55, 0.75)
-		var off := Vector3(cos(a), rng.randf_range(-0.3, 0.25), sin(a)) * main_r * 0.75
-		var blob := Solid.sphere(top + off, Vector3(r, r * 0.85, r), leaf.lightened(rng.randf_range(-0.06, 0.08)), Mat.FOLIAGE)
-		blob.collide = false
-		out.append(blob)
+	var name: String
+	if leaf == LEAF_PINK:
+		name = "Pine_%d" % (1 + rng.randi() % 3)
+	elif leaf == LEAF_GOLD:
+		name = "CommonTree_%d" % (3 + rng.randi() % 2)
+	else:
+		name = "CommonTree_%d" % [1, 2, 5][rng.randi() % 3]
+	var path := ModelLib.NATURE + name + ".gltf"
+	var model_h := ModelLib.aabb(path).size.y
+	var sc := height / maxf(model_h, 0.1) * 1.25
+	var out: Array = [ModelLib.instance(path, base, rng.randf() * 360.0, sc)]
+	var trunk := Solid.loft(base, Solid.ngon(7, 0.22 * sc * 1.6), 0.0, 2.2, 0.8, TRUNK, Mat.WOOD)
+	trunk.visible = false
+	out.append(trunk)
 	return out
 
-
 static func bush(base: Vector3, r: float = 0.6, leaf: Color = LEAF) -> Array:
-	var s := Solid.sphere(base + Vector3(0, r * 0.6, 0), Vector3(r, r * 0.75, r), leaf.darkened(0.05), Mat.FOLIAGE)
-	s.collide = false
-	return [s]
-
+	var name := "Bush_Common_Flowers" if leaf != LEAF else "Bush_Common"
+	return [ModelLib.instance(ModelLib.NATURE + name + ".gltf", base, fposmod(base.x * 37.0 + base.z * 11.0, 360.0), r / 0.95)]
 
 static func column(base: Vector3, h: float, r: float = 0.3, col: Color = STONE) -> Array:
 	return [
@@ -143,41 +140,76 @@ static func bench(c: Vector3, along_x: bool = true) -> Array:
 static func planter(c: Vector3, flower: Color = LEAF_PINK) -> Array:
 	var box := Solid.box(c + Vector3(0, 0.3, 0), Vector3(1.0, 0.6, 1.0), STONE_WARM, Color(0, 0, 0, 0), Mat.BRICK)
 	var soil := Solid.box(c + Vector3(0, 0.62, 0), Vector3(0.84, 0.04, 0.84), Color(0.45, 0.35, 0.3), Color(0, 0, 0, 0), Mat.GRASS)
-	var out: Array = [box, soil]
-	out.append_array(bush(c + Vector3(0, 0.55, 0), 0.45, flower))
-	return out
-
+	soil.collide = false
+	var name := "Flower_3_Group" if flower == LEAF_PINK else "Flower_4_Group"
+	return [box, soil, ModelLib.instance(ModelLib.NATURE + name + ".gltf", c + Vector3(0, 0.62, 0), c.x * 40.0, 0.38)]
 
 static func crate(c: Vector3, s: float = 0.8) -> Array:
-	return [Solid.box(c + Vector3(0, s * 0.5, 0), Vector3(s, s, s), WOOD, Color(0, 0, 0, 0), Mat.WOOD)]
-
+	var col := Solid.box(c + Vector3(0, s * 0.5, 0), Vector3(s, s, s), WOOD, Color(0, 0, 0, 0), Mat.WOOD)
+	col.visible = false
+	return [col, ModelLib.instance(ModelLib.VILLAGE + "Prop_Crate.gltf", c, c.x * 30.0, s / 1.06)]
 
 ## A little house: plaster walls, pitched roof, door and windows.
 ## `front` is the direction the door faces (one of the 4 axes).
 static func house(base: Vector3, size: Vector3, front: Vector3 = Vector3.BACK,
 		wall: Color = PLASTER, roof: Color = ROOF) -> Array:
+	# Built from the Quaternius modular village kit: 2 m wall panels, corner
+	# beams, a round door, arched windows with open shutters, a tiled roof,
+	# a chimney and a little ivy. An invisible box handles collision.
 	var out: Array = []
-	var basis := Basis.looking_at(-front, Vector3.UP)
-	out.append(Solid.obox(base + Vector3(0, size.y * 0.5, 0), size, basis, wall, Mat.PLASTER))
-	var hw := size.x * 0.5 + 0.25
-	var rh := size.x * 0.4
-	var tri := PackedVector2Array([Vector2(-hw, 0), Vector2(hw, 0), Vector2(0, rh)])
-	out.append(Solid.extrude(tri, size.z + 0.4, Transform3D(basis, base + Vector3(0, size.y, 0)), roof, Mat.ROOF))
-	var fz := size.z * 0.5 + 0.03
-	var door := Solid.obox(base + basis * Vector3(0, 0.95, fz), Vector3(0.9, 1.9, 0.08), basis, WOOD.darkened(0.15), Mat.WOOD)
-	door.collide = false
-	out.append(door)
-	for sx in [-size.x * 0.3, size.x * 0.3]:
-		var win := Solid.obox(base + basis * Vector3(sx, size.y * 0.62, fz), Vector3(0.7, 0.7, 0.08), basis, Color(0.55, 0.72, 0.85), Mat.METAL)
-		win.collide = false
-		out.append(win)
+	var w: int = 6 if size.x > 5.0 else 4
+	var d: int = 6 if size.z > 5.0 else 4
+	if w == 6 and d == 4:
+		w = 4  # the kit has 4x4, 4x6 and 6x6 roofs
+		d = 6
+	var yaw := rad_to_deg(atan2(front.x, front.z))
+	var basis := Basis(Vector3.UP, deg_to_rad(yaw))
+	var col := Solid.obox(base + Vector3(0, 1.6, 0), Vector3(w, 3.2, d), basis, wall, Mat.PLASTER)
+	col.visible = false
+	out.append(col)
+	var stone := wall.r < 0.9  # darker walls get the stone variant
+	var kit := "Wall_UnevenBrick_" if stone else "Wall_Plaster_"
+	var hw := w * 0.5
+	var hd := d * 0.5
+	# Sides: (centre offset in local space, outward yaw, panel count)
+	var sides := [[Vector3(0, 0, hd), 0.0, w / 2], [Vector3(0, 0, -hd), 180.0, w / 2],
+		[Vector3(hw, 0, 0), 90.0, d / 2], [Vector3(-hw, 0, 0), -90.0, d / 2]]
+	var si := 0
+	for side in sides:
+		var count: int = side[2]
+		var side_yaw: float = side[1]
+		var side_basis := Basis(Vector3.UP, deg_to_rad(side_yaw))
+		for k in count:
+			var along := (k - (count - 1) * 0.5) * 2.0
+			var local: Vector3 = side[0] + side_basis * Vector3(along, 0, 0)
+			var piece := kit + "Straight"
+			if si == 0 and k == count / 2:
+				piece = kit + "Door_Round"
+			elif (k + si) % 2 == 0:
+				piece = kit + "Window_Wide_Round"
+			var pos := base + basis * local
+			out.append(ModelLib.instance(ModelLib.VILLAGE + piece + ".gltf", pos, yaw + side_yaw))
+			if piece.ends_with("Window_Wide_Round"):
+				out.append(ModelLib.instance(ModelLib.VILLAGE + "Window_Wide_Round1.gltf", pos, yaw + side_yaw))
+				out.append(ModelLib.instance(ModelLib.VILLAGE + "WindowShutters_Wide_Round_Open.gltf", pos, yaw + side_yaw))
+			elif piece.ends_with("Door_Round"):
+				out.append(ModelLib.instance(ModelLib.VILLAGE + "Door_1_Round.gltf", pos + basis * Basis(Vector3.UP, deg_to_rad(side_yaw)) * Vector3(-0.53, 0, 0), yaw + side_yaw))
+		si += 1
+	for cx in [-hw, hw]:
+		for cz in [-hd, hd]:
+			out.append(ModelLib.instance(ModelLib.VILLAGE + ("Corner_Exterior_Brick" if stone else "Corner_Exterior_Wood") + ".gltf",
+				base + basis * Vector3(cx, 0, cz), yaw))
+	var roof_name := "Roof_RoundTiles_%dx%d" % [mini(w, d), maxi(w, d)]
+	var roof_yaw := yaw if d >= w else yaw + 90.0
+	out.append(ModelLib.instance(ModelLib.VILLAGE + roof_name + ".gltf", base + Vector3(0, 3.12, 0), roof_yaw))
+	out.append(ModelLib.instance(ModelLib.VILLAGE + "Prop_Chimney.gltf", base + basis * Vector3(hw * 0.5, 3.2, -hd * 0.4), yaw))
+	out.append(ModelLib.instance(ModelLib.VILLAGE + "Prop_Vine5.gltf", base + basis * Vector3(-hw + 0.3, 3.0, hd + 0.15), yaw))
 	return out
-
 
 ## Floating island: walkable rect top (grass on rock) with a tapered rocky
 ## underside. `mn`/`mx` are the XZ corners of the top surface at height y.
 static func island(mn: Vector2, mx: Vector2, y: float, top_mat: int = Mat.GRASS,
-		top_col: Color = GRASS, depth: float = 6.0, rock: Color = ROCK) -> Array:
+		top_col: Color = GRASS, depth: float = 6.0, rock: Color = ROCK, scatter: bool = true) -> Array:
 	var out: Array = []
 	out.append(Solid.box_mm(Vector3(mn.x, y - 1.0, mn.y), Vector3(mx.x, y, mx.y), rock, top_col, Mat.ROCK, top_mat))
 	var c := Vector3((mn.x + mx.x) * 0.5, y - 1.0, (mn.y + mx.y) * 0.5)
@@ -185,6 +217,29 @@ static func island(mn: Vector2, mx: Vector2, y: float, top_mat: int = Mat.GRASS,
 	var hz := (mx.y - mn.y) * 0.5
 	var poly := PackedVector2Array([Vector2(-hx, -hz), Vector2(hx, -hz), Vector2(hx, hz), Vector2(-hx, hz)])
 	out.append(_inverted_taper(c, poly, depth, rock))
+	if top_mat == Mat.GRASS and scatter:
+		out.append_array(grass_tufts(mn, mx, y))
+	return out
+
+
+## Scattered grass tufts and the odd fern / mushroom on a grassy top.
+static func grass_tufts(mn: Vector2, mx: Vector2, y: float, density: float = 0.12) -> Array:
+	var out: Array = []
+	var q: int = Progress.quality() if Engine.get_main_loop() != null else 2
+	var area := (mx.x - mn.x) * (mx.y - mn.y)
+	var n := mini(int(area * density * [0.0, 0.5, 1.0][q]), 90)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash(mn) + hash(mx)
+	var names := ["Grass_Common_Short", "Grass_Common_Short", "Grass_Wispy_Short", "Grass_Common_Tall", "Clover_1", "Fern_1", "Mushroom_Common"]
+	for i in n:
+		var p := Vector3(rng.randf_range(mn.x + 0.4, mx.x - 0.4), y - 0.02, rng.randf_range(mn.y + 0.4, mx.y - 0.4))
+		var name: String = names[rng.randi() % names.size()]
+		var sc := 0.45
+		if name == "Fern_1":
+			sc = 0.12
+		elif name == "Mushroom_Common":
+			sc = 0.5
+		out.append(ModelLib.instance(ModelLib.NATURE + name + ".gltf", p, rng.randf() * 360.0, sc * rng.randf_range(0.8, 1.25)))
 	return out
 
 
@@ -212,22 +267,20 @@ static func _decor(list: Array) -> Array:
 
 ## A patch of little flowers on short leafy mounds.
 static func flowers(center: Vector3, radius: float = 1.2, count: int = 9, seed: int = 0,
-		palette: Array = [Color(1, 0.62, 0.72), Color(1, 0.98, 0.95), Color(1, 0.85, 0.35), Color(0.75, 0.68, 1.0)]) -> Array:
+		palette: Array = []) -> Array:
 	var out: Array = []
 	var rng := RandomNumberGenerator.new()
 	rng.seed = hash(center) + seed
-	for i in count:
+	var names := ["Flower_3_Group", "Flower_4_Group", "Flower_3_Single", "Clover_1", "Grass_Common_Short", "Plant_7"]
+	var n := maxi(2, count / 2)
+	for i in n:
 		var a := rng.randf() * TAU
 		var r := sqrt(rng.randf()) * radius
 		var p := center + Vector3(cos(a) * r, 0, sin(a) * r)
-		var h := rng.randf_range(0.18, 0.35)
-		out.append(Solid.loft(p, Solid.ngon(5, 0.12, rng.randf() * TAU), 0.0, h * 0.6, 0.35, LEAF.darkened(0.12), Mat.FOLIAGE))
-		var col: Color = palette[rng.randi() % palette.size()]
-		var bloom := Solid.sphere(p + Vector3(0, h * 0.6 + 0.04, 0), Vector3(0.075, 0.05, 0.075), col, Mat.PLASTER, 0)
-		bloom.faces = bloom.faces.map(func(f): f.erase("sc"); return f)
-		out.append(bloom)
-	return _decor(out)
-
+		var name: String = names[rng.randi() % names.size()]
+		var sc := 0.36 if name.begins_with("Flower") else 0.5
+		out.append(ModelLib.instance(ModelLib.NATURE + name + ".gltf", p, rng.randf() * 360.0, sc * rng.randf_range(0.8, 1.2)))
+	return out
 
 ## A cluster of low-poly boulders.
 static func rocks(center: Vector3, count: int = 3, size: float = 0.6, seed: int = 0) -> Array:
@@ -235,28 +288,23 @@ static func rocks(center: Vector3, count: int = 3, size: float = 0.6, seed: int 
 	var rng := RandomNumberGenerator.new()
 	rng.seed = hash(center) + seed
 	for i in count:
-		var s := size * rng.randf_range(0.45, 1.0)
-		var p := center + Vector3(rng.randf_range(-1, 1), 0, rng.randf_range(-1, 1)) * size
-		out.append(Solid.loft(p, Solid.ngon(6, s, rng.randf() * TAU), -0.1, s * rng.randf_range(0.5, 0.9), 0.55,
-			ROCK.lightened(rng.randf_range(0.0, 0.2)), Mat.ROCK))
-	return _decor(out)
-
+		var p := center + Vector3(rng.randf_range(-1, 1), -0.05, rng.randf_range(-1, 1)) * Vector3(size, 1, size)
+		var name := "Rock_Medium_%d" % (1 + rng.randi() % 3)
+		out.append(ModelLib.instance(ModelLib.NATURE + name + ".gltf", p, rng.randf() * 360.0, size / 3.0 * rng.randf_range(0.6, 1.1)))
+	return out
 
 ## White picket fence.
 static func fence(a: Vector3, b: Vector3, col: Color = Color(0.97, 0.95, 0.9)) -> Array:
 	var out: Array = []
-	var d := b - a
-	var len := d.length()
-	var dir := d / len
-	var basis := Basis(dir.cross(Vector3.UP).normalized(), Vector3.UP, -dir)
-	var n := maxi(1, int(len / 0.35))
-	for i in n + 1:
-		var p := a + dir * (len * i / n)
-		out.append(Solid.obox(p + Vector3(0, 0.4, 0), Vector3(0.08, 0.8, 0.04), basis, col, Mat.WOOD))
-	for y in [0.25, 0.6]:
-		out.append(Solid.obox(a + d * 0.5 + Vector3(0, y, 0.0), Vector3(0.04, 0.07, len), basis, col.darkened(0.05), Mat.WOOD))
-	return _decor(out)
-
+	var dvec := b - a
+	var len := dvec.length()
+	var dir := dvec / len
+	var yaw := rad_to_deg(atan2(-dir.z, dir.x))
+	var n := maxi(1, int(round(len / 2.05)))
+	for i in n:
+		var p := a + dir * (len * (i + 0.5) / n)
+		out.append(ModelLib.instance(ModelLib.VILLAGE + "Prop_WoodenFence_Single.gltf", p, yaw, len / n / 2.06))
+	return out
 
 ## A string of little triangle flags sagging between two points.
 static func bunting(a: Vector3, b: Vector3, sag: float = 0.6, colors: Array = [Color(1, 0.6, 0.6), Color(1, 0.88, 0.5), Color(0.6, 0.8, 1.0), Color(0.7, 0.9, 0.7)]) -> Array:
@@ -283,10 +331,9 @@ static func bunting(a: Vector3, b: Vector3, sag: float = 0.6, colors: Array = [C
 static func stepping_stones(a: Vector3, b: Vector3, n: int = 5) -> Array:
 	var out: Array = []
 	for i in n:
-		var p := a.lerp(b, (i + 0.5) / n) + Vector3(sin(i * 2.1) * 0.25, 0, cos(i * 1.7) * 0.15)
-		out.append(Solid.loft(p, Solid.ngon(7, 0.38, i * 0.7), -0.05, 0.035, 0.95, STONE, Mat.TILE))
-	return _decor(out)
-
+		var p := a.lerp(b, (i + 0.5) / n) + Vector3(sin(i * 2.1) * 0.25, 0.01, cos(i * 1.7) * 0.15)
+		out.append(ModelLib.instance(ModelLib.NATURE + "RockPath_Round_Small_%d.gltf" % [1, 1, 1][i % 3], p, i * 50.0, 0.7))
+	return out
 
 ## Stone coping along the top of a wall (mn/mx = the wall's box).
 static func wall_trim(mn: Vector3, mx: Vector3, col: Color = STONE) -> Array:
@@ -313,10 +360,10 @@ static func window(c: Vector3, out_dir: Vector3, w: float = 1.0, h: float = 1.3,
 static func potted_plant(base: Vector3, leaf: Color = LEAF) -> Array:
 	var out: Array = []
 	out.append(Solid.loft(base, Solid.ngon(8, 0.22), 0.0, 0.4, 1.25, Color(0.86, 0.52, 0.4), Mat.PLASTER))
-	var b := Solid.sphere(base + Vector3(0, 0.62, 0), Vector3(0.32, 0.3, 0.32), leaf, Mat.FOLIAGE, 0)
-	out.append(b)
-	return _decor(out)
-
+	(out[0] as Solid).collide = false
+	var name := "Plant_1" if leaf == LEAF else "Flower_3_Single"
+	out.append(ModelLib.instance(ModelLib.NATURE + name + ".gltf", base + Vector3(0, 0.38, 0), base.x * 23.0, 0.45 if name == "Plant_1" else 0.3))
+	return out
 
 ## A washing line of photos drying in the darkroom.
 static func photo_line(a: Vector3, b: Vector3, sag: float = 0.3) -> Array:
@@ -349,7 +396,7 @@ static func horizon(center: Vector3, radius: float = 140.0, count: int = 6, seed
 		var r := radius * rng.randf_range(0.8, 1.2)
 		var p := center + Vector3(cos(a) * r, rng.randf_range(-12, 18), sin(a) * r)
 		var w := rng.randf_range(10, 22) * scale
-		out.append_array(island(Vector2(p.x - w, p.z - w * 0.7), Vector2(p.x + w, p.z + w * 0.7), p.y, Mat.GRASS, GRASS, w * 0.9))
+		out.append_array(island(Vector2(p.x - w, p.z - w * 0.7), Vector2(p.x + w, p.z + w * 0.7), p.y, Mat.GRASS, GRASS, w * 0.9, ROCK, false))
 		for k in rng.randi_range(1, 3):
 			var tp := p + Vector3(rng.randf_range(-w * 0.6, w * 0.6), 0, rng.randf_range(-w * 0.4, w * 0.4))
 			var leaf: Color = [LEAF, LEAF_PINK, LEAF_GOLD][rng.randi() % 3]

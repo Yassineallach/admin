@@ -38,6 +38,13 @@ func _ready() -> void:
 		await settle(30)
 		await shot("02_miso")
 
+	if want("house"):
+		await load_level(-1)
+		await pose(Vector3(4, 0, 4), 145, 8)
+		await shot("30_hub_house")
+		await pose(Vector3(-4, 0, 5), 215, 8)
+		await shot("31_hub_house_b")
+
 	if want("l1"):
 		await load_level(0)
 		await pose(Vector3(0, 0, 3), 0, -8)

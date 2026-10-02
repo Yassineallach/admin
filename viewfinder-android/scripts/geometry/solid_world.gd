@@ -10,6 +10,7 @@ var material: Material
 
 var _mesh_instance: MeshInstance3D
 var _anchored_mesh: MeshInstance3D
+var _props_mesh: MeshInstance3D
 var _body: StaticBody3D
 
 
@@ -22,6 +23,9 @@ func _ready() -> void:
 	_anchored_mesh.name = "Anchored"
 	_anchored_mesh.layers = 4
 	add_child(_anchored_mesh)
+	_props_mesh = MeshInstance3D.new()
+	_props_mesh.name = "Props"
+	add_child(_props_mesh)
 	_body = StaticBody3D.new()
 	_body.name = "Body"
 	_body.collision_layer = 1
@@ -30,6 +34,9 @@ func _ready() -> void:
 	if material == null:
 		var sm := ShaderMaterial.new()
 		sm.shader = load("res://shaders/world.gdshader")
+		for pair in [["tex_grass", "grass.jpg"], ["tex_cobble", "cobble.png"], ["tex_brick", "stone_brick.png"],
+				["tex_plaster", "plaster.png"], ["tex_wood", "wood.png"], ["tex_roof", "roof_tiles.png"], ["tex_rock", "cliff.jpg"]]:
+			sm.set_shader_parameter(pair[0], load("res://assets/textures/" + pair[1]))
 		material = sm
 
 
@@ -41,13 +48,17 @@ func set_solids(list: Array) -> void:
 func rebuild() -> void:
 	var normal: Array = []
 	var anchored: Array = []
+	var props: Array = []
 	for s in solids:
-		if (s as Solid).anchored:
+		if (s as Solid).is_soup():
+			props.append(s)
+		elif (s as Solid).anchored:
 			anchored.append(s)
 		else:
 			normal.append(s)
 	_mesh_instance.mesh = build_mesh(normal, material)
 	_anchored_mesh.mesh = build_mesh(anchored, material)
+	_props_mesh.mesh = build_props(props)
 	for c in _body.get_children():
 		_body.remove_child(c)
 		c.queue_free()
@@ -72,6 +83,74 @@ func rebuild() -> void:
 	rebuilt.emit()
 
 
+static var _prop_mats: Dictionary = {}
+const WIND_WORDS := ["Leaves", "Leaf", "Grass", "Flower", "Vine", "Fern", "Plant", "Clover"]
+
+
+## Shader material for an imported surface material in a given art style.
+static func prop_material(src: Material, style: int) -> Material:
+	var key := "%d:%d" % [src.get_instance_id() if src else 0, style]
+	if _prop_mats.has(key):
+		return _prop_mats[key]
+	var m := ShaderMaterial.new()
+	m.shader = load("res://shaders/prop.gdshader")
+	m.set_shader_parameter("style", float(style))
+	if src is BaseMaterial3D:
+		var b: BaseMaterial3D = src
+		if b.albedo_texture:
+			m.set_shader_parameter("albedo_tex", b.albedo_texture)
+		else:
+			m.set_shader_parameter("use_tex", 0.0)
+		m.set_shader_parameter("albedo_color", b.albedo_color)
+		if b.transparency != BaseMaterial3D.TRANSPARENCY_DISABLED:
+			m.set_shader_parameter("alpha_cut", 0.5)
+		var name := b.resource_name
+		for w in WIND_WORDS:
+			if name.contains(w):
+				m.set_shader_parameter("wind", 1.0)
+				break
+	else:
+		m.set_shader_parameter("use_tex", 0.0)
+	_prop_mats[key] = m
+	return m
+
+
+## All soup solids batched into one mesh with a surface per material/style.
+static func build_props(list: Array) -> ArrayMesh:
+	var groups: Dictionary = {}  # key -> [mat, style, chunks]
+	for s in list:
+		var sol: Solid = s
+		if not sol.visible:
+			continue
+		for c in sol.soup:
+			var mat: Material = c["mat"]
+			var key := "%d:%d" % [mat.get_instance_id() if mat else 0, sol.style]
+			if not groups.has(key):
+				groups[key] = [mat, sol.style, []]
+			(groups[key][2] as Array).append(c)
+	var mesh := ArrayMesh.new()
+	for key in groups.keys():
+		var g: Array = groups[key]
+		# Packed arrays are values: build locals, then hand them over.
+		var v := PackedVector3Array()
+		var n := PackedVector3Array()
+		var uv := PackedVector2Array()
+		for c in g[2]:
+			v.append_array(c["v"])
+			n.append_array(c["n"])
+			uv.append_array(c["uv"])
+		if v.is_empty():
+			continue
+		var arrays := []
+		arrays.resize(Mesh.ARRAY_MAX)
+		arrays[Mesh.ARRAY_VERTEX] = v
+		arrays[Mesh.ARRAY_NORMAL] = n
+		arrays[Mesh.ARRAY_TEX_UV] = uv
+		mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+		mesh.surface_set_material(mesh.get_surface_count() - 1, prop_material(g[0], g[1]))
+	return mesh
+
+
 static func build_mesh(list: Array, mat: Material) -> ArrayMesh:
 	var verts := PackedVector3Array()
 	var normals := PackedVector3Array()
@@ -81,7 +160,7 @@ static func build_mesh(list: Array, mat: Material) -> ArrayMesh:
 	var custom := PackedFloat32Array()
 	for s in list:
 		var sol: Solid = s
-		if not sol.visible:
+		if not sol.visible or sol.is_soup():
 			continue
 		if sol.mesh_cache.is_empty():
 			sol.mesh_cache = _solid_arrays(sol)
