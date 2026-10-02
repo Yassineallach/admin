@@ -14,3 +14,12 @@ var texture: Texture2D
 var title: String = "Photo"
 ## Camera pitch (radians) the photo was taken at; placement snaps to it.
 var pitch: float = 0.0
+## "photo" (polaroid), "sketch" (pencil drawing) or "painting" (framed canvas).
+var kind: String = "photo"
+## When the picture was taken (msec): used for the developing animation.
+var taken_ms: int = -100000
+
+
+## 0 = still white, 1 = fully developed.
+func developed() -> float:
+	return clampf((Time.get_ticks_msec() - taken_ms) / 1800.0, 0.0, 1.0)

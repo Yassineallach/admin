@@ -8,6 +8,7 @@ signal entered
 
 var needs: int = 1
 var powered: bool = false
+var locked: bool = false
 var sockets: Array[Vector3] = []  # local positions
 
 var _ring_mat: StandardMaterial3D
@@ -16,8 +17,22 @@ var _socket_mats: Array[StandardMaterial3D] = []
 var _t := 0.0
 
 
-func setup(need_count: int) -> void:
+func setup(need_count: int, label: String = "", is_locked: bool = false, done: bool = false) -> void:
 	needs = need_count
+	locked = is_locked
+	if label != "":
+		var l := Label3D.new()
+		var parts := label.split(" · ")
+		l.text = (parts[0] + ("  ✓" if done else "")) + ("\n" + parts[1] if parts.size() > 1 else "")
+		l.font_size = 64
+		l.pixel_size = 0.0055
+		l.line_spacing = -8
+		l.outline_size = 12
+		l.outline_modulate = Color(0.25, 0.2, 0.3, 0.8)
+		l.modulate = Color(0.6, 0.58, 0.62) if is_locked else Color(1, 0.97, 0.9)
+		l.billboard = BaseMaterial3D.BILLBOARD_FIXED_Y
+		l.position = Vector3(0, 3.0, 0)
+		add_child(l)
 	var body := StaticBody3D.new()
 	body.collision_layer = 1
 	var cs := CollisionShape3D.new()
@@ -125,6 +140,7 @@ func update_sockets(batteries: Array, player_pos: Vector3) -> void:
 			if filled[i]:
 				continue
 			if bat.global_position.distance_to(socket_world(i)) < 0.9:
+				Sfx.play("click")
 				bat.set_socket(i)
 				bat.global_transform = Transform3D(Basis(), socket_world(i))
 				filled[i] = true
@@ -142,7 +158,7 @@ func _update_power(filled: Array) -> void:
 		if filled[i]:
 			count += 1
 		_socket_mats[i].emission_energy_multiplier = 2.0 if filled[i] else 0.0
-	powered = count >= needs
+	powered = count >= needs and not locked
 	_ring_mat.emission_energy_multiplier = 2.5 if powered else 0.0
 	_beam.visible = powered
 

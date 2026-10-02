@@ -1,46 +1,73 @@
 class_name Levels
 extends RefCounted
-## Level data. Each level is built procedurally from convex Solids so that the
-## photo slicer can cut every surface.
+## Level data. Every surface is a convex Solid (see Props) so that the photo
+## slicer can cut through everything, scenery included.
 ##
 ## Dictionary keys:
-##   name, hint            : strings shown in the HUD
+##   name, hint            : strings (the hint is also Miso's last line)
+##   cat                   : { pos, yaw, lines: [String] } companion placement + dialogue
+##   notes                 : [{ at, title, text }] archivist notes to read
 ##   spawn, yaw            : player start (yaw in degrees, 0 = facing -Z)
 ##   solids                : Array[Solid] (tag "source" = only exists to be photographed)
 ##   batteries             : Array[Vector3]
 ##   teleporter            : { pos: Vector3, needs: int }
 ##   camera, film          : whether the player owns a camera, film count (-1 = infinite)
-##   found                 : [{ at: Vector3, from: Transform3D, title: String }]
+##   found                 : [{ at, from: Transform3D, title, kind: "photo"|"sketch"|"painting" }]
 ##   kill_y                : falling below this triggers an automatic rewind
 
-const CREAM := Color(0.86, 0.80, 0.73)
-const SAND := Color(0.90, 0.85, 0.77)
-const PEACH := Color(0.94, 0.69, 0.60)
-const ROSE := Color(0.84, 0.55, 0.60)
-const TEAL := Color(0.40, 0.66, 0.68)
-const MINT := Color(0.58, 0.78, 0.68)
-const LAV := Color(0.73, 0.69, 0.88)
-const BUTTER := Color(0.98, 0.86, 0.55)
-const STONE := Color(0.80, 0.79, 0.80)
-const SKYBLUE := Color(0.62, 0.80, 0.93)
+const P := preload("res://scripts/levels/props.gd")
 
-## Far-away origin for scenery that only exists inside found photographs.
+const CREAM := Color(0.92, 0.88, 0.80)
+const TILE_C := Color(0.90, 0.85, 0.78)
+const PEACH := Color(0.94, 0.72, 0.62)
+const ROSE := Color(0.90, 0.62, 0.62)
+const TEAL := Color(0.52, 0.74, 0.76)
+const MINT := Color(0.62, 0.80, 0.70)
+const LAV := Color(0.76, 0.72, 0.90)
+const BUTTER := Color(0.98, 0.86, 0.58)
+const BRICK := Color(0.88, 0.62, 0.52)
+const BRICK_PALE := Color(0.93, 0.80, 0.70)
+
+## Far-away origins for scenery that only exists inside found pictures.
 const SRC := Vector3(1000, 0, 0)
+const SRC2 := Vector3(2000, 0, 0)
+
+const LEVEL_COUNT := 8
+
+
+const NAMES := ["Found Photograph", "Point and Shoot", "Through the Window", "Breakthrough",
+	"Look Up", "Sketchbook", "Watercolour", "Darkroom"]
 
 
 static func count() -> int:
-	return 6
+	return LEVEL_COUNT
+
+
+static func get_level_name(i: int) -> String:
+	return "%d · %s" % [i + 1, NAMES[i]]
 
 
 static func get_level(i: int) -> Dictionary:
+	var lv: Dictionary
 	match i:
-		0: return _found_photograph()
-		1: return _point_and_shoot()
-		2: return _through_the_window()
-		3: return _breakthrough()
-		4: return _look_up()
-		5: return _darkroom()
-	return _found_photograph()
+		0: lv = _found_photograph()
+		1: lv = _point_and_shoot()
+		2: lv = _through_the_window()
+		3: lv = _breakthrough()
+		4: lv = _look_up()
+		5: lv = _sketchbook()
+		6: lv = _watercolour()
+		7: lv = _darkroom()
+		_: lv = _found_photograph()
+	lv["backdrop"] = backdrop(lv.get("backdrop_seed", i + 3))
+	return lv
+
+
+## Far scenery (islands on the horizon + the sea). Rendered but never sliced.
+static func backdrop(seed: int) -> Array:
+	var s: Array = P.horizon(Vector3.ZERO, 150.0, 7, seed)
+	s.append(P.sea(Vector3.ZERO, -45.0))
+	return s
 
 
 static func _eye(pos: Vector3, yaw_deg: float, pitch_deg: float) -> Transform3D:
@@ -48,14 +75,73 @@ static func _eye(pos: Vector3, yaw_deg: float, pitch_deg: float) -> Transform3D:
 	return Transform3D(b, pos)
 
 
-static func _tag(list: Array, tag: String) -> Array:
+static func _tag(list: Array, tag: String, style: int = Mat.STYLE_NORMAL) -> Array:
 	for s in list:
 		(s as Solid).tag = tag
+		(s as Solid).style = style
 	return list
 
 
-static func _pillar(x: float, z: float, h: float, col: Color) -> Solid:
-	return Solid.box_mm(Vector3(x - 0.3, 0, z - 0.3), Vector3(x + 0.3, h, z + 0.3), col)
+static func _wall(mn: Vector3, mx: Vector3, col: Color = BRICK_PALE, mat: int = Mat.BRICK) -> Solid:
+	return Solid.box_mm(mn, mx, col, Color(0, 0, 0, 0), mat)
+
+
+static func _table(c: Vector3) -> Array:
+	var out: Array = [Solid.box(c + Vector3(0, 0.8, 0), Vector3(1.4, 0.1, 1.0), P.WOOD, Color(0, 0, 0, 0), Mat.PLANKS)]
+	for sx in [-0.6, 0.6]:
+		for sz in [-0.4, 0.4]:
+			out.append(Solid.box(c + Vector3(sx, 0.375, sz), Vector3(0.1, 0.75, 0.1), P.WOOD.darkened(0.1), Color(0, 0, 0, 0), Mat.WOOD))
+	return out
+
+
+# ---------------------------------------------------------------------------
+# Hub: the Station, with a portal for each level.
+# ---------------------------------------------------------------------------
+static func hub() -> Dictionary:
+	var s: Array = []
+	s.append_array(P.island(Vector2(-16, -16), Vector2(16, 16), 0.0, Mat.GRASS, P.GRASS, 10.0))
+	# Central tiled plaza + fountain.
+	s.append(Solid.loft(Vector3.ZERO, Solid.ngon(12, 7.0), -0.2, 0.02, 1.0, TILE_C, Mat.TILE))
+	s.append(Solid.loft(Vector3.ZERO, Solid.ngon(12, 2.2), 0.0, 0.55, 1.0, P.STONE_WARM, Mat.BRICK))
+	var basin := Solid.loft(Vector3.ZERO, Solid.ngon(12, 1.9), 0.55, 0.5, 1.0, P.WATER, Mat.WATER)
+	basin.collide = false
+	s.append(basin)
+	s.append_array(P.column(Vector3(0, 0.55, 0), 1.6, 0.22, P.STONE))
+	# Ring of trees, lamps and benches.
+	for i in 8:
+		var a := TAU * (i + 0.5) / 8.0
+		var p := Vector3(cos(a), 0, sin(a))
+		s.append_array(P.tree(p * 14.6, 4.2, [P.LEAF, P.LEAF_PINK, P.LEAF_GOLD][i % 3], i))
+		s.append_array(P.lamp(p * 7.6))
+	s.append_array(P.house(Vector3(0, 0, 13), Vector3(6, 3.4, 3.2), Vector3.FORWARD))
+	s.append_array(P.arch(Vector3(0, 0, -15), Vector3.FORWARD, 3.0, 4.2))
+	return {
+		"name": "The Station",
+		"hint": "Step onto a glowing pad to enter a memory.",
+		"cat": {"pos": Vector3(1.9, 0.55, 0.8), "yaw": -40.0, "lines": [
+			"Oh! A visitor. Welcome to the Station.",
+			"The archivists kept their favourite places here… as photographs.",
+			"Each pad leads into one of their memories. Bring the teleporters back to life and the Archive wakes up.",
+			"I'm Miso. Pet me any time. It helps. Mostly me.",
+		]},
+		"notes": [{"at": Vector3(-2.6, 1.0, 2.0), "title": "Welcome note",
+			"text": "To whoever finds the Station running again:\n\nWe built the Archive so places could outlive us. A photograph here is not a picture of a place — it IS the place. Hold one up, and the world will make room for it.\n\n— Ines, head archivist"}],
+		"spawn": Vector3(0, 0, 4.5), "yaw": 0.0,
+		"solids": s,
+		"batteries": [],
+		"teleporter": {"pos": Vector3(0, 0, -40), "needs": 99},
+		"camera": false, "film": 0,
+		"found": [],
+		"kill_y": -15.0,
+		"is_hub": true,
+		"backdrop": backdrop(42),
+	}
+
+
+## Portal pad positions in the hub (one per level).
+static func hub_pad(i: int) -> Vector3:
+	var a := PI + PI * (i + 0.5) / LEVEL_COUNT  # semicircle on the far (-Z) side
+	return Vector3(cos(a) * 11.5, 0.0, sin(a) * 11.5)
 
 
 # ---------------------------------------------------------------------------
@@ -63,58 +149,89 @@ static func _pillar(x: float, z: float, h: float, col: Color) -> Solid:
 # ---------------------------------------------------------------------------
 static func _found_photograph() -> Dictionary:
 	var s: Array = []
-	s.append(Solid.box_mm(Vector3(-4, -1, -4), Vector3(4, 0, 4.5), CREAM, SAND))
-	s.append(Solid.box_mm(Vector3(-4, 0, 4), Vector3(4, 3.5, 4.5), PEACH))
-	s.append(Solid.box_mm(Vector3(-4.4, 0, -4), Vector3(-4, 1.0, 4.5), PEACH))
-	s.append(Solid.box_mm(Vector3(4, 0, -4), Vector3(4.4, 1.0, 4.5), PEACH))
-	s.append(Solid.box_mm(Vector3(-0.7, 0, 0.0), Vector3(0.7, 0.8, 1.0), LAV))  # pedestal
+	s.append_array(P.island(Vector2(-4, -4), Vector2(4, 4.5), 0.0, Mat.TILE, TILE_C, 7.0))
+	s.append_array(P.arch(Vector3(0, 0, 4.25), Vector3.BACK, 2.4, 3.6, 0.5, P.STONE_WARM, 0.5))
+	s.append(_wall(Vector3(-4, 0, 4.0), Vector3(-1.75, 1.3, 4.5)))
+	s.append(_wall(Vector3(1.75, 0, 4.0), Vector3(4, 1.3, 4.5)))
+	s.append(_wall(Vector3(-4.4, 0, -4), Vector3(-4, 1.0, 4.5)))
+	s.append(_wall(Vector3(4, 0, -4), Vector3(4.4, 1.0, 4.5)))
+	s.append_array(_table(Vector3(0, 0, 0.5)))
+	s.append_array(P.tree(Vector3(-2.9, 0, 2.6), 3.4, P.LEAF_PINK))
+	s.append_array(P.planter(Vector3(3.0, 0, 3.0), P.LEAF_GOLD))
+	s.append_array(P.lamp(Vector3(-3.5, 0, -3.5)))
+	s.append_array(P.lamp(Vector3(3.5, 0, -3.5)))
 	# Far platform.
-	s.append(Solid.box_mm(Vector3(-4, -1, -24), Vector3(4, 0, -13), CREAM, SAND))
-	s.append(_pillar(-3.4, -14, 3, ROSE))
-	s.append(_pillar(3.4, -14, 3, ROSE))
-	s.append(Solid.box_mm(Vector3(-3.7, 3, -14.3), Vector3(3.7, 3.5, -13.7), ROSE))
-	s.append(Solid.box_mm(Vector3(-4, 0, -24.5), Vector3(4, 4, -24), PEACH))
+	s.append_array(P.island(Vector2(-4, -24), Vector2(4, -13), 0.0, Mat.TILE, TILE_C, 8.0))
+	s.append_array(P.arch(Vector3(0, 0, -14), Vector3.FORWARD, 5.4, 4.6, 0.7, ROSE.lightened(0.15)))
+	s.append_array(P.tree(Vector3(-3, 0, -22), 3.8, P.LEAF))
+	s.append_array(P.tree(Vector3(3, 0, -22), 3.2, P.LEAF_GOLD))
+	s.append(_wall(Vector3(-4, 0, -24.4), Vector3(4, 1.2, -24)))
 
-	# The photograph's scenery: a railed bridge.
+	# The photograph's scenery: a wooden footbridge on stone piers.
 	var src: Array = []
-	src.append(Solid.box_mm(SRC + Vector3(-1.5, -1, -26), SRC + Vector3(1.5, 0, 2), TEAL, MINT))
-	src.append(Solid.box_mm(SRC + Vector3(-1.7, 0, -26), SRC + Vector3(-1.5, 0.9, 2), BUTTER))
-	src.append(Solid.box_mm(SRC + Vector3(1.5, 0, -26), SRC + Vector3(1.7, 0.9, 2), BUTTER))
-	for z in [-6.0, -12.0, -18.0]:
-		src.append(Solid.box_mm(SRC + Vector3(-1.8, -3, z - 0.3), SRC + Vector3(-1.5, 0, z + 0.3), BUTTER))
-		src.append(Solid.box_mm(SRC + Vector3(1.5, -3, z - 0.3), SRC + Vector3(1.8, 0, z + 0.3), BUTTER))
+	src.append(Solid.box_mm(SRC + Vector3(-1.5, -0.4, -26), SRC + Vector3(1.5, 0, 2), P.WOOD, Color(0, 0, 0, 0), Mat.PLANKS))
+	src.append_array(P.railing(SRC + Vector3(-1.45, 0, 2), SRC + Vector3(-1.45, 0, -26), 0.95))
+	src.append_array(P.railing(SRC + Vector3(1.45, 0, 2), SRC + Vector3(1.45, 0, -26), 0.95))
+	for z in [-6.0, -14.0, -22.0]:
+		src.append(Solid.loft(SRC + Vector3(0, 0, z), Solid.ngon(8, 1.0), -12.0, -0.4, 0.8, P.STONE, Mat.BRICK))
 	s.append_array(_tag(src, "source"))
 
 	return {
 		"name": "1 · Found Photograph",
-		"hint": "Walk into the polaroid to pick it up. Tap it (top-left) to hold it up, aim at the gap, then PLACE.",
+		"hint": "Walk into the polaroid, tap it (top-left) to hold it up, line it up with the gap, then PLACE.",
+		"cat": {"pos": Vector3(1.6, 0, 2.2), "yaw": -150.0, "lines": [
+			"The bridge in this memory is gone. But someone left a photo of it on the table.",
+			"Pick it up, hold it up and line it up with the gap. Then place it.",
+			"Whatever is in a photo becomes real. Don't overthink it. I never do.",
+		]},
+		"notes": [],
 		"spawn": Vector3(0, 0, 3), "yaw": 0.0,
 		"solids": s,
 		"batteries": [],
 		"teleporter": {"pos": Vector3(0, 0, -19), "needs": 0},
 		"camera": false, "film": 0,
-		"found": [{"at": Vector3(0, 1.4, 0.5), "from": _eye(SRC + Vector3(0, 1.5, 0), 0, -20), "title": "Bridge"}],
+		"found": [{"at": Vector3(0, 1.25, 0.5), "from": _eye(SRC + Vector3(0, 1.5, 0), 0, -20), "title": "Old footbridge", "kind": "photo"}],
 		"kill_y": -15.0,
 	}
 
 
 # ---------------------------------------------------------------------------
-# 2. Take your own photo of a ramp, turn around, paste it against a cliff.
+# 2. Take your own photo of some stairs, turn around, paste it on a cliff.
 # ---------------------------------------------------------------------------
 static func _point_and_shoot() -> Dictionary:
 	var s: Array = []
-	s.append(Solid.box_mm(Vector3(-6, -1, -40), Vector3(6, 0, 30), CREAM, SAND))
-	s.append(Solid.box_mm(Vector3(-6.5, 0, -40), Vector3(-6, 7, 30), LAV))
-	s.append(Solid.box_mm(Vector3(6, 0, -40), Vector3(6.5, 7, 30), LAV))
-	# Teleporter cliff (no way up).
-	s.append(Solid.box_mm(Vector3(-6, 0, -40), Vector3(6, 4, -14), PEACH, SAND))
-	# Look-alike cliff behind the start, with a ramp. Dead end.
-	s.append(Solid.ramp(Vector3(0, 0, 14), Vector3.BACK, 6, 3, 4, TEAL, MINT))
-	s.append(Solid.box_mm(Vector3(-6, 0, 20), Vector3(6, 4, 30), PEACH, SAND))
-	s.append(Solid.box_mm(Vector3(-6, 4, 29.5), Vector3(6, 7, 30), ROSE))
+	s.append(Solid.box_mm(Vector3(-6, -1, -40), Vector3(6, 0, 30), CREAM, TILE_C, Mat.ROCK, Mat.TILE))
+	# Town walls on both sides with windows and a cornice.
+	for sx in [-1.0, 1.0]:
+		var x0: float = 6.0 * sx
+		s.append(_wall(Vector3(minf(x0, x0 + 0.5 * sx), 0, -40), Vector3(maxf(x0, x0 + 0.5 * sx), 7, 30), BRICK_PALE))
+		s.append(Solid.box_mm(Vector3(minf(x0 - 0.15 * sx, x0 + 0.6 * sx), 6.6, -40), Vector3(maxf(x0 - 0.15 * sx, x0 + 0.6 * sx), 7.0, 30), P.STONE, Color(0, 0, 0, 0), Mat.TILE))
+		for z in [-8.0, -2.0, 4.0, 10.0]:
+			var w := Solid.box(Vector3(x0 - 0.04 * sx, 3.4, z), Vector3(0.08, 1.4, 1.0), Color(0.56, 0.72, 0.86), Color(0, 0, 0, 0), Mat.METAL)
+			w.collide = false
+			s.append(w)
+	# Teleporter cliff (no way up) — a raised garden terrace.
+	s.append(Solid.box_mm(Vector3(-6, 0, -40), Vector3(6, 4, -14), P.STONE_WARM, P.GRASS, Mat.BRICK, Mat.GRASS))
+	s.append_array(P.tree(Vector3(-4, 4, -36), 3.5, P.LEAF_PINK))
+	s.append_array(P.tree(Vector3(4, 4, -36), 3.0, P.LEAF))
+	# Look-alike terrace behind the start, with stairs. Dead end.
+	s.append_array(P.stairs(Vector3(0, 0, 14), Vector3.BACK, 16, 3.0, 0.25, 0.375))
+	s.append(Solid.box_mm(Vector3(-6, 0, 20), Vector3(6, 4, 30), P.STONE_WARM, P.GRASS, Mat.BRICK, Mat.GRASS))
+	s.append_array(P.tree(Vector3(-4, 4, 26), 3.5, P.LEAF_GOLD))
+	s.append_array(P.tree(Vector3(4, 4, 26), 3.0, P.LEAF))
+	s.append_array(P.planter(Vector3(-4.5, 0, 8)))
+	s.append_array(P.planter(Vector3(4.5, 0, -6)))
+	s.append_array(P.bench(Vector3(-4.6, 0, 1), false))
 	return {
 		"name": "2 · Point and Shoot",
-		"hint": "You have a camera. Tap CAM, frame the ramp behind you, press SNAP. Then face the cliff and PLACE it.",
+		"hint": "Tap CAM, frame the stairs behind you, press SNAP. Then face the cliff and PLACE it.",
+		"cat": {"pos": Vector3(2.2, 0, 0.5), "yaw": 160.0, "lines": [
+			"Ooh, you found a camera! The archivists' favourite toy.",
+			"Those stairs behind us lead nowhere. But the terrace ahead has no stairs at all…",
+			"Take a picture of the stairs, then hold it up against the cliff.",
+		]},
+		"notes": [{"at": Vector3(-4.6, 0.6, 1.6), "title": "Field log #2",
+			"text": "Tested the instant camera in the courtyard today. Took a picture of the east steps and put them on the west wall. The building did not mind.\n\nNote for Ines: please stop putting stairs on my ceiling.\n— Tomas"}],
 		"spawn": Vector3(0, 0, 2), "yaw": 0.0,
 		"solids": s,
 		"batteries": [],
@@ -130,25 +247,42 @@ static func _point_and_shoot() -> Dictionary:
 # ---------------------------------------------------------------------------
 static func _through_the_window() -> Dictionary:
 	var s: Array = []
-	s.append(Solid.box_mm(Vector3(-14, -1, -14), Vector3(14, 0, 14), CREAM, SAND))
-	# Sealed room: x [-3, 3], z [-12.4, -6]
-	var wall := ROSE
-	s.append(Solid.box_mm(Vector3(-3.4, 0, -6.4), Vector3(-0.8, 3.6, -6.0), wall))
-	s.append(Solid.box_mm(Vector3(0.8, 0, -6.4), Vector3(3.4, 3.6, -6.0), wall))
-	s.append(Solid.box_mm(Vector3(-0.8, 0, -6.4), Vector3(0.8, 1.0, -6.0), wall))
-	s.append(Solid.box_mm(Vector3(-0.8, 2.2, -6.4), Vector3(0.8, 3.6, -6.0), wall))
-	s.append(Solid.box_mm(Vector3(-3.4, 0, -12.8), Vector3(3.4, 3.6, -12.4), PEACH))
-	s.append(Solid.box_mm(Vector3(-3.4, 0, -12.4), Vector3(-3.0, 3.6, -6.4), PEACH))
-	s.append(Solid.box_mm(Vector3(3.0, 0, -12.4), Vector3(3.4, 3.6, -6.4), PEACH))
-	s.append(Solid.box_mm(Vector3(-3.4, 3.6, -12.8), Vector3(3.4, 4.0, -6.0), LAV))
-	s.append(Solid.box_mm(Vector3(-0.6, 0, -10.6), Vector3(0.6, 0.5, -9.4), BUTTER))
-	# Some open-space decoration.
-	s.append(_pillar(8, 8, 2.5, TEAL))
-	s.append(_pillar(-8, 8, 2.5, TEAL))
-	s.append(Solid.box_mm(Vector3(-14, 0, 13.6), Vector3(14, 2, 14), LAV))
+	s.append_array(P.island(Vector2(-14, -14), Vector2(14, 14), 0.0, Mat.GRASS, P.GRASS, 9.0))
+	# Sealed cottage: x [-3.4, 3.4], z [-12.8, -6]
+	var wall := BRICK
+	s.append(_wall(Vector3(-3.4, 0, -6.4), Vector3(-0.8, 3.6, -6.0), wall))
+	s.append(_wall(Vector3(0.8, 0, -6.4), Vector3(3.4, 3.6, -6.0), wall))
+	s.append(_wall(Vector3(-0.8, 0, -6.4), Vector3(0.8, 1.0, -6.0), wall))
+	s.append(_wall(Vector3(-0.8, 2.2, -6.4), Vector3(0.8, 3.6, -6.0), wall))
+	s.append(_wall(Vector3(-3.4, 0, -12.8), Vector3(3.4, 3.6, -12.4), PEACH, Mat.PLASTER))
+	s.append(_wall(Vector3(-3.4, 0, -12.4), Vector3(-3.0, 3.6, -6.4), PEACH, Mat.PLASTER))
+	s.append(_wall(Vector3(3.0, 0, -12.4), Vector3(3.4, 3.6, -6.4), PEACH, Mat.PLASTER))
+	s.append(Solid.box_mm(Vector3(-3.0, 0.0, -12.4), Vector3(3.0, 0.02, -6.4), P.WOOD, Color(0, 0, 0, 0), Mat.PLANKS))
+	var tri := PackedVector2Array([Vector2(-3.9, 0), Vector2(3.9, 0), Vector2(0, 2.4)])
+	s.append(Solid.extrude(tri, 7.4, Transform3D(Basis(), Vector3(0, 3.6, -9.4)), P.ROOF, Mat.ROOF))
+	# Window sill + frame details (outside, below the opening).
+	s.append(Solid.box_mm(Vector3(-1.0, 0.92, -6.0), Vector3(1.0, 1.0, -5.8), P.STONE, Color(0, 0, 0, 0), Mat.TILE))
+	s.append(Solid.box_mm(Vector3(-0.6, 0, -10.6), Vector3(0.6, 0.5, -9.4), BUTTER, Color(0, 0, 0, 0), Mat.WOOD))
+	# Garden.
+	s.append_array(P.tree(Vector3(-8, 0, 8), 4.0, P.LEAF_PINK))
+	s.append_array(P.tree(Vector3(-10, 0, -4), 3.6, P.LEAF))
+	s.append_array(P.tree(Vector3(10, 0, 10), 4.4, P.LEAF_GOLD))
+	s.append_array(P.tree(Vector3(-9, 0, -11), 3.2, P.LEAF))
+	s.append_array(P.bush(Vector3(-4.5, 0, -6.5)))
+	s.append_array(P.bush(Vector3(4.5, 0, -6.5)))
+	s.append_array(P.lamp(Vector3(-6, 0, 3)))
+	s.append_array(P.bench(Vector3(-6, 0, 6)))
+	for x in range(-12, 13, 3):
+		s.append_array(P.bush(Vector3(x, 0, 13), 0.7, P.LEAF.darkened(0.05)))
 	return {
 		"name": "3 · Through the Window",
-		"hint": "The teleporter needs a battery. Press against the window and photograph the one inside. Then PLACE the photo in open space.",
+		"hint": "Press right up against the window and photograph the battery inside. Then PLACE the photo in open space.",
+		"cat": {"pos": Vector3(-1.5, 0, -3.5), "yaw": 30.0, "lines": [
+			"The teleporter needs a battery. There's one in the cottage… which has no door. Classic Tomas.",
+			"Here's a secret: anything inside a photo gets copied. Batteries too.",
+			"Squish your face against the window and take a picture.",
+		]},
+		"notes": [],
 		"spawn": Vector3(0, 0, 0), "yaw": 0.0,
 		"solids": s,
 		"batteries": [Vector3(0, 0.8, -10)],
@@ -165,21 +299,35 @@ static func _through_the_window() -> Dictionary:
 static func _breakthrough() -> Dictionary:
 	var s: Array = []
 	var w := LAV
-	s.append(Solid.box_mm(Vector3(-2, -1, -26), Vector3(2, 0, 10), CREAM, SAND))
-	s.append(Solid.box_mm(Vector3(-2.4, -1, -26), Vector3(-2, 4, 10), w))
-	s.append(Solid.box_mm(Vector3(2, -1, -26), Vector3(2.4, 4, 10), w))
-	s.append(Solid.box_mm(Vector3(-2.4, 4, -26), Vector3(2.4, 4.4, 10), PEACH))
-	s.append(Solid.box_mm(Vector3(-2.4, -1, -26.4), Vector3(2.4, 4.4, -26), PEACH))
+	s.append(Solid.box_mm(Vector3(-2, -1, -26), Vector3(2, 0, 10), CREAM, TILE_C, Mat.ROCK, Mat.TILE))
+	s.append(_wall(Vector3(-2.4, -1, -26), Vector3(-2, 4, 10), w, Mat.PLASTER))
+	s.append(_wall(Vector3(2, -1, -26), Vector3(2.4, 4, 10), w, Mat.PLASTER))
+	s.append(_wall(Vector3(-2.4, 4, -26), Vector3(2.4, 4.4, 10), P.WOOD, Mat.PLANKS))
+	s.append(_wall(Vector3(-2.4, -1, -26.4), Vector3(2.4, 4.4, -26), PEACH, Mat.PLASTER))
+	# Ceiling beams and wall lamps.
+	for z in range(-24, 10, 4):
+		var beam := Solid.box(Vector3(0, 3.9, z), Vector3(4.0, 0.2, 0.25), P.WOOD.darkened(0.15), Color(0, 0, 0, 0), Mat.WOOD)
+		beam.collide = false
+		s.append(beam)
+		var lampl := Solid.sphere(Vector3(-1.9, 2.8, z + 2), Vector3(0.14, 0.18, 0.14), P.LAMP, Mat.GLOW)
+		lampl.collide = false
+		s.append(lampl)
 	# The blocking wall.
-	s.append(Solid.box_mm(Vector3(-2, 0, -8), Vector3(2, 4, -6), ROSE))
+	s.append(_wall(Vector3(-2, 0, -8), Vector3(2, 4, -6), BRICK))
 	# Open terrace behind the start.
-	s.append(Solid.box_mm(Vector3(-2, -1, 10), Vector3(2, 0, 34), TEAL, MINT))
+	s.append(Solid.box_mm(Vector3(-2, -1, 10), Vector3(2, 0, 34), P.ROCK, P.GRASS, Mat.ROCK, Mat.GRASS))
 	for z in [14.0, 20.0, 26.0, 32.0]:
-		s.append(_pillar(-1.7, z, 1.2, BUTTER))
-		s.append(_pillar(1.7, z, 1.2, BUTTER))
+		s.append_array(P.column(Vector3(-1.7, 0, z), 1.6, 0.25, BUTTER))
+		s.append_array(P.column(Vector3(1.7, 0, z), 1.6, 0.25, BUTTER))
 	return {
 		"name": "4 · Breakthrough",
-		"hint": "A photo replaces everything inside its frame. Photograph the open terrace, stand well back from the wall, and PLACE.",
+		"hint": "Photograph the open terrace, stand well back from the wall, and PLACE. A photo replaces everything in its frame.",
+		"cat": {"pos": Vector3(1.3, 0, -3.5), "yaw": 140.0, "lines": [
+			"A wall. Rude.",
+			"A photo doesn't just add things. It replaces everything inside its frame.",
+			"So… what if you took a picture of nothing in particular?",
+		]},
+		"notes": [],
 		"spawn": Vector3(0, 0, -1), "yaw": 0.0,
 		"solids": s,
 		"batteries": [],
@@ -191,29 +339,44 @@ static func _breakthrough() -> Dictionary:
 
 
 # ---------------------------------------------------------------------------
-# 5. A vertical shaft photographed from below becomes a horizontal tunnel.
+# 5. A vertical tower photographed from below becomes a horizontal tunnel.
 # ---------------------------------------------------------------------------
 static func _look_up() -> Dictionary:
 	var s: Array = []
-	s.append(Solid.box_mm(Vector3(-7, -1, -6), Vector3(7, 0, 8), CREAM, SAND))
-	s.append(Solid.box_mm(Vector3(-5, -1, -34), Vector3(5, 0, -18), CREAM, SAND))
-	s.append(Solid.box_mm(Vector3(-5, 0, -34.4), Vector3(5, 4, -34), PEACH))
-	# Shaft centred on (3.5, 3.5), interior half-width 1.5 (= eye height).
+	s.append_array(P.island(Vector2(-7, -6), Vector2(7, 8), 0.0, Mat.GRASS, P.GRASS, 8.0))
+	s.append_array(P.island(Vector2(-5, -34), Vector2(5, -18), 0.0, Mat.TILE, TILE_C, 8.0))
+	s.append(_wall(Vector3(-5, 0, -34.4), Vector3(5, 3, -34), PEACH, Mat.PLASTER))
+	s.append_array(P.arch(Vector3(0, 0, -33.6), Vector3.FORWARD, 2.6, 3.8, 0.6))
+	# Tower centred on (3.5, 3.5), interior half-width 1.5 (= eye height).
 	var cx := 3.5
 	var cz := 3.5
 	var h := 40.0
 	var t := 0.3
-	s.append(Solid.box_mm(Vector3(cx - 1.5 - t, 0, cz - 1.5 - t), Vector3(cx + 1.5 + t, h, cz - 1.5), TEAL))
-	s.append(Solid.box_mm(Vector3(cx - 1.5 - t, 0, cz + 1.5), Vector3(cx + 1.5 + t, h, cz + 1.5 + t), MINT))
-	s.append(Solid.box_mm(Vector3(cx + 1.5, 0, cz - 1.5), Vector3(cx + 1.5 + t, h, cz + 1.5), BUTTER))
+	s.append(_wall(Vector3(cx - 1.5 - t, 0, cz - 1.5 - t), Vector3(cx + 1.5 + t, h, cz - 1.5), Color(0.66, 0.80, 0.84)))
+	s.append(_wall(Vector3(cx - 1.5 - t, 0, cz + 1.5), Vector3(cx + 1.5 + t, h, cz + 1.5 + t), Color(0.72, 0.86, 0.72)))
+	s.append(_wall(Vector3(cx + 1.5, 0, cz - 1.5), Vector3(cx + 1.5 + t, h, cz + 1.5), Color(0.98, 0.86, 0.62)))
 	# West wall has a doorway at the bottom.
-	s.append(Solid.box_mm(Vector3(cx - 1.5 - t, 2.4, cz - 1.5), Vector3(cx - 1.5, h, cz + 1.5), LAV))
-	s.append(Solid.box_mm(Vector3(cx - 1.5 - t, 0, cz - 1.5), Vector3(cx - 1.5, 2.4, cz - 0.6), LAV))
-	s.append(Solid.box_mm(Vector3(cx - 1.5 - t, 0, cz + 0.6), Vector3(cx - 1.5, 2.4, cz + 1.5), LAV))
-	s.append(Solid.box_mm(Vector3(-7, 0, 7.6), Vector3(7, 2.5, 8), ROSE))
+	s.append(_wall(Vector3(cx - 1.5 - t, 2.4, cz - 1.5), Vector3(cx - 1.5, h, cz + 1.5), LAV))
+	s.append(_wall(Vector3(cx - 1.5 - t, 0, cz - 1.5), Vector3(cx - 1.5, 2.4, cz - 0.6), LAV))
+	s.append(_wall(Vector3(cx - 1.5 - t, 0, cz + 0.6), Vector3(cx - 1.5, 2.4, cz + 1.5), LAV))
+	# Crenellations on top.
+	for i in 4:
+		var a := Vector3([-1.2, 1.2, -1.2, 1.2][i], 0, [-1.2, -1.2, 1.2, 1.2][i])
+		s.append(Solid.box(Vector3(cx, h + 0.4, cz) + a, Vector3(0.8, 0.8, 0.8), P.STONE, Color(0, 0, 0, 0), Mat.BRICK))
+	s.append_array(P.tree(Vector3(-4.5, 0, 5), 3.6, P.LEAF_PINK))
+	s.append_array(P.tree(Vector3(-5.5, 0, -3.5), 3.0, P.LEAF))
+	s.append_array(P.lamp(Vector3(-3, 0, -5.2)))
+	s.append_array(P.tree(Vector3(-3.5, 0, -30), 3.4, P.LEAF_GOLD))
+	s.append_array(P.tree(Vector3(3.5, 0, -30), 3.4, P.LEAF))
 	return {
 		"name": "5 · Look Up",
-		"hint": "Stand in the middle of the tower and look straight up. A tunnel is a tower lying down. Stand back from the edge to PLACE.",
+		"hint": "Stand in the middle of the tower and look straight up. A tunnel is just a tower lying down. Stand back from the edge to PLACE.",
+		"cat": {"pos": Vector3(-1.5, 0, 1.5), "yaw": -60.0, "lines": [
+			"That island is much too far to jump. Even for me.",
+			"Have you looked up inside the tower? It's a long, long tube.",
+			"I wonder what a tube looks like… lying down.",
+		]},
+		"notes": [],
 		"spawn": Vector3(-2, 0, 3), "yaw": 0.0,
 		"solids": s,
 		"batteries": [],
@@ -225,35 +388,147 @@ static func _look_up() -> Dictionary:
 
 
 # ---------------------------------------------------------------------------
-# 6. Everything together, with limited film.
+# 6. A pencil sketch: the stairs it shows become real — still in pencil.
+# ---------------------------------------------------------------------------
+static func _sketchbook() -> Dictionary:
+	var s: Array = []
+	s.append_array(P.island(Vector2(-8, -14), Vector2(8, 8), 0.0, Mat.GRASS, P.GRASS, 8.0))
+	s.append(Solid.box_mm(Vector3(-8, 0, -40), Vector3(8, 7, -14), P.STONE_WARM, P.GRASS, Mat.BRICK, Mat.GRASS))
+	s.append_array(P.island(Vector2(-8, -40), Vector2(8, -14), 0.0, Mat.ROCK, P.ROCK, 9.0))
+	s.append_array(P.tree(Vector3(-5, 7, -36), 3.4, P.LEAF_PINK))
+	s.append_array(P.tree(Vector3(5, 7, -37), 3.0, P.LEAF))
+	s.append_array(P.house(Vector3(-5, 0, 3), Vector3(4, 3, 3), Vector3.RIGHT, PEACH.lightened(0.2)))
+	s.append_array(P.tree(Vector3(5.5, 0, 4.5), 3.5, P.LEAF_GOLD))
+	s.append_array(P.bush(Vector3(5, 0, -10)))
+	# Easel with the sketch.
+	s.append(Solid.box(Vector3(0, 0.6, 5.2), Vector3(0.1, 1.2, 0.1), P.WOOD, Color(0, 0, 0, 0), Mat.WOOD))
+	s.append(Solid.box(Vector3(0, 1.0, 5.1), Vector3(1.0, 0.08, 0.2), P.WOOD, Color(0, 0, 0, 0), Mat.WOOD))
+
+	# The drawing: a stone staircase climbing the cliff (in pencil).
+	var src: Array = []
+	src.append(Solid.box_mm(SRC2 + Vector3(-8, -1, -40), SRC2 + Vector3(8, 0, 4), CREAM, Color(0, 0, 0, 0), Mat.TILE))
+	src.append_array(P.stairs(SRC2 + Vector3(0, 0, -5), Vector3.FORWARD, 28, 3.0, 0.25, 0.45))
+	src.append(Solid.box_mm(SRC2 + Vector3(-8, 0, -40), SRC2 + Vector3(8, 7, -17.6), CREAM, Color(0, 0, 0, 0), Mat.BRICK))
+	src.append_array(P.railing(SRC2 + Vector3(-1.5, 0, -5), SRC2 + Vector3(-1.5, 7, -17.6), 0.9))
+	src.append_array(P.railing(SRC2 + Vector3(1.5, 0, -5), SRC2 + Vector3(1.5, 7, -17.6), 0.9))
+	src.append_array(P.column(SRC2 + Vector3(-2.2, 7, -19), 2.4, 0.3))
+	src.append_array(P.column(SRC2 + Vector3(2.2, 7, -19), 2.4, 0.3))
+	s.append_array(_tag(src, "source", Mat.STYLE_SKETCH))
+	return {
+		"name": "6 · Sketchbook",
+		"hint": "Pick up the sketch from the easel. Stand about 5 m from the cliff, look straight ahead and PLACE it.",
+		"cat": {"pos": Vector3(1.5, 0, 3.0), "yaw": -120.0, "lines": [
+			"Ines used to sketch here. She drew stairs everywhere. Even on the cliff that never had any.",
+			"A drawing works just like a photo. It stays a drawing, though. Very stylish.",
+		]},
+		"notes": [{"at": Vector3(-2.6, 0.9, 5.2), "title": "Sketchbook margin",
+			"text": "If the Archive can hold photographs, why not drawings? A drawing is a place someone hoped for.\n\nTried it this morning. The stairs are still made of pencil. I climbed them anyway.\n— Ines"}],
+		"spawn": Vector3(0, 0, 3), "yaw": 180.0,
+		"solids": s,
+		"batteries": [],
+		"teleporter": {"pos": Vector3(0, 7, -32), "needs": 0},
+		"camera": false, "film": 0,
+		"found": [{"at": Vector3(0, 1.45, 5.15), "from": _eye(SRC2 + Vector3(0, 1.5, 0), 0, 0), "title": "Pencil sketch", "kind": "sketch"}],
+		"kill_y": -15.0,
+	}
+
+
+# ---------------------------------------------------------------------------
+# 7. A watercolour painting of a bridge across a river gorge.
+# ---------------------------------------------------------------------------
+static func _watercolour() -> Dictionary:
+	var s: Array = []
+	s.append_array(P.island(Vector2(-7, -6), Vector2(7, 8), 0.0, Mat.GRASS, P.GRASS, 14.0))
+	s.append_array(P.island(Vector2(-7, -32), Vector2(7, -18), 0.0, Mat.GRASS, P.GRASS, 14.0))
+	s.append(P.water(Vector2(-30, -20), Vector2(30, -4), -10.0))
+	s.append_array(P.tree(Vector3(-5, 0, 5), 3.8, P.LEAF))
+	s.append_array(P.tree(Vector3(5.5, 0, 6), 3.4, P.LEAF_PINK))
+	s.append_array(P.house(Vector3(4.5, 0, 0), Vector3(3.4, 3, 3), Vector3.LEFT))
+	s.append_array(P.tree(Vector3(-5, 0, -28), 4.0, P.LEAF_GOLD))
+	s.append_array(P.tree(Vector3(5, 0, -27), 3.6, P.LEAF))
+	s.append_array(P.lamp(Vector3(-2.2, 0, -19)))
+	s.append_array(P.lamp(Vector3(2.2, 0, -19)))
+	s.append(Solid.box(Vector3(-3, 0.6, 5.0), Vector3(0.1, 1.2, 0.1), P.WOOD, Color(0, 0, 0, 0), Mat.WOOD))
+	s.append(Solid.box(Vector3(-3, 1.0, 4.9), Vector3(1.0, 0.08, 0.2), P.WOOD, Color(0, 0, 0, 0), Mat.WOOD))
+
+	# The painting: a stone arch bridge over a river, in watercolour.
+	var src: Array = []
+	src.append(Solid.box_mm(SRC + Vector3(-7, -1, -3.5), SRC + Vector3(7, 0, 4), P.GRASS, Color(0, 0, 0, 0), Mat.GRASS))
+	src.append(Solid.box_mm(SRC + Vector3(-2, -0.6, -40), SRC + Vector3(2, 0, -3.5), P.STONE_WARM, TILE_C, Mat.BRICK, Mat.TILE))
+	src.append_array(P.railing(SRC + Vector3(-1.9, 0, -3.5), SRC + Vector3(-1.9, 0, -40), 0.8, P.STONE))
+	src.append_array(P.railing(SRC + Vector3(1.9, 0, -3.5), SRC + Vector3(1.9, 0, -40), 0.8, P.STONE))
+	for z in [-9.0, -17.0, -25.0, -33.0]:
+		src.append(Solid.loft(SRC + Vector3(0, 0, z), Solid.ngon(8, 1.4), -14.0, -0.6, 0.85, P.STONE_WARM, Mat.BRICK))
+	src.append(P.water(Vector2(SRC.x - 30, -40), Vector2(SRC.x + 30, -4), -10.0))
+	src.append_array(P.tree(SRC + Vector3(-5, 0, 2), 3.5, P.LEAF_PINK))
+	s.append_array(_tag(src, "source", Mat.STYLE_PAINT))
+	return {
+		"name": "7 · Watercolour",
+		"hint": "Take the painting from the easel. Stand a few steps back from the edge, face the far island and PLACE it.",
+		"cat": {"pos": Vector3(1.2, 0, 3.6), "yaw": -160.0, "lines": [
+			"Tomas painted this view before the bridge washed away. Or before he forgot to build it. Hard to say.",
+			"Paintings stay paintings. I think it's prettier that way.",
+		]},
+		"notes": [],
+		"spawn": Vector3(0, 0, 3), "yaw": 0.0,
+		"solids": s,
+		"batteries": [],
+		"teleporter": {"pos": Vector3(0, 0, -25), "needs": 0},
+		"camera": false, "film": 0,
+		"found": [{"at": Vector3(-3, 1.45, 4.85), "from": _eye(SRC + Vector3(0, 1.5, 0), 0, 0), "title": "River painting", "kind": "painting"}],
+		"kill_y": -15.0,
+	}
+
+
+# ---------------------------------------------------------------------------
+# 8. Everything together, with limited film.
 # ---------------------------------------------------------------------------
 static func _darkroom() -> Dictionary:
 	var s: Array = []
-	s.append(Solid.box_mm(Vector3(-10, -1, -40), Vector3(10, 0, 10), CREAM, SAND))
-	s.append(Solid.box_mm(Vector3(-10, 0, -40), Vector3(10, 6, -12), PEACH, SAND))
-	s.append(Solid.box_mm(Vector3(-10.4, 0, -40), Vector3(-10, 8, 10), LAV))
-	s.append(Solid.box_mm(Vector3(10, 0, -40), Vector3(10.4, 8, 10), LAV))
-	s.append(Solid.box_mm(Vector3(-10, 0, 9.6), Vector3(10, 8, 10), LAV))
+	s.append(Solid.box_mm(Vector3(-10, -1, -40), Vector3(10, 0, 10), P.WOOD, P.WOOD, Mat.ROCK, Mat.PLANKS))
+	s.append(Solid.box_mm(Vector3(-10, 0, -40), Vector3(10, 6, -12), BRICK_PALE, TILE_C, Mat.BRICK, Mat.TILE))
+	s.append(_wall(Vector3(-10.4, 0, -40), Vector3(-10, 8, 10), LAV, Mat.PLASTER))
+	s.append(_wall(Vector3(10, 0, -40), Vector3(10.4, 8, 10), LAV, Mat.PLASTER))
+	s.append(_wall(Vector3(-10, 0, 9.6), Vector3(10, 8, 10), LAV, Mat.PLASTER))
+	# Framed pictures on the walls.
+	for z in [-6.0, 0.0, 6.0]:
+		for sx in [-1.0, 1.0]:
+			var fr := Solid.box(Vector3(9.95 * sx, 3.2, z), Vector3(0.06, 1.6, 2.2), P.WOOD.darkened(0.2), Color(0, 0, 0, 0), Mat.WOOD)
+			fr.collide = false
+			s.append(fr)
+			var pic := Solid.box(Vector3(9.9 * sx, 3.2, z), Vector3(0.06, 1.3, 1.9), [ROSE, TEAL, BUTTER][(int(z) + 6) / 6 % 3], Color(0, 0, 0, 0), Mat.PLASTER)
+			pic.collide = false
+			s.append(pic)
 	# Rug + plinth for the battery.
-	s.append(Solid.box_mm(Vector3(4.5, 0, 0.5), Vector3(7.5, 0.05, 3.5), ROSE))
-	s.append(Solid.box_mm(Vector3(5.6, 0, 1.6), Vector3(6.4, 0.4, 2.4), BUTTER))
-	s.append(Solid.box_mm(Vector3(-2, 0, 5), Vector3(2, 0.8, 6), STONE))  # postcard stand
+	s.append(Solid.box_mm(Vector3(4.5, 0, 0.5), Vector3(7.5, 0.05, 3.5), ROSE, Color(0, 0, 0, 0), Mat.PLASTER))
+	s.append(Solid.box_mm(Vector3(5.6, 0, 1.6), Vector3(6.4, 0.4, 2.4), BUTTER, Color(0, 0, 0, 0), Mat.WOOD))
+	s.append(Solid.box_mm(Vector3(-2, 0, 5), Vector3(2, 0.8, 6), P.STONE, Color(0, 0, 0, 0), Mat.TILE))
+	s.append_array(P.planter(Vector3(-8.5, 0, 8.3)))
+	s.append_array(P.planter(Vector3(8.5, 0, 8.3), P.LEAF_GOLD))
 
 	var src: Array = []
-	src.append(Solid.box_mm(SRC + Vector3(-10, -1, -40), SRC + Vector3(10, 0, 4), CREAM, SAND))
-	src.append(Solid.ramp(SRC + Vector3(0, 0, -5), Vector3.FORWARD, 9, 4, 6, TEAL, MINT))
-	src.append(Solid.box_mm(SRC + Vector3(-10, 0, -40), SRC + Vector3(10, 6, -14), PEACH, SAND))
-	src.append(Solid.box_mm(SRC + Vector3(-10.4, 0, -40), SRC + Vector3(-10, 8, 4), LAV))
-	src.append(Solid.box_mm(SRC + Vector3(10, 0, -40), SRC + Vector3(10.4, 8, 4), LAV))
-	s.append_array(_tag(src, "source"))
+	src.append(Solid.box_mm(SRC + Vector3(-10, -1, -40), SRC + Vector3(10, 0, 4), P.WOOD, Color(0, 0, 0, 0), Mat.PLANKS))
+	src.append_array(P.stairs(SRC + Vector3(0, 0, -5), Vector3.FORWARD, 24, 4.0, 0.25, 0.375))
+	src.append(Solid.box_mm(SRC + Vector3(-10, 0, -40), SRC + Vector3(10, 6, -14), BRICK_PALE, TILE_C, Mat.BRICK, Mat.TILE))
+	src.append(_wall(SRC + Vector3(-10.4, 0, -40), SRC + Vector3(-10, 8, 4), LAV, Mat.PLASTER))
+	src.append(_wall(SRC + Vector3(10, 0, -40), SRC + Vector3(10.4, 8, 4), LAV, Mat.PLASTER))
+	s.append_array(_tag(src, "source", Mat.STYLE_SEPIA))
 	return {
-		"name": "6 · Darkroom",
+		"name": "8 · Darkroom",
 		"hint": "Two batteries, three shots. Copy one by aiming DOWN at it — a photo replaces everything in its frame, all the way to the horizon. Hold REWIND to undo.",
+		"cat": {"pos": Vector3(-1.5, 0, 2.0), "yaw": 30.0, "lines": [
+			"This was the darkroom. The archivists developed every memory here.",
+			"Two batteries this time, and only three shots of film. Aim down when you copy something, or you'll copy the whole room.",
+			"And if it all goes wrong, hold REWIND. I won't tell anyone.",
+		]},
+		"notes": [{"at": Vector3(2.6, 1.0, 5.5), "title": "Darkroom rules",
+			"text": "1. Film is precious. Think before you shoot.\n2. A photo takes EVERYTHING in its frame, all the way to the horizon. Aim carefully.\n3. Do not photograph the cat. She multiplies.\n— management"}],
 		"spawn": Vector3(0, 0, 3), "yaw": 0.0,
 		"solids": s,
 		"batteries": [Vector3(6, 0.75, 2)],
 		"teleporter": {"pos": Vector3(0, 6, -30), "needs": 2},
 		"camera": true, "film": 3,
-		"found": [{"at": Vector3(0, 1.5, 5.5), "from": _eye(SRC + Vector3(0, 1.5, 0), 0, 0), "title": "Postcard"}],
+		"found": [{"at": Vector3(0, 1.5, 5.5), "from": _eye(SRC + Vector3(0, 1.5, 0), 0, 0), "title": "Old postcard", "kind": "photo"}],
 		"kill_y": -15.0,
+		"backdrop_seed": 0,
 	}

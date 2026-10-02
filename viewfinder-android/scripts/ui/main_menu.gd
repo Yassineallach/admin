@@ -33,7 +33,7 @@ func _ready() -> void:
 	row.add_child(left)
 
 	var title := Label.new()
-	title.text = "LENSFOLD"
+	title.text = "Lensfold"
 	title.add_theme_font_size_override("font_size", 92)
 	title.add_theme_color_override("font_color", INK)
 	left.add_child(title)
@@ -43,8 +43,8 @@ func _ready() -> void:
 	sub.add_theme_color_override("font_color", INK.lightened(0.25))
 	left.add_child(sub)
 
-	var play := _button("Continue" if Progress.unlocked > 1 else "Play", 34)
-	play.pressed.connect(func(): level_chosen.emit(mini(Progress.unlocked, Levels.count()) - 1))
+	var play := styled_button("Continue" if Progress.unlocked > 1 else "Play", 34)
+	play.pressed.connect(func(): level_chosen.emit(Game.HUB))
 	left.add_child(play)
 
 	var sens_row := HBoxContainer.new()
@@ -75,13 +75,12 @@ func _ready() -> void:
 	right.add_child(grid)
 	row.add_child(right)
 	for i in Levels.count():
-		var lv := Levels.get_level(i)
 		var locked := i + 1 > Progress.unlocked
-		var label: String = lv["name"]
+		var label: String = Levels.get_level_name(i)
 		if Progress.completed.has(i):
 			label += "  ✓"
-		var b := _button(label, 24)
-		b.custom_minimum_size = Vector2(300, 78)
+		var b := styled_button(label, 24)
+		b.custom_minimum_size = Vector2(300, 64)
 		b.disabled = locked
 		if locked:
 			b.text = "🔒 " + label
@@ -90,7 +89,7 @@ func _ready() -> void:
 		grid.add_child(b)
 
 
-func _button(text: String, fsize: int) -> Button:
+static func styled_button(text: String, fsize: int) -> Button:
 	var b := Button.new()
 	b.text = text
 	b.custom_minimum_size = Vector2(320, 80)

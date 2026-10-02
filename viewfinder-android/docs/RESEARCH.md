@@ -81,12 +81,16 @@ test, a runtime copy of actors, and mesh cutting with Geometry Script.
 | Object copies | Batteries inside the frustum are recorded in camera space and spawned again on placement. Batteries inside the placement frustum are deleted. |
 | Rewind | Every physics tick records the player and battery states. Each world-changing event (capture, place, pickup) pushes an immutable snapshot. Solids are never mutated, so a snapshot is only an array of references. Holding REWIND plays the timeline backwards at 2× speed. Falling off the world rewinds automatically. |
 | Teleporter | Has battery sockets and its own pad collider, so it still works if a photo carves away the floor under it. |
+| Textures stay attached | Each face stores a texture frame (origin + U/V axes). The frame is moved along with the face, so a pasted piece of brick wall keeps its bricks. |
+| Drawings and paintings | Each solid has an art style (normal / sketch / watercolour / sepia) that is kept through capture and placement. The shader draws pencil line art or watercolour pigment pooling, using per-triangle barycentrics plus a mask of real polygon edges. |
+| Far scenery | Distant islands and the sea are a separate backdrop mesh that photos never cut, the equivalent of Viewfinder's skybox scenery. |
+| Atmosphere | Hub with level pads, Miso the cat (dialogue, petting), archivist notes, and runtime-synthesised music and sound effects. |
 
 Performance with GDScript on desktop is about 0.5–1 ms per capture or placement,
 plus 0.3 ms to rebuild the mesh (see `tests/`). That leaves plenty of headroom on
 phones.
 
-## 5. Level design (6 original puzzles)
+## 5. Level design (hub + 8 original puzzles)
 
 Each level teaches one Viewfinder idea:
 
@@ -97,8 +101,11 @@ Each level teaches one Viewfinder idea:
 5. **Look Up:** a tower photographed from inside, looking straight up, becomes a
    horizontal tunnel across a chasm. The tower's half-width equals eye height, so
    the tunnel floor lines up with the ground exactly.
-6. **Darkroom:** limited film, two batteries, and a postcard showing a ramp. It
-   teaches you to aim *down* when copying objects, because a photo takes
+6. **Sketchbook:** a pencil drawing of stairs becomes climbable line-art stairs
+   up a cliff.
+7. **Watercolour:** a painting of a bridge becomes a painted bridge across a gorge.
+8. **Darkroom:** limited film, two batteries, and a sepia postcard showing stairs.
+   It teaches you to aim *down* when copying objects, because a photo takes
    everything behind the object too.
 
 ## Sources

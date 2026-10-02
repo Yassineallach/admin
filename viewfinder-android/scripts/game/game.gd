@@ -1,9 +1,13 @@
 class_name Game
 extends Node3D
-## Runs one level: builds the world, owns the photo inventory, performs
-## capture / placement, and records everything for the rewind system.
+## Runs one level (or the hub): builds the world, owns the photo inventory,
+## performs capture / placement, and records everything for rewind.
 
+## next >= 0: load that level · HUB: go to the hub · MENU: main menu.
 signal exit_requested(next_level: int)
+
+const HUB := -2
+const MENU := -1
 
 const PHOTO_PX := 512
 const HOLD_DIST := 0.3
@@ -13,14 +17,21 @@ const SNAP_PITCH := deg_to_rad(8.0)
 const SNAP_LEVEL := deg_to_rad(6.0)
 const SNAP_YAW := deg_to_rad(5.0)
 const SNAP_VERTICAL := deg_to_rad(86.0)
+## Visual layer for things that should not appear in photographs.
+const LAYER_NO_PHOTO := 4
 
+## Level to play; -1 = hub.
 var level_index: int = 0
 var level: Dictionary
+var is_hub := false
 
 var solid_world: SolidWorld
 var entities: Node3D
 var player: Player
 var teleporter: Teleporter
+var hub_pads: Array = []
+var cat: Cat
+var notes: Array = []
 var hud: Hud
 
 var photos: Array = []
@@ -37,9 +48,15 @@ var collected: Dictionary = {}
 var _photo_vp: SubViewport
 var _photo_cam: Camera3D
 var _held_root: Node3D
+var _held_frame: MeshInstance3D
 var _held_photo: MeshInstance3D
+var _held_dev: MeshInstance3D
+var _held_dev_mat: StandardMaterial3D
+var _raise_t := 1.0
+var _sway := Vector2.ZERO
 var _next_item_id := 1
 var _photo_counter := 0
+var _cat_line := 0
 
 # Rewind
 var _snapshots: Array = []
@@ -53,13 +70,20 @@ var _pending_unstick := 0
 
 
 func _ready() -> void:
-	level = Levels.get_level(level_index)
+	is_hub = level_index < 0
+	level = Levels.hub() if is_hub else Levels.get_level(level_index)
 	_build_environment()
 
 	solid_world = SolidWorld.new()
 	solid_world.name = "SolidWorld"
 	add_child(solid_world)
 	solid_world.set_solids(level["solids"].duplicate())
+	# Distant islands + sea: a backdrop that photos never cut (like a skybox).
+	var backdrop := MeshInstance3D.new()
+	backdrop.name = "Backdrop"
+	backdrop.mesh = SolidWorld.build_mesh(level.get("backdrop", []), solid_world.material)
+	backdrop.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(backdrop)
 
 	entities = Node3D.new()
 	entities.name = "Entities"
@@ -82,19 +106,46 @@ func _ready() -> void:
 	_photo_cam.fov = rad_to_deg(2.0 * atan(Photo.T))
 	_photo_cam.keep_aspect = Camera3D.KEEP_HEIGHT
 	_photo_cam.near = 0.05
-	_photo_cam.far = 400.0
-	_photo_cam.cull_mask = 1  # world only: no held photo / UI layer
+	_photo_cam.far = 600.0
+	_photo_cam.cull_mask = 1  # world + batteries only
 	_photo_vp.add_child(_photo_cam)
 
-	var tp: Dictionary = level["teleporter"]
-	teleporter = Teleporter.new()
-	entities.add_child(teleporter)
-	teleporter.position = tp["pos"]
-	teleporter.setup(int(tp["needs"]))
-	teleporter.entered.connect(_on_teleporter_entered)
+	if is_hub:
+		for i in Levels.count():
+			var pad := Teleporter.new()
+			entities.add_child(pad)
+			pad.position = Levels.hub_pad(i)
+			pad.rotation.y = atan2(-pad.position.x, -pad.position.z)
+			var locked := i + 1 > Progress.unlocked
+			pad.setup(0, Levels.get_level_name(i), locked, Progress.completed.has(i))
+			pad.entered.connect(_on_hub_pad.bind(i))
+			hub_pads.append(pad)
+			_no_photo(pad)
+	elif level.get("teleporter") != null:
+		var tp: Dictionary = level["teleporter"]
+		teleporter = Teleporter.new()
+		entities.add_child(teleporter)
+		teleporter.position = tp["pos"]
+		teleporter.setup(int(tp["needs"]))
+		teleporter.entered.connect(_on_teleporter_entered)
+		_no_photo(teleporter)
 
 	for pos in level["batteries"]:
 		_spawn_battery(Transform3D(Basis(), pos))
+
+	if level.has("cat"):
+		cat = Cat.new()
+		entities.add_child(cat)
+		cat.position = level["cat"]["pos"]
+		cat.rotation.y = deg_to_rad(level["cat"]["yaw"])
+		_no_photo(cat)
+	for n in level.get("notes", []):
+		var note := Note.new()
+		entities.add_child(note)
+		note.position = n["at"]
+		note.setup(n["title"], n["text"])
+		notes.append(note)
+		_no_photo(note)
 
 	has_camera = level["camera"]
 	film = int(level["film"])
@@ -112,40 +163,60 @@ func _ready() -> void:
 	_snapshots.append(_make_snapshot())
 	ready_to_play = true
 	player.frozen = false
+	if cat:
+		var lines: Array = level["cat"]["lines"]
+		if is_hub and Progress.settings.get("hub_intro_seen", false):
+			lines = ["Welcome back. Pick a pad, any pad."]
+		hud.say("Miso", lines)
+		if is_hub:
+			Progress.settings["hub_intro_seen"] = true
+			Progress.save_progress()
+
+
+func _no_photo(n: Node) -> void:
+	if n is VisualInstance3D:
+		(n as VisualInstance3D).layers = LAYER_NO_PHOTO
+	for c in n.get_children():
+		_no_photo(c)
 
 
 func _build_environment() -> void:
 	var env := Environment.new()
 	var sky := Sky.new()
-	var sm := ProceduralSkyMaterial.new()
-	sm.sky_top_color = Color(0.52, 0.72, 0.9)
-	sm.sky_horizon_color = Color(0.97, 0.88, 0.82)
-	sm.ground_bottom_color = Color(0.78, 0.66, 0.72)
-	sm.ground_horizon_color = Color(0.97, 0.88, 0.82)
-	sm.sun_angle_max = 20.0
+	var sm := ShaderMaterial.new()
+	sm.shader = load("res://shaders/sky.gdshader")
 	sky.sky_material = sm
+	sky.process_mode = Sky.PROCESS_MODE_REALTIME
+	sky.radiance_size = Sky.RADIANCE_SIZE_64
 	env.background_mode = Environment.BG_SKY
 	env.sky = sky
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
-	env.ambient_light_energy = 0.45
+	env.ambient_light_energy = 0.55
+	env.ambient_light_sky_contribution = 0.8
+	env.ambient_light_color = Color(1.0, 0.92, 0.9)
 	env.tonemap_mode = Environment.TONE_MAPPER_AGX
-	env.tonemap_exposure = 1.1
+	env.tonemap_exposure = 1.05
+	env.glow_enabled = true
+	env.glow_intensity = 0.55
+	env.glow_bloom = 0.08
+	env.glow_hdr_threshold = 0.9
 	env.fog_enabled = true
-	env.fog_light_color = Color(0.95, 0.87, 0.85)
-	env.fog_density = 0.0025
+	env.fog_light_color = Color(0.98, 0.88, 0.86)
+	env.fog_density = 0.0016
 	env.fog_sky_affect = 0.0
+	env.fog_aerial_perspective = 0.4
 	var we := WorldEnvironment.new()
 	we.environment = env
 	add_child(we)
 
 	var sun := DirectionalLight3D.new()
-	sun.rotation = Vector3(deg_to_rad(-55), deg_to_rad(35), 0)
-	sun.light_energy = 0.75
+	sun.rotation = Vector3(deg_to_rad(-48), deg_to_rad(28), 0)
+	sun.light_energy = 1.25
+	sun.light_color = Color(1.0, 0.95, 0.88)
+	sun.shadow_enabled = true
 	sun.shadow_bias = 0.06
 	sun.shadow_normal_bias = 1.5
 	sun.shadow_blur = 1.5
-	sun.light_color = Color(1.0, 0.96, 0.9)
-	sun.shadow_enabled = true
 	sun.directional_shadow_max_distance = 70.0
 	sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS
 	add_child(sun)
@@ -157,34 +228,39 @@ func _build_held_photo() -> void:
 	player.camera.add_child(_held_root)
 	var side := 2.0 * HOLD_DIST * Photo.T
 
-	var frame := MeshInstance3D.new()
-	var fq := QuadMesh.new()
-	fq.size = Vector2(side * 1.12, side * 1.28)
-	frame.mesh = fq
-	frame.position = Vector3(0, -side * 0.08, -0.001)
-	var fmat := StandardMaterial3D.new()
-	fmat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	fmat.albedo_color = Color(0.99, 0.98, 0.95, 0.9)
-	fmat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	fmat.no_depth_test = true
-	fmat.render_priority = 10
-	frame.material_override = fmat
-	frame.layers = 2
-	frame.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	_held_root.add_child(frame)
+	_held_frame = _overlay_quad(Vector2(side * 1.12, side * 1.28), Color(0.99, 0.98, 0.95), 9)
+	_held_frame.position = Vector3(0, -side * 0.08, -0.001)
+	_held_root.add_child(_held_frame)
 
-	_held_photo = MeshInstance3D.new()
-	var q := QuadMesh.new()
-	q.size = Vector2(side, side)
-	_held_photo.mesh = q
-	_held_photo.layers = 2
-	_held_photo.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_held_photo = _overlay_quad(Vector2(side, side), Color.WHITE, 10)
 	_held_root.add_child(_held_photo)
+
+	_held_dev = _overlay_quad(Vector2(side, side), Color(0.97, 0.96, 0.93, 0.0), 11)
+	_held_dev_mat = _held_dev.material_override
+	_held_dev.position.z = 0.0005
+	_held_root.add_child(_held_dev)
 	_held_root.visible = false
 
 
+func _overlay_quad(size: Vector2, col: Color, priority: int) -> MeshInstance3D:
+	var mi := MeshInstance3D.new()
+	var q := QuadMesh.new()
+	q.size = size
+	mi.mesh = q
+	var m := StandardMaterial3D.new()
+	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	m.albedo_color = col
+	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	m.no_depth_test = true
+	m.render_priority = priority
+	mi.material_override = m
+	mi.layers = 2
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	return mi
+
+
 # ---------------------------------------------------------------------------
-# Found photos
+# Found pictures
 # ---------------------------------------------------------------------------
 
 func _prepare_found_photos() -> void:
@@ -199,6 +275,7 @@ func _prepare_found_photos() -> void:
 		var xf: Transform3D = fp["from"]
 		var p := Photo.new()
 		p.title = fp.get("title", "Photo")
+		p.kind = fp.get("kind", "photo")
 		p.solids = Slicer.capture(source, xf, Photo.T)
 		p.pitch = xf.basis.get_euler().x
 		p.texture = await _render_photo(xf)
@@ -207,6 +284,7 @@ func _prepare_found_photos() -> void:
 		entities.add_child(pick)
 		pick.position = fp["at"]
 		pick.setup(p)
+		_no_photo(pick)
 		pickups[pick.key] = pick
 		idx += 1
 	if not source.is_empty():
@@ -278,6 +356,7 @@ func toggle_camera_mode() -> void:
 	if not has_camera or not ready_to_play:
 		return
 	camera_mode = not camera_mode
+	Sfx.play("click", -8.0, 1.4 if camera_mode else 1.1)
 	if camera_mode:
 		lower_photo()
 
@@ -286,12 +365,15 @@ func take_photo() -> void:
 	if not has_camera or not ready_to_play or completed:
 		return
 	if film == 0:
+		Sfx.play("denied")
 		hud.toast("Out of film — hold REWIND to get it back")
 		return
 	var xf := _capture_transform()
 	var p := Photo.new()
 	_photo_counter += 1
 	p.title = "Photo %d" % _photo_counter
+	p.kind = "photo"
+	p.taken_ms = Time.get_ticks_msec()
 	p.pitch = xf.basis.get_euler().x
 	p.solids = Slicer.capture(solid_world.solids, xf, Photo.T)
 	var inv := xf.affine_inverse()
@@ -305,10 +387,13 @@ func take_photo() -> void:
 	if film > 0:
 		film -= 1
 	_commit()
+	Sfx.play("shutter")
 	hud.flash = 1.0
 	camera_mode = false
 	p.texture = await _render_photo(xf)
-	hud.toast("Captured! Tap the photo to hold it up.")
+	p.taken_ms = Time.get_ticks_msec()
+	Sfx.play("eject", -4.0)
+	hud.eject(photos.find(p))
 
 
 func raise_photo(i: int) -> void:
@@ -320,6 +405,8 @@ func raise_photo(i: int) -> void:
 	raised = i
 	roll = 0.0
 	camera_mode = false
+	_raise_t = 0.0
+	Sfx.play("paper", -6.0)
 	_update_held_photo()
 
 
@@ -332,6 +419,7 @@ func rotate_photo(dir: int) -> void:
 	if raised < 0:
 		return
 	roll = wrapf(roll + dir * PI * 0.5, -PI, PI)
+	Sfx.play("paper", -10.0, 1.3)
 	_update_held_photo()
 
 
@@ -341,15 +429,25 @@ func _update_held_photo() -> void:
 		_held_root.visible = false
 		return
 	var p: Photo = photos[raised]
-	var mat := StandardMaterial3D.new()
-	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	var side := 2.0 * HOLD_DIST * Photo.T
+	var fm: StandardMaterial3D = _held_frame.material_override
+	var fq: QuadMesh = _held_frame.mesh
+	match p.kind:
+		"sketch":
+			fq.size = Vector2(side * 1.06, side * 1.06)
+			_held_frame.position = Vector3(0, 0, -0.001)
+			fm.albedo_color = Color(0.95, 0.93, 0.87, 0.95)
+		"painting":
+			fq.size = Vector2(side * 1.16, side * 1.16)
+			_held_frame.position = Vector3(0, 0, -0.001)
+			fm.albedo_color = Color(0.5, 0.34, 0.22, 0.97)
+		_:
+			fq.size = Vector2(side * 1.12, side * 1.28)
+			_held_frame.position = Vector3(0, -side * 0.08, -0.001)
+			fm.albedo_color = Color(0.99, 0.98, 0.95, 0.92)
+	var mat: StandardMaterial3D = _held_photo.material_override
 	mat.albedo_texture = p.texture
-	mat.albedo_color = Color(1, 1, 1, 0.85)
-	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	mat.no_depth_test = true
-	mat.render_priority = 11
-	_held_photo.material_override = mat
-	_held_root.rotation = Vector3(0, 0, roll)
+	mat.albedo_color = Color(1, 1, 1, 0.86)
 	_held_root.visible = true
 
 
@@ -369,16 +467,48 @@ func place_photo() -> void:
 		_spawn_battery(xf * (it["xf"] as Transform3D))
 	solid_world.set_solids(new_solids)
 	photos.remove_at(raised)
+	_play_place_effect(p)
 	lower_photo()
 	_commit()
 	for b in batteries:
 		(b as Battery).sleeping = false
 	_pending_unstick = 2
-	hud.flash = 0.6
+	Sfx.play("place")
+	hud.flash = 0.45
+
+
+## The held picture swells past the screen edges as it becomes the world.
+func _play_place_effect(p: Photo) -> void:
+	var fx := _overlay_quad((_held_photo.mesh as QuadMesh).size, Color(1, 1, 1, 0.85), 12)
+	(fx.material_override as StandardMaterial3D).albedo_texture = p.texture
+	fx.position = _held_root.position
+	fx.rotation = _held_root.rotation
+	player.camera.add_child(fx)
+	var tw := create_tween().set_parallel().set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+	tw.tween_property(fx, "scale", Vector3(3.2, 3.2, 1), 0.35)
+	tw.tween_property(fx.material_override, "albedo_color:a", 0.0, 0.35)
+	tw.chain().tween_callback(fx.queue_free)
+
+
+func _process(delta: float) -> void:
+	if not ready_to_play or _held_root == null:
+		return
+	# Held picture: slide up when raised, sway gently with the view, develop.
+	if _held_root.visible:
+		_raise_t = minf(_raise_t + delta * 4.0, 1.0)
+		var e := 1.0 - pow(1.0 - _raise_t, 3.0)
+		var look := hud.peek_look()
+		_sway = _sway.lerp(Vector2(clampf(-look.x * 0.00012, -0.01, 0.01), clampf(look.y * 0.00012, -0.01, 0.01)), delta * 8.0)
+		_held_root.position = Vector3(0.12 * (1.0 - e) + _sway.x, -0.25 * (1.0 - e) + _sway.y, -HOLD_DIST)
+		_held_root.rotation = Vector3(0, 0, roll + _sway.x * 2.0 + 0.2 * (1.0 - e))
+		var p: Photo = photos[raised] if raised >= 0 and raised < photos.size() else null
+		_held_dev_mat.albedo_color.a = 1.0 - (p.developed() if p else 1.0)
+	if cat:
+		cat.watch(player.camera.global_position)
 
 
 # ---------------------------------------------------------------------------
-# Batteries
+# Batteries, notes, cat
 # ---------------------------------------------------------------------------
 
 func _spawn_battery(xf: Transform3D, id: int = -1) -> Battery:
@@ -398,16 +528,7 @@ func _remove_battery(b: Battery) -> void:
 	b.queue_free()
 
 
-func interact() -> void:
-	if not ready_to_play or completed:
-		return
-	if held:
-		var drop := player.camera.global_transform * Vector3(0, -0.2, -0.9)
-		held.global_transform = Transform3D(Basis(), drop)
-		held.set_held(false)
-		held.linear_velocity = player.velocity
-		held = null
-		return
+func _battery_in_reach() -> Battery:
 	var eye := player.camera.global_position
 	var fwd := -player.camera.global_transform.basis.z
 	var best: Battery = null
@@ -425,12 +546,66 @@ func interact() -> void:
 		if score > best_score:
 			best_score = score
 			best = bat
+	return best
+
+
+func _note_in_reach() -> Note:
+	for n in notes:
+		if (n as Note).global_position.distance_to(player.camera.global_position) < 2.0:
+			return n
+	return null
+
+
+func _cat_in_reach() -> bool:
+	return cat != null and cat.global_position.distance_to(player.global_position) < 2.0
+
+
+## What the context button would do right now (shown as its label).
+func act_label() -> String:
+	if held:
+		return "DROP"
+	if _battery_in_reach():
+		return "GRAB"
+	if _note_in_reach():
+		return "READ"
+	if _cat_in_reach():
+		return "PET"
+	return ""
+
+
+func interact() -> void:
+	if not ready_to_play or completed:
+		return
+	if held:
+		var drop := player.camera.global_transform * Vector3(0, -0.2, -0.9)
+		held.global_transform = Transform3D(Basis(), drop)
+		held.set_held(false)
+		held.linear_velocity = player.velocity
+		held = null
+		Sfx.play("click", -6.0, 0.8)
+		return
+	var best := _battery_in_reach()
 	if best:
 		best.set_socket(-1)
 		best.set_held(true)
 		held = best
-	else:
-		hud.toast("Nothing to grab")
+		Sfx.play("click", -4.0, 1.2)
+		return
+	var note := _note_in_reach()
+	if note:
+		Sfx.play("paper")
+		hud.show_note(note.title, note.text)
+		return
+	if _cat_in_reach():
+		cat.pet()
+		var extra := ["Mrrrp.", "You're doing great. Probably.", "Purr… where was I? Oh, right:"]
+		var lines: Array = [extra[_cat_line % extra.size()]]
+		if not is_hub:
+			lines.append(level["hint"])
+		_cat_line += 1
+		hud.say("Miso", lines)
+		return
+	hud.toast("Nothing to grab")
 
 
 # ---------------------------------------------------------------------------
@@ -441,6 +616,7 @@ func _physics_process(_delta: float) -> void:
 	if not ready_to_play:
 		return
 	var rewinding := (hud.wants_rewind() or _auto_rewind > 0) and not completed
+	Sfx.loop("rewind", rewinding, -10.0)
 	if rewinding:
 		_step_rewind()
 		_was_rewinding = true
@@ -466,9 +642,13 @@ func _physics_process(_delta: float) -> void:
 			pick.visible = false
 			photos.append(pick.photo)
 			_commit()
-			hud.toast("Found a photograph: " + pick.photo.title)
+			Sfx.play("pickup")
+			hud.toast("Found: " + pick.photo.title + " — tap it to hold it up")
 
-	teleporter.update_sockets(batteries, player.global_position)
+	if teleporter:
+		teleporter.update_sockets(batteries, player.global_position)
+	for pad in hub_pads:
+		(pad as Teleporter).update_sockets([], player.global_position)
 
 	if player.global_position.y < float(level["kill_y"]):
 		_auto_rewind = 150
@@ -520,9 +700,9 @@ func on_hud_action(name: String) -> void:
 		"place": place_photo()
 		"rotl": rotate_photo(-1)
 		"rotr": rotate_photo(1)
-		"restart": exit_requested.emit(level_index)
-		"menu": exit_requested.emit(-1)
-		"next": exit_requested.emit(level_index + 1 if level_index + 1 < Levels.count() else -1)
+		"restart": exit_requested.emit(HUB if is_hub else level_index)
+		"menu": exit_requested.emit(MENU)
+		"hub", "next": exit_requested.emit(HUB)
 		_:
 			if name.begins_with("photo_"):
 				raise_photo(int(name.substr(6)))
@@ -533,8 +713,20 @@ func _on_teleporter_entered() -> void:
 		return
 	completed = true
 	player.frozen = true
+	Sfx.play("teleport")
 	Progress.mark_completed(level_index)
 	hud.show_complete(level_index + 1 >= Levels.count())
+
+
+func _on_hub_pad(i: int) -> void:
+	if completed:
+		return
+	completed = true
+	player.frozen = true
+	Sfx.play("teleport")
+	hud.fade_out()
+	await get_tree().create_timer(0.6).timeout
+	exit_requested.emit(i)
 
 
 # ---------------------------------------------------------------------------

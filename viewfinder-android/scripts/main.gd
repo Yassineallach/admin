@@ -25,12 +25,13 @@ func show_menu() -> void:
 	_current = layer
 
 
+## index >= 0: a level, Game.HUB: the Station hub.
 func start_level(index: int) -> void:
 	_clear()
 	var g := Game.new()
-	g.level_index = clampi(index, 0, Levels.count() - 1)
+	g.level_index = -1 if index == Game.HUB else clampi(index, 0, Levels.count() - 1)
 	g.exit_requested.connect(func(next: int):
-		if next < 0:
+		if next == Game.MENU:
 			show_menu.call_deferred()
 		else:
 			start_level.call_deferred(next))

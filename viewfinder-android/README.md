@@ -12,30 +12,57 @@ mobile release.
 See **[docs/RESEARCH.md](docs/RESEARCH.md)** for the research on the original
 game and how its mechanic works.
 
-| Hold up a found photo… | …and it becomes a bridge | A tower photographed looking up, placed as a tunnel |
+| The Station (hub) | A found photo becomes a real bridge | A tower photographed looking up becomes a tunnel |
 |---|---|---|
-| ![holding](docs/screenshots/holding_photo.png) | ![bridge](docs/screenshots/bridge_placed.png) | ![tunnel](docs/screenshots/tower_tunnel.png) |
+| ![hub](docs/screenshots/hub.png) | ![bridge](docs/screenshots/bridge_placed.png) | ![tunnel](docs/screenshots/tower_tunnel.png) |
+| **A pencil sketch stays a sketch** | **A watercolour stays a painting** | **Holding up a found photo** |
+| ![sketch](docs/screenshots/pencil_stairs.png) | ![painting](docs/screenshots/painted_bridge.png) | ![holding](docs/screenshots/holding_photo.png) |
 
 ## Features
 
+**The core mechanic**
 * **Photo → geometry.** A real-time convex-polyhedron slicer cuts the world along
   the photo frustum. Placing a photo deletes everything inside its frame (to the
-  horizon) and pastes the captured geometry, collision included.
-* **Instant camera** with a viewfinder overlay that matches the photo frame
-  exactly. Some levels give you limited film.
-* **Found photos and postcards** that show places that don't exist in the level.
-* **Copy objects:** photograph a battery to duplicate it.
-* **Rotate photos** in 90° steps before placing them.
-* **Rewind:** hold REWIND to scrub time backwards, undoing photo placements,
-  pickups and falls. Falling off the world rewinds automatically.
-* **Teleporters** powered by batteries.
-* **6 handcrafted levels**, each teaching one idea. Progress is saved.
-* **Touch-first HUD** with multi-touch: a floating joystick on the left, drag to
-  look on the right, and buttons for JUMP, GRAB, CAM/SNAP, PLACE, rotate and REW.
-  Keyboard and mouse also work on desktop.
-* Mobile-friendly rendering: **Compatibility (GLES3) renderer**, the whole level
-  in one batched draw call, a pastel shader with world-space tiling, and Jolt
-  physics.
+  horizon) and pastes the captured geometry, collision included. Trees, arches,
+  stairs and houses are sliced too.
+* **Textures travel with geometry.** Every face carries its own texture frame, so
+  bricks, planks and tiles stay glued to a pasted piece of world.
+* **Art styles survive placement**, as in Viewfinder. A found **pencil sketch**
+  becomes 3D line art on paper, a **watercolour** becomes painted geometry with
+  pigment blooms, and an old postcard comes out in **sepia**.
+* **Instant camera** with a viewfinder overlay (frame guides, REC dot,
+  level/vertical indicator). Some levels give you limited film.
+* **Polaroid feel:** the shutter clicks, the picture ejects with a motor whirr,
+  develops from white, sways in your hand, and swells out past the screen edges
+  when you place it.
+* **Copy objects:** photograph a battery to duplicate it. Rotate photos in 90° steps.
+* **Rewind:** hold REWIND to scrub time backwards, with a VHS-style effect. It
+  undoes placements, pickups and falls.
+
+**The world**
+* **The Station:** a hub island with a fountain and a portal pad for each memory.
+  Locked and completed states are shown above each pad.
+* **Miso the cat:** a companion who lounges around each level, watches you,
+  talks you through puzzles, and purrs (with hearts) when you pet her.
+* **Archivist notes** to read, telling a small original story about the people
+  who built the Archive.
+* **8 handcrafted levels:** Found Photograph, Point and Shoot, Through the Window,
+  Breakthrough, Look Up, Sketchbook, Watercolour and Darkroom.
+* A pastel look: procedural materials (grass, stone tiles, brick, planks, roof
+  shingles, rock, foliage, water), soft half-lambert lighting with lifted
+  shadows, glow, a painted sky with drifting clouds, floating islands on the
+  horizon and a sea below. The horizon is a backdrop that photos never cut, like
+  a skybox.
+* **All audio is synthesised at runtime:** an ambient music loop, the shutter,
+  photo eject, placement whoosh, chimes, rewind and purring. The APK ships no
+  audio files.
+
+**Mobile**
+* Touch-first multi-touch HUD with a floating joystick, drag-to-look, and
+  context buttons (GRAB / DROP / READ / PET). Keyboard and mouse also work.
+* **Compatibility (GLES3) renderer.** The level is one batched mesh and draw
+  call. Per-solid mesh and collision caches mean a placement only rebuilds the
+  pieces it cut. Jolt physics.
 
 ## Controls
 
@@ -44,7 +71,7 @@ game and how its mechanic works.
 | Move | left half of screen (floating stick) | WASD |
 | Look | drag on the right half | mouse drag |
 | Jump | JUMP | Space |
-| Grab / drop battery | GRAB | E |
+| Grab / drop · read note · pet Miso | context button | E |
 | Camera mode / take photo | CAM, then SNAP | C, then F |
 | Hold up photo *n* | tap its thumbnail (top-left) | 1–9 |
 | Place held photo | PLACE | F |
@@ -61,11 +88,14 @@ when you're within a few degrees, so near-misses still line up.
 project.godot            Godot 4.7, GL Compatibility, landscape, Jolt physics
 export_presets.cfg       Android preset (arm64-v8a, immersive, com.lensfold.game)
 scenes/main.tscn         entry scene (menu <-> level flow in scripts/main.gd)
-scripts/geometry/        Solid (convex polyhedron), Slicer (clip/capture/carve/place), SolidWorld (batched mesh + collision)
-scripts/game/            Game (photos, rewind, items), Player, Battery, Teleporter, PhotoPickup, Photo, Progress (save)
-scripts/levels/levels.gd the 6 levels, built procedurally from boxes and ramps
-scripts/ui/              Hud (touch controls, viewfinder, tray), MainMenu
-shaders/world.gdshader   pastel vertex-colour + grid shader
+scripts/geometry/        Solid (convex polyhedron + texture frames), Slicer (clip/capture/carve/place),
+                         SolidWorld (cached batched mesh + collision), Mat (material & art-style ids)
+scripts/game/            Game (photos, rewind, items, hub), Player, Battery, Teleporter, PhotoPickup, Photo,
+                         Cat (Miso), Note, Sfx (synthesised audio), Progress (save)
+scripts/levels/          levels.gd (hub + 8 levels), props.gd (trees, arches, stairs, houses, islands…)
+scripts/ui/              Hud (touch controls, viewfinder, tray, dialogue, notes), MainMenu
+shaders/world.gdshader   procedural materials + sketch / watercolour / sepia styles + soft lighting
+shaders/sky.gdshader     painted sky with clouds
 tests/                   slicer unit tests, full scripted playthrough, screenshot harness
 tools/apksigner/         optional apksigner drop-in for headless/CI APK builds
 ```
@@ -111,16 +141,26 @@ exported debug APK is about 28 MB (arm64-v8a, minSdk 24, targetSdk 36).
 
 ```bash
 godot --headless --path . --script res://tests/test_slicer.gd                   # geometry unit tests
-godot --headless --fixed-fps 60 --path . res://tests/level_playthrough.tscn      # solves all 6 levels + rewind
+godot --headless --fixed-fps 60 --path . res://tests/level_playthrough.tscn      # solves all 8 levels + rewind + hub
 xvfb-run godot --path . --rendering-driver opengl3 res://tests/screenshots.tscn -- /tmp/shots
 ```
 
 The playthrough test drives the real player physics, slicer, battery copying,
-teleporter sockets and rewind, and checks that every level can be completed.
+teleporter sockets, sketch/painting styles, the hub pads and rewind, and checks
+that every level can be completed (43 checks).
+
+## How close is it to the original?
+
+The mechanics, structure and feel follow Viewfinder closely: photos that become
+geometry, found pictures in their own art styles, an instant camera with limited
+film, battery copying, teleporters, rewind, a hub of memories, a cat companion,
+and notes from the people who built the world. **The assets are not
+Viewfinder's.** Its models, textures, music, story and exact level layouts are
+copyrighted by Sad Owl Studios, so everything here is original work in a similar
+pastel style.
 
 ## Ideas for more content
 
-Paintings and drawings with their own art style (a different shader per photo),
-a photocopier that duplicates photos, colour filters that make some geometry
-solid, fixed security cameras that take the photo for you, a hub world, Cait the
-cat, and sound/haptics (`permissions/vibrate` is already enabled).
+A photocopier that duplicates photos, colour filters that make some geometry
+solid, fixed security cameras that take the photo for you, timed rooms, more
+hubs, and haptics (`permissions/vibrate` is already enabled).

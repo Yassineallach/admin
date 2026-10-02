@@ -11,6 +11,7 @@ func _ready() -> void:
 	for i in Levels.count():
 		await _run_level(i)
 	await _test_rewind()
+	await _test_hub()
 	print("PLAYTHROUGH DONE, failures: ", failures)
 	get_tree().quit(1 if failures > 0 else 0)
 
@@ -165,6 +166,25 @@ func _run_level(i: int) -> void:
 			var g := ground_at(0, -12, 2.5)
 			check(absf(g) < 0.1, "tunnel floor is level with the ground (y=%.3f)" % g)
 		5:
+			await pose(Vector3(0, 0, 4.6), 180, 0)
+			await frames(3)
+			check(game.photos.size() == 1 and game.photos[0].kind == "sketch", "sketch picked up")
+			var sketch_style := true
+			for so in game.photos[0].solids:
+				sketch_style = sketch_style and (so as Solid).style == Mat.STYLE_SKETCH
+			check(sketch_style, "sketch geometry keeps the pencil style")
+			await pose(Vector3(0, 0, -9), 0, 0)
+			await place(0)
+			check(ground_at(0, -20, 8.0) > 2.0, "pencil stairs climb the cliff (y=%.2f)" % ground_at(0, -20, 8.0))
+		6:
+			await pose(Vector3(-3, 0, 3.9), 0, 0)
+			await frames(3)
+			check(game.photos.size() == 1 and game.photos[0].kind == "painting", "painting picked up")
+			await pose(Vector3(0, 0, -2), 0, 0)
+			await place(0)
+			var gy := ground_at(0, -12, 3.0)
+			check(absf(gy) < 0.05, "painted bridge spans the gorge (y=%.2f)" % gy)
+		7:
 			# Aim down so the photo only grabs a patch of floor + the battery.
 			await pose(Vector3(6, 0, 3.6), 0, -50)
 			await snap()
@@ -201,6 +221,30 @@ func _run_level(i: int) -> void:
 	if not game.completed:
 		print("    player ended at ", game.player.global_position)
 	check(game.completed, "level %d completed" % (i + 1))
+
+
+func _test_hub() -> void:
+	print("Hub")
+	if game:
+		game.queue_free()
+		await get_tree().process_frame
+	Progress.unlocked = 1
+	game = Game.new()
+	game.level_index = -1
+	add_child(game)
+	while not game.ready_to_play:
+		await get_tree().process_frame
+	await frames(5)
+	check(game.hub_pads.size() == Levels.count(), "hub has a pad per level")
+	check(not (game.hub_pads[1] as Teleporter).powered, "locked pads are off")
+	var chosen := [-99]
+	game.exit_requested.connect(func(n): chosen[0] = n)
+	await pose(Levels.hub_pad(1), 0, 0)
+	await frames(10)
+	check(chosen[0] == -99, "locked pad does nothing")
+	await pose(Levels.hub_pad(0), 0, 0)
+	await frames(60)
+	check(chosen[0] == 0, "first pad opens level 1")
 
 
 func _test_rewind() -> void:

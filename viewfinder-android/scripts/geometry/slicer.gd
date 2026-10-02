@@ -53,12 +53,14 @@ static func clip(s: Solid, plane: Plane, cap_color: Variant = null) -> Solid:
 				cap_pts.append(p)
 		res = _clean_polygon(res)
 		if res.size() >= 3:
-			out.faces.append({"v": res, "n": f["n"], "c": f["c"]})
+			var g: Dictionary = f.duplicate()
+			g["v"] = res
+			out.faces.append(g)
 
 	var cap := _build_cap(cap_pts, -plane.normal)
 	if cap.size() >= 3:
 		var cc: Color = cap_color if cap_color != null else s.color
-		out.faces.append({"v": cap, "n": -plane.normal, "c": cc})
+		out.add_face(cap, -plane.normal, cc)
 	if out.faces.size() < 4:
 		return null
 	return out
@@ -139,6 +141,23 @@ static func point_in_frustum(cam: Transform3D, t: float, p: Vector3) -> bool:
 
 ## 0 = fully outside some plane, 1 = fully inside all planes, 2 = straddles.
 static func _classify(s: Solid, planes: Array) -> int:
+	# Fast path on the cached bounding box.
+	var b := s.bounds()
+	var box_inside_all := true
+	for pl in planes:
+		var plane: Plane = pl
+		var mx := -INF
+		var mn := INF
+		for i in 8:
+			var d := plane.distance_to(b.get_endpoint(i))
+			mx = maxf(mx, d)
+			mn = minf(mn, d)
+		if mx < -EPS:
+			return 0
+		if mn < -EPS:
+			box_inside_all = false
+	if box_inside_all:
+		return 1
 	var inside_all := true
 	for pl in planes:
 		var all_out := true

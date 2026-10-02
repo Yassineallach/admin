@@ -1,8 +1,9 @@
 extends Node
 ## Renders a set of gameplay screenshots (needs a real display / Xvfb).
-## Run: godot --path . --rendering-driver opengl3 res://tests/screenshots.tscn -- <out_dir>
+## Run: godot --path . --rendering-driver opengl3 res://tests/screenshots.tscn -- <out_dir> [only]
 
 var out_dir := "user://shots"
+var only := ""
 var game: Game
 
 
@@ -10,57 +11,113 @@ func _ready() -> void:
 	var args := OS.get_cmdline_user_args()
 	if args.size() > 0:
 		out_dir = args[0]
+	if args.size() > 1:
+		only = args[1]
 	DirAccess.make_dir_recursive_absolute(out_dir)
+	Progress.unlocked = 9
 
-	var menu := MainMenu.new()
-	var layer := CanvasLayer.new()
-	layer.add_child(menu)
-	add_child(layer)
-	await settle(10)
-	await shot("00_menu")
-	layer.queue_free()
+	if want("menu"):
+		var menu := MainMenu.new()
+		var layer := CanvasLayer.new()
+		layer.add_child(menu)
+		add_child(layer)
+		await settle(10)
+		await shot("00_menu")
+		layer.queue_free()
 
-	await load_level(0)
-	await pose(Vector3(0, 0, 3), 0, -8)
-	await shot("01_found_photograph_start")
-	await pose(Vector3(0, 0, 1.6), 0, 0)
-	await settle(4)
-	await pose(Vector3(0, 0, -3.6), 0, -20)
-	game.raise_photo(0)
-	await shot("02_holding_photo")
-	game.place_photo()
-	await settle(8)
-	await pose(Vector3(0, 0, -3.6), 0, -12)
-	await shot("03_bridge_placed")
+	if want("hub"):
+		await load_level(-1)
+		await pose(Vector3(0, 0, 6.5), 0, -4)
+		await shot("01_hub")
+		await pose(Vector3(1.9, 0, 2.5), 0, -32)
+		game.cat.watch(game.player.camera.global_position)
+		await settle(30)
+		await shot("02_miso")
 
-	await load_level(1)
-	await pose(Vector3(0, 0, 4), 180, 0)
-	game.camera_mode = true
-	await shot("04_viewfinder")
-	await game.take_photo()
-	await pose(Vector3(0, 0, -4), 0, 0)
-	await shot("05_cliff_before")
-	game.raise_photo(0)
-	game.place_photo()
-	await settle(8)
-	await pose(Vector3(1.5, 0, -6), 15, 5)
-	await shot("06_cliff_after")
+	if want("l1"):
+		await load_level(0)
+		await pose(Vector3(0, 0, 3), 0, -8)
+		await shot("03_found_photograph")
+		await pose(Vector3(0, 0, 1.6), 0, 0)
+		await settle(4)
+		await pose(Vector3(0, 0, -3.6), 0, -20)
+		game.raise_photo(0)
+		await settle(20)
+		await shot("04_holding_photo")
+		game.place_photo()
+		await settle(40)
+		await pose(Vector3(0, 0, -3.0), 0, -10)
+		await shot("05_bridge_placed")
+		await pose(Vector3(5.5, 0.5, -6), 60, -8)
+		game.player.frozen = true
+		await shot("06_bridge_side")
 
-	await load_level(4)
-	await pose(Vector3(3.5, 0, 3.5), 0, 89)
-	await shot("07_shaft_up")
-	await game.take_photo()
-	await pose(Vector3(0, 0, -2), 0, 0)
-	game.raise_photo(0)
-	game.place_photo()
-	await settle(8)
-	await pose(Vector3(0, 0, -3), 0, 0)
-	await shot("08_tunnel")
+	if want("l2"):
+		await load_level(1)
+		await pose(Vector3(0, 0, 4), 180, 0)
+		game.camera_mode = true
+		await shot("07_viewfinder")
+		game.take_photo()
+		await settle(28)
+		await shot("08_eject")
+		await settle(90)
+		await pose(Vector3(0, 0, -4), 0, 0)
+		game.raise_photo(0)
+		game.place_photo()
+		await settle(40)
+		await pose(Vector3(2, 0, -6), 15, 8)
+		await shot("09_stairs_pasted")
 
-	await load_level(2)
-	await pose(Vector3(0, 0, -5.6), 0, 0)
-	await shot("09_window")
+	if want("l5"):
+		await load_level(4)
+		await pose(Vector3(3.5, 0, 3.5), 0, 89)
+		await shot("10_tower_up")
+		await game.take_photo()
+		await settle(90)
+		await pose(Vector3(0, 0, -2), 0, 0)
+		game.raise_photo(0)
+		game.place_photo()
+		await settle(40)
+		await pose(Vector3(0, 0, -3), 0, 0)
+		await shot("11_tunnel")
+
+	if want("l6"):
+		await load_level(5)
+		await pose(Vector3(0, 0, 3.3), 180, -10)
+		await shot("12_sketch_easel")
+		await pose(Vector3(0, 0, 4.6), 180, 0)
+		await settle(4)
+		await pose(Vector3(0, 0, -9), 0, 0)
+		game.raise_photo(0)
+		await settle(20)
+		await shot("13_holding_sketch")
+		game.place_photo()
+		await settle(40)
+		await pose(Vector3(0, 0, -10.5), 0, 12)
+		await shot("14_pencil_stairs")
+
+	if want("l7"):
+		await load_level(6)
+		await pose(Vector3(-3, 0, 3.9), 0, 0)
+		await settle(4)
+		await pose(Vector3(0, 0, -2), 0, 0)
+		game.raise_photo(0)
+		await settle(20)
+		await shot("15_holding_painting")
+		game.place_photo()
+		await settle(40)
+		await pose(Vector3(0, 0, -3), 0, -6)
+		await shot("16_painted_bridge")
+
+	if want("l8"):
+		await load_level(7)
+		await pose(Vector3(0, 0, 8), 0, -6)
+		await shot("17_darkroom")
 	get_tree().quit()
+
+
+func want(tag: String) -> bool:
+	return only == "" or only.split(",").has(tag)
 
 
 func settle(n: int) -> void:
@@ -78,6 +135,7 @@ func load_level(i: int) -> void:
 	while not game.ready_to_play:
 		await get_tree().process_frame
 	game.hud.fade = 0.0
+	game.hud._title_time = 0.0
 
 
 func pose(pos: Vector3, yaw_deg: float, pitch_deg: float) -> void:

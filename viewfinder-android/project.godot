@@ -16,6 +16,7 @@ boot_splash/bg_color=Color(0.96, 0.93, 0.88, 1)
 [autoload]
 
 Progress="*res://scripts/game/progress.gd"
+Sfx="*res://scripts/game/sfx.gd"
 
 [display]
 
