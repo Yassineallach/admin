@@ -12,6 +12,8 @@ mobile release.
 See **[docs/RESEARCH.md](docs/RESEARCH.md)** for the research on the original
 game and how its mechanic works.
 
+![Gameplay: a found photo becomes a bridge, a tower becomes a tunnel, a pencil sketch becomes stairs](docs/gameplay.gif)
+
 | The Station (hub) | A found photo becomes a real bridge | A tower photographed looking up becomes a tunnel |
 |---|---|---|
 | ![hub](docs/screenshots/hub.png) | ![bridge](docs/screenshots/bridge_placed.png) | ![tunnel](docs/screenshots/tower_tunnel.png) |
@@ -143,6 +145,8 @@ exported debug APK is about 28 MB (arm64-v8a, minSdk 24, targetSdk 36).
 godot --headless --path . --script res://tests/test_slicer.gd                   # geometry unit tests
 godot --headless --fixed-fps 60 --path . res://tests/level_playthrough.tscn      # solves all 8 levels + rewind + hub
 xvfb-run godot --path . --rendering-driver opengl3 res://tests/screenshots.tscn -- /tmp/shots
+# record the scripted gameplay run (PNG frames + WAV) with Movie Maker:
+xvfb-run godot --path . --rendering-driver opengl3 --write-movie /tmp/rec/frame.png --fixed-fps 30 res://tests/record_gameplay.tscn
 ```
 
 The playthrough test drives the real player physics, slicer, battery copying,
