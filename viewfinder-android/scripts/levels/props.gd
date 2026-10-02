@@ -27,6 +27,7 @@ const TEAL := Color(0.42, 0.74, 0.74)
 const BUTTER := Color(0.98, 0.84, 0.50)
 const LILAC := Color(0.74, 0.66, 0.92)
 const ACCENTS := [CORAL, TEAL, BUTTER, LILAC]
+const PAVER := Color(0.93, 0.90, 0.86)
 const BLOSSOM := Color(1.0, 0.64, 0.80)
 const BLOSSOM_LILAC := Color(0.80, 0.66, 1.0)
 const AUTUMN := Color(1.0, 0.74, 0.40)
@@ -54,6 +55,24 @@ static func tree(base: Vector3, height: float = 3.6, leaf: Color = LEAF, seed: i
 	trunk.visible = false
 	out.append(trunk)
 	return out
+
+## Cheap low-poly tree for far scenery: a trunk and a few leafy blobs.
+static func far_tree(base: Vector3, height: float = 4.0, leaf: Color = LEAF, seed: int = 0) -> Array:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash(base) + seed
+	var col := leaf
+	if leaf == LEAF_PINK:
+		col = BLOSSOM if rng.randf() < 0.7 else BLOSSOM_LILAC
+	elif leaf == LEAF_GOLD:
+		col = AUTUMN
+	var out: Array = [Solid.loft(base, Solid.ngon(6, height * 0.05), 0.0, height * 0.6, 0.6, TRUNK, Mat.WOOD)]
+	var r := height * 0.28
+	out.append(Solid.sphere(base + Vector3(0, height * 0.68, 0), Vector3(r, r * 0.85, r), col, Mat.FOLIAGE))
+	for k in 2:
+		var a := rng.randf() * TAU
+		out.append(Solid.sphere(base + Vector3(cos(a) * r * 0.6, height * 0.55, sin(a) * r * 0.6), Vector3(r * 0.7, r * 0.6, r * 0.7), col.darkened(0.06 * k), Mat.FOLIAGE))
+	return _decor(out)
+
 
 static func bush(base: Vector3, r: float = 0.6, leaf: Color = LEAF) -> Array:
 	var name := "Bush_Common_Flowers" if leaf != LEAF else "Bush_Common"
@@ -172,7 +191,8 @@ static func crate(c: Vector3, s: float = 0.8) -> Array:
 ## `front` is the direction the door faces (one of the 4 axes). With `tall`
 ## a cantilevered glass-fronted upper storey sits on top.
 static func house(base: Vector3, size: Vector3, front: Vector3 = Vector3.BACK,
-		wall: Color = WHITE, accent: Color = Color(0, 0, 0, 0), tall: bool = false) -> Array:
+		wall: Color = WHITE, accent: Color = Color(0, 0, 0, 0), tall: bool = false,
+		models: bool = true) -> Array:
 	var out: Array = []
 	var rng := RandomNumberGenerator.new()
 	rng.seed = hash(base)
@@ -238,10 +258,12 @@ static func house(base: Vector3, size: Vector3, front: Vector3 = Vector3.BACK,
 		for k in 2:
 			out.append_array(_solar(at.call(Vector3(ux + (k - 0.5) * uw * 0.45, roof_y + 2.5, 0)), basis))
 		# Garden on the remaining roof.
-		out.append_array(_roof_garden(at.call(Vector3(-w * 0.3, roof_y, 0)), basis, w * 0.38, d * 0.8))
+		out.append_array(_roof_garden(at.call(Vector3(-w * 0.3, roof_y, 0)), basis, w * 0.38, d * 0.8, models))
 	else:
 		out.append_array(_solar(at.call(Vector3(w * 0.22, roof_y, -d * 0.1)), basis))
-		out.append_array(_roof_garden(at.call(Vector3(-w * 0.22, roof_y, 0)), basis, w * 0.4, d * 0.8))
+		out.append_array(_roof_garden(at.call(Vector3(-w * 0.22, roof_y, 0)), basis, w * 0.4, d * 0.8, models))
+	if not models:
+		return out
 	# Vines spill over the front edge; potted plants flank the door.
 	for vx in [-w * 0.42, w * 0.38]:
 		out.append(ModelLib.instance(ModelLib.VILLAGE + "Prop_Vine%d.gltf" % [1, 5, 6][rng.randi() % 3],
@@ -261,9 +283,13 @@ static func _solar(c: Vector3, basis: Basis) -> Array:
 
 
 ## Grass bed with bushes and flowers on a flat roof.
-static func _roof_garden(c: Vector3, basis: Basis, w: float, d: float) -> Array:
+static func _roof_garden(c: Vector3, basis: Basis, w: float, d: float, models: bool = true) -> Array:
 	var out: Array = []
 	out.append(Solid.obox(c + Vector3(0, 0.15, 0), Vector3(w, 0.3, d), basis, CONCRETE, Mat.CONCRETE, GRASS, Mat.GRASS))
+	if not models:
+		# Cheap stand-in hedge for far-away roofs.
+		out.append(Solid.obox(c + Vector3(0, 0.55, 0), Vector3(w * 0.8, 0.5, d * 0.6), basis, LEAF, Mat.FOLIAGE))
+		return _decor(out)
 	out.append_array(bush(c + Vector3(0, 0.3, 0) + basis * Vector3(-w * 0.2, 0, d * 0.15), 0.55, LEAF))
 	out.append_array(bush(c + Vector3(0, 0.3, 0) + basis * Vector3(w * 0.25, 0, -d * 0.2), 0.45, LEAF_PINK))
 	out.append(ModelLib.instance(ModelLib.NATURE + "Grass_Common_Tall.gltf", c + Vector3(0, 0.3, 0) + basis * Vector3(w * 0.2, 0, d * 0.25), c.x * 17.0, 0.5))
@@ -472,7 +498,7 @@ static func horizon(center: Vector3, radius: float = 140.0, count: int = 6, seed
 		for k in rng.randi_range(1, 3):
 			var tp := p + Vector3(rng.randf_range(-w * 0.6, w * 0.6), 0, rng.randf_range(-w * 0.4, w * 0.4))
 			var leaf: Color = [LEAF, LEAF_PINK, LEAF_GOLD][rng.randi() % 3]
-			out.append_array(tree(tp, rng.randf_range(5, 9) * maxf(scale, 0.6), leaf, k))
+			out.append_array(far_tree(tp, rng.randf_range(5, 9) * maxf(scale, 0.6), leaf, k))
 	for s in out:
 		(s as Solid).collide = false
 	return out
@@ -489,6 +515,113 @@ static func tower(base: Vector3, h: float, accent: Color = TEAL) -> Array:
 		out.append(Solid.loft(base + Vector3(0, y, 0), Solid.ngon(12, rr), 0.0, 0.35, 1.0, accent if k != 1 else WHITE, Mat.PLASTER))
 	out.append(Solid.loft(base + Vector3(0, h, 0), Solid.ngon(12, r * 1.5), 0.0, r * 1.2, 0.6, GLASS, Mat.GLASS))
 	out.append(Solid.loft(base + Vector3(0, h + r * 1.2, 0), Solid.ngon(12, r * 0.95), 0.0, 0.3, 0.2, WHITE, Mat.PLASTER))
+	return _decor(out)
+
+
+## Dresses a plain street wall as a row of town-house fronts: pilasters,
+## doors under awnings, flower boxes under the windows at `win_z`, wall
+## lamps and vines over the cornice. `x` is the wall face, `out` = +1/-1 the
+## direction it faces (along X). Purely decorative and paper-thin.
+static func facade(x: float, out: float, z0: float, z1: float, h: float, win_z: Array, seed: int = 0) -> Array:
+	var res: Array = []
+	var rng := RandomNumberGenerator.new()
+	rng.seed = seed
+	var q: int = Progress.quality() if Engine.get_main_loop() != null else 2
+	var basis := Basis(Vector3.UP, PI * 0.5 * out)  # local +Z -> facing direction
+	var z := z0
+	var k := 0
+	while z <= z1:
+		res.append(Solid.box(Vector3(x + out * 0.08, h * 0.5, z), Vector3(0.16, h, 0.45), WHITE, CONCRETE, Mat.PLASTER, Mat.CONCRETE))
+		z += 6.0
+		k += 1
+	for wz in win_z:
+		var accent: Color = ACCENTS[rng.randi() % ACCENTS.size()]
+		var p := Vector3(x, 0, wz)
+		# Door below the window, with a canopy.
+		res.append(Solid.box(p + Vector3(out * 0.04, 1.05, 0), Vector3(0.08, 2.1, 1.0), accent, Color(0, 0, 0, 0), Mat.PLASTER))
+		res.append(Solid.box(p + Vector3(out * 0.025, 1.12, 0), Vector3(0.05, 2.3, 1.25), CONCRETE, Color(0, 0, 0, 0), Mat.CONCRETE))
+		res.append(Solid.obox(p + Vector3(out * 0.4, 2.45, 0), Vector3(1.6, 0.08, 0.85), basis * Basis(Vector3.RIGHT, deg_to_rad(12)), accent.lightened(0.15), Mat.PLASTER))
+		# Flower box under the window.
+		res.append(Solid.box(p + Vector3(out * 0.18, 2.55, 0), Vector3(0.36, 0.25, 1.1), WHITE, Color(0.45, 0.35, 0.3), Mat.PLASTER, Mat.GRASS))
+		if q >= 1:
+			res.append(ModelLib.instance(ModelLib.NATURE + ("Flower_3_Group" if rng.randf() < 0.5 else "Flower_4_Group") + ".gltf",
+				p + Vector3(out * 0.18, 2.66, 0), rng.randf() * 360.0, 0.28))
+		else:
+			res.append(Solid.sphere(p + Vector3(out * 0.18, 2.8, 0), Vector3(0.18, 0.15, 0.5), BLOSSOM, Mat.FOLIAGE))
+		# Wall lamp beside the door.
+		res.append(Solid.box(p + Vector3(out * 0.1, 2.0, 0.8), Vector3(0.2, 0.06, 0.06), METAL, Color(0, 0, 0, 0), Mat.METAL))
+		res.append(Solid.sphere(p + Vector3(out * 0.22, 1.9, 0.8), Vector3(0.1, 0.12, 0.1), LAMP, Mat.GLOW))
+		# Vines over the cornice.
+		if q >= 1 and rng.randf() < 0.75:
+			res.append(ModelLib.instance(ModelLib.VILLAGE + "Prop_Vine%d.gltf" % [1, 5, 6][rng.randi() % 3],
+				Vector3(x + out * 0.15, h - 0.3, wz + rng.randf_range(-1.5, 1.5)), rad_to_deg(PI * 0.5 * out), 1.0))
+	return _decor(res)
+
+
+## White pergola with timber slats and vines on top.
+static func pergola(c: Vector3, basis: Basis, w: float = 3.0, d: float = 2.4, models: bool = true) -> Array:
+	var out: Array = []
+	for sx in [-1.0, 1.0]:
+		for sz in [-1.0, 1.0]:
+			out.append(Solid.obox(c + basis * Vector3(sx * w * 0.5, 1.3, sz * d * 0.5), Vector3(0.22, 2.6, 0.22), basis, WHITE, Mat.PLASTER))
+	for sz in [-1.0, 1.0]:
+		out.append(Solid.obox(c + basis * Vector3(0, 2.66, sz * d * 0.5), Vector3(w + 0.5, 0.18, 0.2), basis, WHITE, Mat.PLASTER))
+	var n := int(w / 0.45)
+	for k in n + 1:
+		out.append(Solid.obox(c + basis * Vector3(-w * 0.5 + k * w / n, 2.8, 0), Vector3(0.08, 0.1, d + 0.5), basis, WOOD, Mat.WOOD))
+	if models:
+		out.append(ModelLib.instance(ModelLib.VILLAGE + "Prop_Vine6.gltf", c + basis * Vector3(-w * 0.3, 2.85, d * 0.5), rad_to_deg(basis.get_euler().y), 0.9))
+	else:
+		out.append(Solid.obox(c + basis * Vector3(-w * 0.15, 2.95, 0), Vector3(w * 0.6, 0.2, d * 0.7), basis, LEAF, Mat.FOLIAGE))
+	return _decor(out)
+
+
+## A floating city block for the scenery around a level: paved island, a
+## row of whitewashed buildings at the back facing `toward`, and a plaza with
+## a pergola, lamps, benches, trees and the odd tower in front.
+static func district(c: Vector3, half: Vector2, toward: Vector3, seed: int, q: int) -> Array:
+	var out: Array = []
+	var rng := RandomNumberGenerator.new()
+	rng.seed = seed
+	out.append_array(island(Vector2(c.x - half.x, c.z - half.y), Vector2(c.x + half.x, c.z + half.y), c.y,
+		Mat.TILE, PAVER, rng.randf_range(6.0, 12.0), ROCK, false))
+	var to := toward - c
+	var front := Vector3(signf(to.x), 0, 0) if absf(to.x) > absf(to.z) else Vector3(0, 0, signf(to.z))
+	if front == Vector3.ZERO:
+		front = Vector3.BACK
+	var along := Vector3(absf(front.z), 0, absf(front.x))
+	var L := 2.0 * (half.x if along.x > 0.5 else half.y)
+	var D := 2.0 * (half.y if along.x > 0.5 else half.x)
+	var basis := Basis(Vector3.UP, atan2(front.x, front.z))
+	var count := clampi(int(L / 6.5), 1, 4)
+	var slot := L / count
+	for k in count:
+		var w := minf(slot - 1.0, rng.randf_range(4.0, 7.0))
+		var d := minf(D * 0.5, rng.randf_range(3.0, 5.0))
+		var h := rng.randf_range(3.0, 6.5)
+		var pos := c + along * (-L * 0.5 + slot * (k + 0.5)) - front * (D * 0.5 - d * 0.5 - 0.7)
+		var tall := w >= 4.0 and rng.randf() < 0.45
+		var models := q >= 2 and rng.randf() < 0.35
+		out.append_array(house(pos, Vector3(w, h, d), front, WHITE, ACCENTS[rng.randi() % ACCENTS.size()], tall, models))
+	# Plaza dressing in front of the buildings.
+	var strip := c + front * (D * 0.5 - 2.2)
+	var px := rng.randf_range(-L * 0.25, L * 0.25)
+	out.append_array(pergola(strip + along * px, basis, 3.0, 2.2, q >= 2))
+	for k in 2:
+		out.append_array(lamp(c + front * (D * 0.5 - 0.6) + along * (L * (0.35 if k == 0 else -0.35))))
+	out.append_array(bench(strip + along * (px + (2.8 if px < 0 else -2.8)), along.x > 0.5))
+	var tp := strip + along * (px + (-L * 0.3 if px > 0 else L * 0.3))
+	var leaf: Color = [LEAF_PINK, LEAF, LEAF_PINK, LEAF_GOLD][rng.randi() % 4]
+	if q >= 2 and rng.randf() < 0.5:
+		out.append_array(tree(tp, rng.randf_range(3.5, 5.0), leaf, seed))
+	else:
+		out.append_array(far_tree(tp, rng.randf_range(3.5, 5.0), leaf, seed))
+	for k in 3:
+		var pp := c + front * rng.randf_range(-D * 0.1, D * 0.4) + along * rng.randf_range(-L * 0.45, L * 0.45)
+		out.append(Solid.box(pp + Vector3(0, 0.3, 0), Vector3(1.0, 0.6, 1.0), WHITE, GRASS, Mat.PLASTER, Mat.GRASS))
+		out.append(Solid.sphere(pp + Vector3(0, 0.85, 0), Vector3(0.5, 0.4, 0.5), [LEAF, BLOSSOM, LEAF][k], Mat.FOLIAGE))
+	if rng.randf() < 0.35:
+		out.append_array(tower(c - front * (D * 0.5 - 1.2) + along * (L * 0.5 - 1.2), rng.randf_range(10.0, 18.0), ACCENTS[rng.randi() % ACCENTS.size()]))
 	return _decor(out)
 
 

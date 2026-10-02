@@ -64,7 +64,7 @@ static func get_level(i: int) -> Dictionary:
 		10: lv = _watchtower()
 		11: lv = _plan_ahead()
 		_: lv = _found_photograph()
-	lv["backdrop"] = backdrop(lv.get("backdrop_seed", i + 3))
+	lv["backdrop"] = backdrop(lv.get("backdrop_seed", i + 3), play_bounds(lv))
 	if CH1_TEXT.has(i):
 		# Miso sets the scene; the solution only comes as hints you ask for.
 		lv["cat"]["lines"] = CH1_TEXT[i][0]
@@ -108,10 +108,66 @@ const CH1_TEXT := {
 }
 
 
-## Far scenery (islands on the horizon + the sea). Rendered but never sliced.
-static func backdrop(seed: int) -> Array:
-	var s: Array = P.horizon(Vector3.ZERO, 150.0, 7, seed)
-	s.append_array(P.horizon(Vector3(0, -6, -10), 62.0, 7, seed + 101, 0.5))
+## XZ rectangle covering everything you can walk on or photograph in a level
+## (picture-only scenery far away at SRC is ignored).
+static func play_bounds(lv: Dictionary) -> Rect2:
+	var r := Rect2()
+	var first := true
+	for s in lv.get("solids", []):
+		var b: AABB = (s as Solid).get_aabb()
+		if absf(b.get_center().x) > 400.0 or b.size.x > 200.0:
+			continue
+		var rr := Rect2(b.position.x, b.position.z, b.size.x, b.size.z)
+		r = rr if first else r.merge(rr)
+		first = false
+	for key in ["spawn"]:
+		if lv.has(key):
+			var p: Vector3 = lv[key]
+			r = r.expand(Vector2(p.x, p.z))
+	if lv.has("teleporter"):
+		var tp: Vector3 = lv["teleporter"]["pos"]
+		r = r.expand(Vector2(tp.x, tp.z))
+	return r
+
+
+## Scenery that is rendered but never sliced: a ring of floating city blocks
+## around the play area, then islands with towers on the horizon. Nothing in
+## the ring can block a view inside the play area, since it stays outside
+## the (convex) play rectangle.
+static func backdrop(seed: int, play: Rect2 = Rect2(-20, -20, 40, 40)) -> Array:
+	var q: int = Progress.quality() if Engine.get_main_loop() != null else 2
+	var s: Array = []
+	var rng := RandomNumberGenerator.new()
+	rng.seed = seed * 7919
+	var margin := 7.0
+	var ctr := Vector3(play.get_center().x, 0, play.get_center().y)
+	var heights := [-7.0, -4.0, -2.0, 0.0, 2.5, 5.0]
+	var k := 0
+	for side in 4:
+		var horiz := side < 2  # districts along the -Z / +Z sides run along X
+		var length := (play.size.x if horiz else play.size.y) + margin * 2.0 + 16.0
+		var count := maxi(1, roundi(length / 24.0))
+		if q == 0:
+			count = maxi(1, count / 2)
+		for i in count:
+			var seg := length / count
+			var ah := seg * 0.5 - rng.randf_range(1.5, 4.0)
+			var dh := rng.randf_range(5.5, 8.5)
+			var off := rng.randf_range(0.0, 7.0)
+			var y: float = heights[rng.randi() % heights.size()]
+			var t := -length * 0.5 + seg * (i + 0.5)
+			var c: Vector3
+			var half: Vector2
+			match side:
+				0: c = Vector3(ctr.x + t, y, play.position.y - margin - dh - off); half = Vector2(ah, dh)
+				1: c = Vector3(ctr.x + t, y, play.end.y + margin + dh + off); half = Vector2(ah, dh)
+				2: c = Vector3(play.position.x - margin - dh - off, y, ctr.z + t); half = Vector2(dh, ah)
+				_: c = Vector3(play.end.x + margin + dh + off, y, ctr.z + t); half = Vector2(dh, ah)
+			s.append_array(P.district(c, half, ctr, seed * 31 + k, q))
+			k += 1
+	var radius := maxf(play.size.x, play.size.y) * 0.5
+	s.append_array(P.horizon(ctr, radius + 110.0, 7, seed))
+	s.append_array(P.horizon(ctr + Vector3(0, -6, 0), radius + 55.0, 7, seed + 101, 0.5))
 	return s
 
 
@@ -208,7 +264,7 @@ static func hub() -> Dictionary:
 		"found": [],
 		"kill_y": -15.0,
 		"is_hub": true,
-		"backdrop": backdrop(42),
+		"backdrop": backdrop(42, Rect2(-16, -16, 32, 32)),
 	}
 
 
@@ -349,6 +405,8 @@ static func _point_and_shoot() -> Dictionary:
 		s.append_array(P.bunting(Vector3(-5.9, 5.9, z), Vector3(5.9, 5.9, z + 1.5), 0.8))
 	s.append_array(P.potted_plant(Vector3(-5.3, 0, -12.5)))
 	s.append_array(P.potted_plant(Vector3(5.3, 0, 12.5), P.LEAF_PINK))
+	s.append_array(P.facade(-6.0, 1.0, -13.0, 13.0, 6.6, [-8.0, -2.0, 4.0, 10.0], 21))
+	s.append_array(P.facade(6.0, -1.0, -13.0, 13.0, 6.6, [-8.0, -2.0, 4.0, 10.0], 22))
 	s.append_array(P.flowers(Vector3(0, 4, -32), 3.0, 14))
 	s.append_array(P.flowers(Vector3(0, 4, 24), 3.0, 14, 5))
 	return {
