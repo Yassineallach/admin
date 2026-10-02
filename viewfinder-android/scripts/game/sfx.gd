@@ -110,11 +110,26 @@ func set_music(on: bool) -> void:
 # Synthesis helpers
 # ---------------------------------------------------------------------------
 
+## Safety margin after every buffer. The mixer reads a few samples ahead
+## while resampling (pitch_scale != 1, 11 kHz music at 44/48 kHz output). A
+## buffer that ends exactly on its last sample let it read past the end of the
+## allocation, which crashed the audio thread on some Android phones
+## (SIGSEGV in AudioTrack).
+const PAD := 512
+
+
 func _wav(samples: PackedFloat32Array, rate: int = RATE, looped: bool = false) -> AudioStreamWAV:
+	var n := samples.size()
 	var data := PackedByteArray()
-	data.resize(samples.size() * 2)
-	for i in samples.size():
+	data.resize((n + PAD) * 2)
+	data.fill(0)
+	for i in n:
 		data.encode_s16(i * 2, int(clampf(samples[i], -1.0, 1.0) * 32000.0))
+	if looped and n > 0:
+		# Continue the waveform past the loop point so any read-ahead stays
+		# both in bounds and seamless.
+		for i in PAD:
+			data.encode_s16((n + i) * 2, int(clampf(samples[i % n], -1.0, 1.0) * 32000.0))
 	var w := AudioStreamWAV.new()
 	w.format = AudioStreamWAV.FORMAT_16_BITS
 	w.mix_rate = rate
@@ -123,7 +138,7 @@ func _wav(samples: PackedFloat32Array, rate: int = RATE, looped: bool = false) -
 	if looped:
 		w.loop_mode = AudioStreamWAV.LOOP_FORWARD
 		w.loop_begin = 0
-		w.loop_end = samples.size()
+		w.loop_end = n  # loop well inside the padded buffer
 	return w
 
 
