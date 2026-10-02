@@ -204,7 +204,143 @@ static func water(mn: Vector2, mx: Vector2, y: float) -> Solid:
 
 
 ## Distant scenery: a few floating islands with trees around the horizon.
-static func horizon(center: Vector3, radius: float = 140.0, count: int = 6, seed: int = 1) -> Array:
+static func _decor(list: Array) -> Array:
+	for x in list:
+		(x as Solid).collide = false
+	return list
+
+
+## A patch of little flowers on short leafy mounds.
+static func flowers(center: Vector3, radius: float = 1.2, count: int = 9, seed: int = 0,
+		palette: Array = [Color(1, 0.62, 0.72), Color(1, 0.98, 0.95), Color(1, 0.85, 0.35), Color(0.75, 0.68, 1.0)]) -> Array:
+	var out: Array = []
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash(center) + seed
+	for i in count:
+		var a := rng.randf() * TAU
+		var r := sqrt(rng.randf()) * radius
+		var p := center + Vector3(cos(a) * r, 0, sin(a) * r)
+		var h := rng.randf_range(0.18, 0.35)
+		out.append(Solid.loft(p, Solid.ngon(5, 0.12, rng.randf() * TAU), 0.0, h * 0.6, 0.35, LEAF.darkened(0.12), Mat.FOLIAGE))
+		var col: Color = palette[rng.randi() % palette.size()]
+		var bloom := Solid.sphere(p + Vector3(0, h * 0.6 + 0.04, 0), Vector3(0.075, 0.05, 0.075), col, Mat.PLASTER, 0)
+		bloom.faces = bloom.faces.map(func(f): f.erase("sc"); return f)
+		out.append(bloom)
+	return _decor(out)
+
+
+## A cluster of low-poly boulders.
+static func rocks(center: Vector3, count: int = 3, size: float = 0.6, seed: int = 0) -> Array:
+	var out: Array = []
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash(center) + seed
+	for i in count:
+		var s := size * rng.randf_range(0.45, 1.0)
+		var p := center + Vector3(rng.randf_range(-1, 1), 0, rng.randf_range(-1, 1)) * size
+		out.append(Solid.loft(p, Solid.ngon(6, s, rng.randf() * TAU), -0.1, s * rng.randf_range(0.5, 0.9), 0.55,
+			ROCK.lightened(rng.randf_range(0.0, 0.2)), Mat.ROCK))
+	return _decor(out)
+
+
+## White picket fence.
+static func fence(a: Vector3, b: Vector3, col: Color = Color(0.97, 0.95, 0.9)) -> Array:
+	var out: Array = []
+	var d := b - a
+	var len := d.length()
+	var dir := d / len
+	var basis := Basis(dir.cross(Vector3.UP).normalized(), Vector3.UP, -dir)
+	var n := maxi(1, int(len / 0.35))
+	for i in n + 1:
+		var p := a + dir * (len * i / n)
+		out.append(Solid.obox(p + Vector3(0, 0.4, 0), Vector3(0.08, 0.8, 0.04), basis, col, Mat.WOOD))
+	for y in [0.25, 0.6]:
+		out.append(Solid.obox(a + d * 0.5 + Vector3(0, y, 0.0), Vector3(0.04, 0.07, len), basis, col.darkened(0.05), Mat.WOOD))
+	return _decor(out)
+
+
+## A string of little triangle flags sagging between two points.
+static func bunting(a: Vector3, b: Vector3, sag: float = 0.6, colors: Array = [Color(1, 0.6, 0.6), Color(1, 0.88, 0.5), Color(0.6, 0.8, 1.0), Color(0.7, 0.9, 0.7)]) -> Array:
+	var out: Array = []
+	var d := b - a
+	var len := d.length()
+	var dir := d / len
+	var segs := maxi(4, int(len / 0.7))
+	var prev := a
+	for i in range(1, segs + 1):
+		var t := float(i) / segs
+		var p := a + d * t - Vector3.UP * sag * 4.0 * t * (1.0 - t)
+		var mid := (prev + p) * 0.5
+		var seg_len := prev.distance_to(p)
+		var sb := Basis.looking_at(p - prev, Vector3.UP)
+		out.append(Solid.obox(mid, Vector3(0.02, 0.02, seg_len), sb, Color(0.95, 0.93, 0.9), Mat.PLASTER))
+		var tri := PackedVector2Array([Vector2(-0.14, 0), Vector2(0.14, 0), Vector2(0, -0.32)])
+		var basis2 := Basis(dir, Vector3.UP, dir.cross(Vector3.UP).normalized())
+		out.append(Solid.extrude(tri, 0.01, Transform3D(basis2, mid - Vector3.UP * 0.01), colors[i % colors.size()], Mat.PLASTER))
+		prev = p
+	return _decor(out)
+
+
+static func stepping_stones(a: Vector3, b: Vector3, n: int = 5) -> Array:
+	var out: Array = []
+	for i in n:
+		var p := a.lerp(b, (i + 0.5) / n) + Vector3(sin(i * 2.1) * 0.25, 0, cos(i * 1.7) * 0.15)
+		out.append(Solid.loft(p, Solid.ngon(7, 0.38, i * 0.7), -0.05, 0.035, 0.95, STONE, Mat.TILE))
+	return _decor(out)
+
+
+## Stone coping along the top of a wall (mn/mx = the wall's box).
+static func wall_trim(mn: Vector3, mx: Vector3, col: Color = STONE) -> Array:
+	return _decor([Solid.box_mm(Vector3(mn.x - 0.06, mx.y, mn.z - 0.06), Vector3(mx.x + 0.06, mx.y + 0.14, mx.z + 0.06), col, Color(0, 0, 0, 0), Mat.TILE)])
+
+
+## A window with frame, sill and shutters on a wall face. `out_dir` points
+## away from the wall (into the street).
+static func window(c: Vector3, out_dir: Vector3, w: float = 1.0, h: float = 1.3,
+		shutter: Color = Color(0.55, 0.72, 0.68)) -> Array:
+	var out: Array = []
+	var basis := Basis.looking_at(-out_dir, Vector3.UP)
+	var f := WOOD.lightened(0.35)
+	out.append(Solid.obox(c, Vector3(w, h, 0.06), basis, Color(0.6, 0.76, 0.88), Mat.METAL))
+	out.append(Solid.obox(c + basis * Vector3(0, h * 0.5 + 0.05, 0.04), Vector3(w + 0.2, 0.1, 0.1), basis, f, Mat.WOOD))
+	out.append(Solid.obox(c + basis * Vector3(0, -h * 0.5 - 0.06, 0.08), Vector3(w + 0.3, 0.1, 0.2), basis, STONE, Mat.TILE))
+	for sx in [-1.0, 1.0]:
+		out.append(Solid.obox(c + basis * Vector3(sx * (w * 0.5 + 0.05), 0, 0.04), Vector3(0.1, h, 0.1), basis, f, Mat.WOOD))
+		out.append(Solid.obox(c + basis * Vector3(sx * (w * 0.75 + 0.12), 0, 0.06), Vector3(w * 0.5, h, 0.05), basis, shutter, Mat.PLANKS))
+	out.append(Solid.obox(c, Vector3(0.05, h, 0.08), basis, f, Mat.WOOD))
+	return _decor(out)
+
+
+static func potted_plant(base: Vector3, leaf: Color = LEAF) -> Array:
+	var out: Array = []
+	out.append(Solid.loft(base, Solid.ngon(8, 0.22), 0.0, 0.4, 1.25, Color(0.86, 0.52, 0.4), Mat.PLASTER))
+	var b := Solid.sphere(base + Vector3(0, 0.62, 0), Vector3(0.32, 0.3, 0.32), leaf, Mat.FOLIAGE, 0)
+	out.append(b)
+	return _decor(out)
+
+
+## A washing line of photos drying in the darkroom.
+static func photo_line(a: Vector3, b: Vector3, sag: float = 0.3) -> Array:
+	var out: Array = []
+	var d := b - a
+	var len := d.length()
+	var dir := d / len
+	var segs := maxi(3, int(len / 0.9))
+	var prev := a
+	var tints := [Color(0.7, 0.85, 0.95), Color(0.98, 0.8, 0.75), Color(0.8, 0.9, 0.75), Color(0.95, 0.88, 0.7)]
+	var basis2 := Basis(dir, Vector3.UP, dir.cross(Vector3.UP).normalized())
+	for i in range(1, segs + 1):
+		var t := float(i) / segs
+		var p := a + d * t - Vector3.UP * sag * 4.0 * t * (1.0 - t)
+		out.append(Solid.obox((prev + p) * 0.5, Vector3(0.015, 0.015, prev.distance_to(p)), Basis.looking_at(p - prev, Vector3.UP), Color(0.9, 0.88, 0.85), Mat.PLASTER))
+		var c := (prev + p) * 0.5 - Vector3.UP * 0.2
+		out.append(Solid.obox(c, Vector3(0.3, 0.36, 0.01), basis2, Color(0.99, 0.98, 0.95), Mat.PLASTER))
+		out.append(Solid.obox(c + Vector3.UP * 0.03 + basis2.z * 0.008, Vector3(0.25, 0.25, 0.005), basis2, tints[i % tints.size()], Mat.PLASTER))
+		out.append(Solid.obox(c + Vector3.UP * 0.19, Vector3(0.04, 0.06, 0.03), basis2, WOOD, Mat.WOOD))
+		prev = p
+	return _decor(out)
+
+
+static func horizon(center: Vector3, radius: float = 140.0, count: int = 6, seed: int = 1, scale: float = 1.0) -> Array:
 	var out: Array = []
 	var rng := RandomNumberGenerator.new()
 	rng.seed = seed
@@ -212,12 +348,12 @@ static func horizon(center: Vector3, radius: float = 140.0, count: int = 6, seed
 		var a := TAU * i / count + rng.randf_range(-0.3, 0.3)
 		var r := radius * rng.randf_range(0.8, 1.2)
 		var p := center + Vector3(cos(a) * r, rng.randf_range(-12, 18), sin(a) * r)
-		var w := rng.randf_range(10, 22)
+		var w := rng.randf_range(10, 22) * scale
 		out.append_array(island(Vector2(p.x - w, p.z - w * 0.7), Vector2(p.x + w, p.z + w * 0.7), p.y, Mat.GRASS, GRASS, w * 0.9))
 		for k in rng.randi_range(1, 3):
 			var tp := p + Vector3(rng.randf_range(-w * 0.6, w * 0.6), 0, rng.randf_range(-w * 0.4, w * 0.4))
 			var leaf: Color = [LEAF, LEAF_PINK, LEAF_GOLD][rng.randi() % 3]
-			out.append_array(tree(tp, rng.randf_range(5, 9), leaf, k))
+			out.append_array(tree(tp, rng.randf_range(5, 9) * maxf(scale, 0.6), leaf, k))
 	for s in out:
 		(s as Solid).collide = false
 	return out

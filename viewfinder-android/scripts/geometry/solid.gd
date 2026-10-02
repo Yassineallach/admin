@@ -248,7 +248,7 @@ static func loft(c: Vector3, poly: PackedVector2Array, y0: float, y1: float, top
 
 
 ## Geodesic sphere (icosahedron subdivided once: 80 faces). Smooth-shaded.
-static func sphere(c: Vector3, r: Vector3, col: Color, mat: int = Mat.FOLIAGE) -> Solid:
+static func sphere(c: Vector3, r: Vector3, col: Color, mat: int = Mat.FOLIAGE, subdiv: int = 1) -> Solid:
 	var t := (1.0 + sqrt(5.0)) / 2.0
 	var verts := [
 		Vector3(-1, t, 0), Vector3(1, t, 0), Vector3(-1, -t, 0), Vector3(1, -t, 0),
@@ -260,6 +260,10 @@ static func sphere(c: Vector3, r: Vector3, col: Color, mat: int = Mat.FOLIAGE) -
 		[11, 10, 2], [10, 7, 6], [7, 1, 8], [3, 9, 4], [3, 4, 2], [3, 2, 6], [3, 6, 8], [3, 8, 9],
 		[4, 9, 5], [2, 4, 11], [6, 2, 10], [8, 6, 7], [9, 8, 1]]
 	var sub: Array = []
+	if subdiv <= 0:
+		for tri in tris:
+			sub.append([verts[tri[0]], verts[tri[1]], verts[tri[2]]])
+		tris = []
 	for tri in tris:
 		var a: Vector3 = verts[tri[0]]
 		var b: Vector3 = verts[tri[1]]

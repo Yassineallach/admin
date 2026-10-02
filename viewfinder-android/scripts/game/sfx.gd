@@ -8,6 +8,7 @@ const MUSIC_RATE := 11025
 var _streams: Dictionary = {}
 var _players: Array[AudioStreamPlayer] = []
 var _music: AudioStreamPlayer
+var _ambience: AudioStreamPlayer
 var _loops: Dictionary = {}  # name -> AudioStreamPlayer
 var _rng := RandomNumberGenerator.new()
 var _music_task := -1
@@ -28,6 +29,9 @@ func _ready() -> void:
 	_streams["rewind"] = _rewind()
 	_streams["paper"] = _paper()
 	_streams["meow"] = _meow()
+	_streams["step"] = _step()
+	_streams["land"] = _land()
+	_streams["hum"] = _hum()
 	for i in 8:
 		var p := AudioStreamPlayer.new()
 		p.bus = "Master"
@@ -36,6 +40,9 @@ func _ready() -> void:
 	_music = AudioStreamPlayer.new()
 	_music.volume_db = -9.0
 	add_child(_music)
+	_ambience = AudioStreamPlayer.new()
+	_ambience.volume_db = -12.0
+	add_child(_ambience)
 	# Music takes a moment to synthesise: do it after the first frame.
 	_build_music.call_deferred()
 
@@ -51,6 +58,10 @@ func play(name: String, volume_db: float = 0.0, pitch: float = 1.0) -> void:
 			p.pitch_scale = pitch
 			p.play()
 			return
+
+
+func get_stream(name: String) -> AudioStream:
+	return _streams.get(name)
 
 
 func loop(name: String, on: bool, volume_db: float = -4.0) -> void:
@@ -72,7 +83,8 @@ func _build_music() -> void:
 	# ~16 s of audio: synthesise on a worker thread so phones don't hitch.
 	_music_task = WorkerThreadPool.add_task(func():
 		var w := _music_loop()
-		_start_music.call_deferred(w))
+		var amb := _ambience_loop()
+		_start_music.call_deferred(w, amb))
 
 
 func _exit_tree() -> void:
@@ -81,9 +93,11 @@ func _exit_tree() -> void:
 		_music_task = -1
 
 
-func _start_music(w: AudioStreamWAV) -> void:
+func _start_music(w: AudioStreamWAV, amb: AudioStreamWAV) -> void:
 	_music.stream = w
 	_music.play()
+	_ambience.stream = amb
+	_ambience.play()
 
 
 func set_music(on: bool) -> void:
@@ -237,6 +251,68 @@ func _rewind() -> AudioStreamWAV:
 
 ## A gentle 16-second ambient loop: warm pad chords plus a sparse music-box
 ## arpeggio. Built so the end flows seamlessly into the start.
+func _step() -> AudioStreamWAV:
+	var b := _buf(0.14)
+	var lp := 0.0
+	for i in b.size():
+		var t := float(i) / RATE
+		lp += (_rng.randf_range(-1, 1) - lp) * 0.18
+		b[i] = (lp * 1.4 + sin(TAU * 90.0 * t) * 0.4) * exp(-t * 38.0) * minf(t * 400.0, 1.0)
+	return _wav(b)
+
+
+func _land() -> AudioStreamWAV:
+	var b := _buf(0.3)
+	var lp := 0.0
+	for i in b.size():
+		var t := float(i) / RATE
+		lp += (_rng.randf_range(-1, 1) - lp) * 0.1
+		b[i] = (lp * 1.6 + sin(TAU * 60.0 * t) * 0.7) * exp(-t * 16.0) * minf(t * 300.0, 1.0)
+	return _wav(b)
+
+
+func _hum() -> AudioStreamWAV:
+	var dur := 2.0
+	var b := _buf(dur)
+	for i in b.size():
+		var t := float(i) / RATE
+		var wob := 1.0 + 0.25 * sin(TAU * 0.5 * t)
+		b[i] = (sin(TAU * 110.0 * t) * 0.18 + sin(TAU * 220.0 * t) * 0.08 * wob + sin(TAU * 330.5 * t) * 0.04) * 0.8
+	return _wav(b, RATE, true)
+
+
+## Gentle wind with the occasional bird call (12 s, loops).
+func _ambience_loop() -> AudioStreamWAV:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 99
+	var length := 12.0
+	var n := int(length * MUSIC_RATE)
+	var b := PackedFloat32Array()
+	b.resize(n)
+	var lp := 0.0
+	var lp2 := 0.0
+	for i in n:
+		var t := float(i) / MUSIC_RATE
+		lp += (rng.randf_range(-1, 1) - lp) * 0.02
+		lp2 += (lp - lp2) * 0.3
+		var gust := 0.55 + 0.45 * sin(TAU * t / length) * sin(TAU * t * 2.0 / length + 1.0)
+		b[i] = lp2 * 2.2 * gust
+	# Bird chirps: short frequency sweeps.
+	var calls := [[1.3, 2600.0], [1.45, 3000.0], [4.8, 2200.0], [5.0, 2500.0], [5.15, 2800.0], [8.6, 3200.0], [8.75, 2700.0]]
+	for cl in calls:
+		var start := int(float(cl[0]) * MUSIC_RATE)
+		var f0: float = cl[1]
+		var dur := 0.09
+		var phase := 0.0
+		for k in int(dur * MUSIC_RATE):
+			var t := float(k) / MUSIC_RATE
+			var f := f0 * (1.0 + 0.6 * sin(PI * t / dur))
+			phase += TAU * minf(f, MUSIC_RATE * 0.45) / MUSIC_RATE
+			if start + k < n:
+				b[start + k] += sin(phase) * sin(PI * t / dur) * 0.08
+	return _wav(b, MUSIC_RATE, true)
+
+
 func _music_loop() -> AudioStreamWAV:
 	var length := 16.0
 	var n := int(length * MUSIC_RATE)

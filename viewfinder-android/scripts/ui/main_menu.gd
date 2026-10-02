@@ -11,8 +11,21 @@ const ACCENT := Color(0.94, 0.62, 0.52)
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	var bg := ColorRect.new()
-	bg.color = BG
+	# The live 3D island shows through on the right; a soft paper wash on the
+	# left keeps the text readable.
+	var g := Gradient.new()
+	g.set_color(0, Color(BG, 0.92))
+	g.add_point(0.42, Color(BG, 0.78))
+	g.set_color(g.get_point_count() - 1, Color(BG, 0.0))
+	g.add_point(0.68, Color(BG, 0.0))
+	var gt := GradientTexture2D.new()
+	gt.gradient = g
+	gt.width = 256
+	gt.height = 4
+	var bg := TextureRect.new()
+	bg.texture = gt
+	bg.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	bg.stretch_mode = TextureRect.STRETCH_SCALE
 	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(bg)
 
@@ -29,12 +42,12 @@ func _ready() -> void:
 	var left := VBoxContainer.new()
 	left.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	left.alignment = BoxContainer.ALIGNMENT_CENTER
-	left.add_theme_constant_override("separation", 14)
+	left.add_theme_constant_override("separation", 12)
 	row.add_child(left)
 
 	var title := Label.new()
 	title.text = "Lensfold"
-	title.add_theme_font_size_override("font_size", 92)
+	title.add_theme_font_size_override("font_size", 84)
 	title.add_theme_color_override("font_color", INK)
 	left.add_child(title)
 	var sub := Label.new()
@@ -43,7 +56,9 @@ func _ready() -> void:
 	sub.add_theme_color_override("font_color", INK.lightened(0.25))
 	left.add_child(sub)
 
-	var play := styled_button("Continue" if Progress.unlocked > 1 else "Play", 34)
+	var play := styled_button("Continue" if Progress.unlocked > 1 else "Play", 32)
+	play.custom_minimum_size = Vector2(512, 72)
+	play.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	play.pressed.connect(func(): level_chosen.emit(Game.HUB))
 	left.add_child(play)
 
@@ -68,19 +83,27 @@ func _ready() -> void:
 	var grid := GridContainer.new()
 	grid.columns = 2
 	grid.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	grid.add_theme_constant_override("h_separation", 16)
-	grid.add_theme_constant_override("v_separation", 16)
-	var right := CenterContainer.new()
+	grid.add_theme_constant_override("h_separation", 12)
+	grid.add_theme_constant_override("v_separation", 10)
+	var chapters := Label.new()
+	chapters.text = "Memories"
+	chapters.add_theme_font_size_override("font_size", 22)
+	chapters.add_theme_color_override("font_color", INK.lightened(0.25))
+	left.add_child(chapters)
+	left.add_child(grid)
+	# The right half stays empty so the live island shows through.
+	var right := Control.new()
 	right.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	right.add_child(grid)
+	right.size_flags_stretch_ratio = 0.9
+	right.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.add_child(right)
 	for i in Levels.count():
 		var locked := i + 1 > Progress.unlocked
 		var label: String = Levels.get_level_name(i)
 		if Progress.completed.has(i):
 			label += "  ✓"
-		var b := styled_button(label, 24)
-		b.custom_minimum_size = Vector2(300, 64)
+		var b := styled_button(label, 19)
+		b.custom_minimum_size = Vector2(250, 48)
 		b.disabled = locked
 		if locked:
 			b.text = "🔒 " + label

@@ -18,7 +18,9 @@ game and how its mechanic works.
 |---|---|---|
 | ![hub](docs/screenshots/hub.png) | ![bridge](docs/screenshots/bridge_placed.png) | ![tunnel](docs/screenshots/tower_tunnel.png) |
 | **A pencil sketch stays a sketch** | **A watercolour stays a painting** | **Holding up a found photo** |
-| ![sketch](docs/screenshots/pencil_stairs.png) | ![painting](docs/screenshots/painted_bridge.png) | ![holding](docs/screenshots/holding_photo.png) |
+| ![sketch](docs/screenshots/pencil_stairs.png) | ![painting](docs/screenshots/painted_bridge.png) | ![holding](docs/screenshots/holding_painting.png) |
+| **Main menu over the live island** | **Every level is dressed** | **A keepsake when a memory is restored** |
+| ![menu](docs/screenshots/menu.png) | ![found](docs/screenshots/found_photograph.png) | ![restored](docs/screenshots/memory_restored.png) |
 
 ## Features
 
@@ -40,6 +42,21 @@ game and how its mechanic works.
 * **Copy objects:** photograph a battery to duplicate it. Rotate photos in 90° steps.
 * **Rewind:** hold REWIND to scrub time backwards, with a VHS-style effect. It
   undoes placements, pickups and falls.
+
+**Polish & feel**
+* Hands hold the picture up, and the camera has head-bob, footsteps and a
+  landing dip. The bob never shifts where a photo lands.
+* Living world: trees sway in the wind, pollen drifts, birds circle overhead,
+  butterflies flutter, and wind and birdsong play in the background.
+* Detailed surfaces: flowers and clover in the grass, moss in tile grout,
+  cracked tiles, weathered bricks, nailed planks, lichen on rock, and soft bevel
+  highlights on every edge.
+* Set dressing in every level: flower beds, bunting, picket fences, stepping
+  stones, wall copings, shuttered windows, potted plants, rock clusters, and
+  photos drying on a line in the darkroom.
+* Teleporters with orbiting runes, rising sparkles and a positional hum.
+* The main menu floats over the live Station island. Restoring a memory gives
+  you a polaroid keepsake of the place.
 
 **The world**
 * **The Station:** a hub island with a fountain and a portal pad for each memory.

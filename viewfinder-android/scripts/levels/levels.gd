@@ -66,6 +66,7 @@ static func get_level(i: int) -> Dictionary:
 ## Far scenery (islands on the horizon + the sea). Rendered but never sliced.
 static func backdrop(seed: int) -> Array:
 	var s: Array = P.horizon(Vector3.ZERO, 150.0, 7, seed)
+	s.append_array(P.horizon(Vector3(0, -6, -10), 75.0, 5, seed + 101, 0.45))
 	s.append(P.sea(Vector3.ZERO, -45.0))
 	return s
 
@@ -115,6 +116,22 @@ static func hub() -> Dictionary:
 		s.append_array(P.lamp(p * 7.6))
 	s.append_array(P.house(Vector3(0, 0, 13), Vector3(6, 3.4, 3.2), Vector3.FORWARD))
 	s.append_array(P.arch(Vector3(0, 0, -15), Vector3.FORWARD, 3.0, 4.2))
+	# Dressing.
+	for i in 8:
+		var a := TAU * (i + 0.5) / 8.0
+		var d := Vector3(cos(a), 0, sin(a))
+		s.append_array(P.flowers(d * 9.3, 1.1, 8, i))
+	for i in 4:
+		var a0 := TAU * (i * 2 + 0.5) / 8.0
+		var a1 := TAU * (i * 2 + 1.5) / 8.0
+		s.append_array(P.bunting(Vector3(cos(a0), 0, sin(a0)) * 7.6 + Vector3(0, 2.7, 0), Vector3(cos(a1), 0, sin(a1)) * 7.6 + Vector3(0, 2.7, 0), 0.5))
+	s.append_array(P.stepping_stones(Vector3(0, 0, 7.2), Vector3(0, 0, 11.2), 4))
+	s.append_array(P.potted_plant(Vector3(-2.4, 0, 11.1)))
+	s.append_array(P.potted_plant(Vector3(2.4, 0, 11.1), P.LEAF_PINK))
+	for c in [Vector3(-14.5, 0, 6), Vector3(14, 0, -3), Vector3(-13, 0, -9), Vector3(10, 0, 13.5)]:
+		s.append_array(P.rocks(c, 3, 0.7))
+	s.append_array(P.fence(Vector3(-15.5, 0, 9), Vector3(-15.5, 0, 15.5)))
+	s.append_array(P.fence(Vector3(15.5, 0, 9), Vector3(15.5, 0, 15.5)))
 	return {
 		"name": "The Station",
 		"hint": "Step onto a glowing pad to enter a memory.",
@@ -176,6 +193,16 @@ static func _found_photograph() -> Dictionary:
 		src.append(Solid.loft(SRC + Vector3(0, 0, z), Solid.ngon(8, 1.0), -12.0, -0.4, 0.8, P.STONE, Mat.BRICK))
 	s.append_array(_tag(src, "source"))
 
+	# Dressing.
+	s.append_array(P.flowers(Vector3(-2.9, 0, 2.6), 0.9, 7))
+	s.append_array(P.flowers(Vector3(-3.0, 0, -21.5), 0.8, 6))
+	s.append_array(P.flowers(Vector3(3.0, 0, -21.5), 0.8, 6, 3))
+	s.append_array(P.potted_plant(Vector3(3.3, 0, -14.8), P.LEAF_PINK))
+	s.append_array(P.potted_plant(Vector3(-3.3, 0, -14.8)))
+	s.append_array(P.bunting(Vector3(-3.5, 2.55, -3.5), Vector3(3.5, 2.55, -3.5), 0.5))
+	s.append_array(P.wall_trim(Vector3(-4.4, 0, -4), Vector3(-4, 1.0, 4.5)))
+	s.append_array(P.wall_trim(Vector3(4, 0, -4), Vector3(4.4, 1.0, 4.5)))
+	s.append_array(P.potted_plant(Vector3(-3.4, 1.14, 0.5), P.LEAF_GOLD))
 	return {
 		"name": "1 · Found Photograph",
 		"hint": "Walk into the polaroid, tap it (top-left) to hold it up, line it up with the gap, then PLACE.",
@@ -222,6 +249,16 @@ static func _point_and_shoot() -> Dictionary:
 	s.append_array(P.planter(Vector3(-4.5, 0, 8)))
 	s.append_array(P.planter(Vector3(4.5, 0, -6)))
 	s.append_array(P.bench(Vector3(-4.6, 0, 1), false))
+	# Dressing: shuttered windows, strings of flags across the street, plants.
+	for z in [-8.0, -2.0, 4.0, 10.0]:
+		s.append_array(P.window(Vector3(-5.92, 3.4, z), Vector3.RIGHT, 1.0, 1.3, Color(0.55, 0.72, 0.68)))
+		s.append_array(P.window(Vector3(5.92, 3.4, z), Vector3.LEFT, 1.0, 1.3, Color(0.9, 0.62, 0.6)))
+	for z in [-10.0, -4.0, 2.0, 8.0]:
+		s.append_array(P.bunting(Vector3(-5.9, 5.9, z), Vector3(5.9, 5.9, z + 1.5), 0.8))
+	s.append_array(P.potted_plant(Vector3(-5.3, 0, -12.5)))
+	s.append_array(P.potted_plant(Vector3(5.3, 0, 12.5), P.LEAF_PINK))
+	s.append_array(P.flowers(Vector3(0, 4, -32), 3.0, 14))
+	s.append_array(P.flowers(Vector3(0, 4, 24), 3.0, 14, 5))
 	return {
 		"name": "2 · Point and Shoot",
 		"hint": "Tap CAM, frame the stairs behind you, press SNAP. Then face the cliff and PLACE it.",
@@ -274,6 +311,22 @@ static func _through_the_window() -> Dictionary:
 	s.append_array(P.bench(Vector3(-6, 0, 6)))
 	for x in range(-12, 13, 3):
 		s.append_array(P.bush(Vector3(x, 0, 13), 0.7, P.LEAF.darkened(0.05)))
+	# Dressing.
+	for sx in [-1.0, 1.0]:
+		var sh := Solid.box(Vector3(sx * 1.15, 1.6, -5.97), Vector3(0.6, 1.3, 0.05), Color(0.55, 0.72, 0.68), Color(0, 0, 0, 0), Mat.PLANKS)
+		sh.collide = false
+		s.append(sh)
+	s.append_array(P.flowers(Vector3(-2.2, 0, -5.4), 0.6, 6))
+	s.append_array(P.flowers(Vector3(2.2, 0, -5.4), 0.6, 6, 2))
+	s.append_array(P.flowers(Vector3(-8, 0, 8), 1.5, 10))
+	s.append_array(P.flowers(Vector3(10, 0, 10), 1.5, 10, 4))
+	s.append_array(P.flowers(Vector3(-10, 0, -4), 1.2, 8, 6))
+	s.append_array(P.stepping_stones(Vector3(0, 0, -1.2), Vector3(0, 0, -5.2), 4))
+	s.append_array(P.fence(Vector3(-13.5, 0, 12.2), Vector3(-4, 0, 12.2)))
+	s.append_array(P.fence(Vector3(4, 0, 12.2), Vector3(13.5, 0, 12.2)))
+	for c in [Vector3(-13, 0, -13), Vector3(13, 0, -12), Vector3(12.5, 0, 4)]:
+		s.append_array(P.rocks(c, 3, 0.7))
+	s.append_array(P.potted_plant(Vector3(-6.9, 0, 6.7), P.LEAF_PINK))
 	return {
 		"name": "3 · Through the Window",
 		"hint": "Press right up against the window and photograph the battery inside. Then PLACE the photo in open space.",
@@ -319,6 +372,19 @@ static func _breakthrough() -> Dictionary:
 	for z in [14.0, 20.0, 26.0, 32.0]:
 		s.append_array(P.column(Vector3(-1.7, 0, z), 1.6, 0.25, BUTTER))
 		s.append_array(P.column(Vector3(1.7, 0, z), 1.6, 0.25, BUTTER))
+	# Dressing: framed pictures and plants along the hall, flowers on the terrace.
+	for z in [-22.0, -16.0, -12.0, 2.0, 6.0]:
+		for sx in [-1.0, 1.0]:
+			var fr := Solid.box(Vector3(1.97 * sx, 2.3, z), Vector3(0.04, 0.9, 1.2), P.WOOD.darkened(0.2), Color(0, 0, 0, 0), Mat.WOOD)
+			fr.collide = false
+			s.append(fr)
+			var pic := Solid.box(Vector3(1.95 * sx, 2.3, z), Vector3(0.03, 0.7, 1.0), [ROSE, TEAL, BUTTER, MINT][(int(z) + 30) % 4], Color(0, 0, 0, 0), Mat.PLASTER)
+			pic.collide = false
+			s.append(pic)
+	s.append_array(P.potted_plant(Vector3(-1.6, 0, 8.6)))
+	s.append_array(P.potted_plant(Vector3(1.6, 0, -24.6), P.LEAF_PINK))
+	s.append_array(P.flowers(Vector3(-1.2, 0, 22), 0.6, 6))
+	s.append_array(P.flowers(Vector3(1.2, 0, 29), 0.6, 6, 1))
 	return {
 		"name": "4 · Breakthrough",
 		"hint": "Photograph the open terrace, stand well back from the wall, and PLACE. A photo replaces everything in its frame.",
@@ -368,6 +434,14 @@ static func _look_up() -> Dictionary:
 	s.append_array(P.lamp(Vector3(-3, 0, -5.2)))
 	s.append_array(P.tree(Vector3(-3.5, 0, -30), 3.4, P.LEAF_GOLD))
 	s.append_array(P.tree(Vector3(3.5, 0, -30), 3.4, P.LEAF))
+	# Dressing.
+	s.append_array(P.flowers(Vector3(-4.5, 0, 5), 1.1, 8))
+	s.append_array(P.flowers(Vector3(-5.5, 0, -3.5), 1.0, 7, 2))
+	s.append_array(P.rocks(Vector3(6, 0, 7), 3, 0.6))
+	s.append_array(P.rocks(Vector3(-6.3, 0, 7), 2, 0.5))
+	s.append_array(P.flowers(Vector3(-3.5, 0, -30), 1.0, 7, 3))
+	s.append_array(P.flowers(Vector3(3.5, 0, -30), 1.0, 7, 4))
+	s.append_array(P.bunting(Vector3(-3, 2.5, -5.2), Vector3(1.7, 6.0, 1.7), 0.6))
 	return {
 		"name": "5 · Look Up",
 		"hint": "Stand in the middle of the tower and look straight up. A tunnel is just a tower lying down. Stand back from the edge to PLACE.",
@@ -414,6 +488,13 @@ static func _sketchbook() -> Dictionary:
 	src.append_array(P.column(SRC2 + Vector3(-2.2, 7, -19), 2.4, 0.3))
 	src.append_array(P.column(SRC2 + Vector3(2.2, 7, -19), 2.4, 0.3))
 	s.append_array(_tag(src, "source", Mat.STYLE_SKETCH))
+	# Dressing.
+	s.append_array(P.flowers(Vector3(5.5, 0, 4.5), 1.2, 9))
+	s.append_array(P.flowers(Vector3(-5, 7, -36), 1.0, 8, 2))
+	s.append_array(P.fence(Vector3(-7.6, 0, 7.6), Vector3(7.6, 0, 7.6)))
+	s.append_array(P.rocks(Vector3(6.5, 0, -12), 3, 0.7))
+	s.append_array(P.rocks(Vector3(-6.5, 0, -2), 2, 0.6))
+	s.append_array(P.potted_plant(Vector3(-2.8, 0, 2.0), P.LEAF_GOLD))
 	return {
 		"name": "6 · Sketchbook",
 		"hint": "Pick up the sketch from the easel. Stand about 5 m from the cliff, look straight ahead and PLACE it.",
@@ -462,6 +543,14 @@ static func _watercolour() -> Dictionary:
 	src.append(P.water(Vector2(SRC.x - 30, -40), Vector2(SRC.x + 30, -4), -10.0))
 	src.append_array(P.tree(SRC + Vector3(-5, 0, 2), 3.5, P.LEAF_PINK))
 	s.append_array(_tag(src, "source", Mat.STYLE_PAINT))
+	# Dressing.
+	s.append_array(P.flowers(Vector3(-5, 0, 5), 1.2, 9))
+	s.append_array(P.flowers(Vector3(5.5, 0, 6), 1.0, 8, 2))
+	s.append_array(P.flowers(Vector3(-5, 0, -28), 1.2, 9, 3))
+	s.append_array(P.rocks(Vector3(-6.4, 0, -5.4), 3, 0.6))
+	s.append_array(P.rocks(Vector3(6.4, 0, -18.6), 3, 0.6))
+	s.append_array(P.fence(Vector3(-6.8, 0, 7.6), Vector3(6.8, 0, 7.6)))
+	s.append_array(P.bunting(Vector3(-2.2, 2.6, -19), Vector3(2.2, 2.6, -19), 0.4))
 	return {
 		"name": "7 · Watercolour",
 		"hint": "Take the painting from the easel. Stand a few steps back from the edge, face the far island and PLACE it.",
@@ -513,6 +602,19 @@ static func _darkroom() -> Dictionary:
 	src.append(_wall(SRC + Vector3(-10.4, 0, -40), SRC + Vector3(-10, 8, 4), LAV, Mat.PLASTER))
 	src.append(_wall(SRC + Vector3(10, 0, -40), SRC + Vector3(10.4, 8, 4), LAV, Mat.PLASTER))
 	s.append_array(_tag(src, "source", Mat.STYLE_SEPIA))
+	# Dressing: photos drying on lines, plants, a desk.
+	s.append_array(P.photo_line(Vector3(-9.8, 5.2, 7.0), Vector3(9.8, 5.2, 7.0), 0.4))
+	s.append_array(P.photo_line(Vector3(-9.8, 5.0, -4.0), Vector3(9.8, 5.0, -2.0), 0.4))
+	s.append_array(P.potted_plant(Vector3(-9.3, 0, -10.8)))
+	s.append_array(P.potted_plant(Vector3(9.3, 0, -10.8), P.LEAF_PINK))
+	var desk: Array = _table(Vector3(-7, 0, 2))
+	for d in desk:
+		(d as Solid).collide = false
+	s.append_array(desk)
+	for k in 3:
+		var paper := Solid.obox(Vector3(-7.3 + k * 0.3, 0.86, 2.0 + k * 0.1), Vector3(0.3, 0.01, 0.38), Basis(Vector3.UP, k * 0.3), Color(0.99, 0.98, 0.95), Mat.PLASTER)
+		paper.collide = false
+		s.append(paper)
 	return {
 		"name": "8 · Darkroom",
 		"hint": "Two batteries, three shots. Copy one by aiming DOWN at it — a photo replaces everything in its frame, all the way to the horizon. Hold REWIND to undo.",

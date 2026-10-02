@@ -17,12 +17,16 @@ func _clear() -> void:
 
 func show_menu() -> void:
 	_clear()
+	var root := Node.new()
+	var backdrop := MenuBackdrop.new()
+	root.add_child(backdrop)
 	var layer := CanvasLayer.new()
 	var menu := MainMenu.new()
 	menu.level_chosen.connect(start_level)
 	layer.add_child(menu)
-	add_child(layer)
-	_current = layer
+	root.add_child(layer)
+	add_child(root)
+	_current = root
 
 
 ## index >= 0: a level, Game.HUB: the Station hub.

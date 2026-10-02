@@ -95,6 +95,11 @@ func _ready() -> void:
 	player.global_position = level["spawn"]
 	player.set_look(deg_to_rad(level["yaw"]), 0.0)
 	player.frozen = true
+	var life := AmbientLife.new()
+	add_child(life)
+	life.setup(player, Vector3(level["spawn"]) * Vector3(1, 0, 1) + Vector3(0, level["spawn"].y, 0), level["spawn"])
+	player.footstep.connect(func(): Sfx.play("step", -14.0, randf_range(0.85, 1.15)))
+	player.landed.connect(func(k: float): Sfx.play("land", lerpf(-12.0, -4.0, k)))
 	_build_held_photo()
 
 	_photo_vp = SubViewport.new()
@@ -181,6 +186,11 @@ func _no_photo(n: Node) -> void:
 
 
 func _build_environment() -> void:
+	Game.make_environment(self)
+
+
+## Sky, ambient light, fog, glow and the sun. Shared with the menu backdrop.
+static func make_environment(parent: Node) -> void:
 	var env := Environment.new()
 	var sky := Sky.new()
 	var sm := ShaderMaterial.new()
@@ -207,7 +217,7 @@ func _build_environment() -> void:
 	env.fog_aerial_perspective = 0.4
 	var we := WorldEnvironment.new()
 	we.environment = env
-	add_child(we)
+	parent.add_child(we)
 
 	var sun := DirectionalLight3D.new()
 	sun.rotation = Vector3(deg_to_rad(-48), deg_to_rad(28), 0)
@@ -219,7 +229,7 @@ func _build_environment() -> void:
 	sun.shadow_blur = 1.5
 	sun.directional_shadow_max_distance = 70.0
 	sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS
-	add_child(sun)
+	parent.add_child(sun)
 
 
 func _build_held_photo() -> void:
@@ -239,7 +249,63 @@ func _build_held_photo() -> void:
 	_held_dev_mat = _held_dev.material_override
 	_held_dev.position.z = 0.0005
 	_held_root.add_child(_held_dev)
+	_build_hands(side)
 	_held_root.visible = false
+
+
+## Two stylised hands pinching the bottom corners of the held picture.
+func _build_hands(side: float) -> void:
+	var skin := StandardMaterial3D.new()
+	skin.albedo_color = Color(0.86, 0.62, 0.5)
+	skin.roughness = 1.0
+	skin.no_depth_test = true
+	skin.render_priority = 14
+	var sleeve := StandardMaterial3D.new()
+	sleeve.albedo_color = Color(0.42, 0.5, 0.72)
+	sleeve.roughness = 1.0
+	sleeve.no_depth_test = true
+	sleeve.render_priority = 13
+	for sx in [-1.0, 1.0]:
+		# Hands hold the sides of the picture: the palm tucks behind the frame,
+		# the thumb rests on the front, the sleeve runs off the bottom of the screen.
+		var hand := Node3D.new()
+		hand.position = Vector3(side * 0.56 * sx, -side * 0.3, 0.0)
+		_held_root.add_child(hand)
+		var palm := MeshInstance3D.new()
+		var pm := SphereMesh.new()
+		pm.radius = 0.024
+		pm.height = 0.048
+		palm.mesh = pm
+		palm.scale = Vector3(0.8, 1.35, 0.5)
+		palm.position = Vector3(0.006 * sx, -0.004, -0.006)
+		var palm_mat: StandardMaterial3D = skin.duplicate()
+		palm_mat.render_priority = 8
+		palm.material_override = palm_mat
+		hand.add_child(palm)
+		var thumb := MeshInstance3D.new()
+		var tm := CapsuleMesh.new()
+		tm.radius = 0.008
+		tm.height = 0.038
+		thumb.mesh = tm
+		thumb.position = Vector3(-0.011 * sx, 0.006, 0.004)
+		thumb.rotation.z = 0.9 * sx
+		thumb.material_override = skin
+		hand.add_child(thumb)
+		var cuff := MeshInstance3D.new()
+		var cm := CylinderMesh.new()
+		cm.top_radius = 0.022
+		cm.bottom_radius = 0.028
+		cm.height = 0.16
+		cuff.mesh = cm
+		cuff.position = Vector3(0.03 * sx, -0.09, -0.02)
+		cuff.rotation = Vector3(-0.3, 0, 0.35 * sx)
+		var cuff_mat: StandardMaterial3D = sleeve.duplicate()
+		cuff_mat.render_priority = 7
+		cuff.material_override = cuff_mat
+		hand.add_child(cuff)
+		for c in hand.get_children():
+			(c as MeshInstance3D).layers = 2
+			(c as MeshInstance3D).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 
 
 func _overlay_quad(size: Vector2, col: Color, priority: int) -> MeshInstance3D:
@@ -338,7 +404,7 @@ func _capture_transform() -> Transform3D:
 	elif absf(pitch) < SNAP_LEVEL:
 		pitch = 0.0
 	var yaw := _snap_angle(player.yaw, PI * 0.5, SNAP_YAW)
-	return Transform3D(Basis.from_euler(Vector3(pitch, yaw, 0)), player.camera.global_position)
+	return Transform3D(Basis.from_euler(Vector3(pitch, yaw, 0)), player.eye_origin())
 
 
 func _placement_transform(p: Photo) -> Transform3D:
@@ -349,7 +415,7 @@ func _placement_transform(p: Photo) -> Transform3D:
 		pitch = 0.0
 	var yaw := _snap_angle(player.yaw, PI * 0.5, SNAP_YAW)
 	var b := Basis.from_euler(Vector3(pitch, yaw, 0)) * Basis(Vector3(0, 0, 1), roll)
-	return Transform3D(b, player.camera.global_position)
+	return Transform3D(b, player.eye_origin())
 
 
 func toggle_camera_mode() -> void:
@@ -715,7 +781,11 @@ func _on_teleporter_entered() -> void:
 	player.frozen = true
 	Sfx.play("teleport")
 	Progress.mark_completed(level_index)
-	hud.show_complete(level_index + 1 >= Levels.count())
+	hud.flash = 1.0
+	# A keepsake: the game snaps one last photo of the restored memory.
+	var keep := await _render_photo(Transform3D(Basis.from_euler(Vector3(deg_to_rad(-8), player.yaw + PI, 0)),
+		player.eye_origin() + Vector3(0, 1.2, 0)))
+	hud.show_complete(level_index + 1 >= Levels.count(), keep, Levels.NAMES[level_index])
 
 
 func _on_hub_pad(i: int) -> void:

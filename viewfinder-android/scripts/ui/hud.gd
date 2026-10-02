@@ -37,6 +37,9 @@ var _eject_t := 1.0
 var _pause_panel: Control
 var _complete_panel: Control
 var _complete_next: Button
+var _keep_photo: TextureRect
+var _keep_caption: Label
+var _vignette: GradientTexture2D
 var _note_panel: Control
 var _note_title: Label
 var _note_text: Label
@@ -54,6 +57,18 @@ func _ready() -> void:
 	_pause_panel = _make_panel("Paused", [["Resume", "resume"], ["Restart", "restart"], ["Back to the Station", "hub"], ["Main menu", "menu"]])
 	_complete_panel = _make_panel("Memory restored", [["Continue", "next"], ["Replay", "restart"], ["Main menu", "menu"]])
 	_complete_next = _complete_panel.find_child("Btn_next", true, false)
+	_build_keepsake()
+	var g := Gradient.new()
+	g.set_color(0, Color(0.1, 0.06, 0.12, 0.0))
+	g.add_point(0.6, Color(0.1, 0.06, 0.12, 0.0))
+	g.set_color(g.get_point_count() - 1, Color(0.1, 0.06, 0.12, 0.38))
+	_vignette = GradientTexture2D.new()
+	_vignette.gradient = g
+	_vignette.fill = GradientTexture2D.FILL_RADIAL
+	_vignette.fill_from = Vector2(0.5, 0.5)
+	_vignette.fill_to = Vector2(1.08, 0.5)
+	_vignette.width = 128
+	_vignette.height = 128
 	_build_note_panel()
 	resized.connect(_layout)
 	_layout()
@@ -112,7 +127,17 @@ func toggle_pause() -> void:
 	get_tree().paused = _pause_panel.visible
 
 
-func show_complete(last: bool) -> void:
+func show_complete(last: bool, keepsake: Texture2D = null, place_name: String = "") -> void:
+	_keep_photo.texture = keepsake
+	_keep_caption.text = place_name
+	_keep_photo.get_parent().get_parent().visible = keepsake != null
+	var card: Control = _keep_photo.get_parent().get_parent()
+	card.pivot_offset = card.size * 0.5
+	card.scale = Vector2(0.6, 0.6)
+	card.modulate.a = 0.0
+	var tw := create_tween().set_parallel().set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tw.tween_property(card, "scale", Vector2.ONE, 0.5)
+	tw.tween_property(card, "modulate:a", 1.0, 0.3)
 	_complete_next.text = "Back to the Station" if not last else "Back to the Station  ✦"
 	_complete_panel.visible = true
 	_touches.clear()
@@ -304,6 +329,7 @@ func _draw() -> void:
 	var s := size
 	var u := _u
 
+	draw_texture_rect(_vignette, Rect2(Vector2.ZERO, s), false)
 	if game.camera_mode:
 		_draw_viewfinder()
 
@@ -548,6 +574,38 @@ func _make_panel(title: String, entries: Array) -> Control:
 		b.pressed.connect(func(): _on_panel(act))
 		box.add_child(b)
 	return root
+
+
+## The polaroid keepsake shown when a memory is restored.
+func _build_keepsake() -> void:
+	var box: VBoxContainer = _complete_panel.get_child(0).get_child(0)
+	var card := PanelContainer.new()
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(1.0, 0.99, 0.96)
+	sb.content_margin_left = 14
+	sb.content_margin_right = 14
+	sb.content_margin_top = 14
+	sb.content_margin_bottom = 8
+	sb.shadow_color = Color(0, 0, 0, 0.35)
+	sb.shadow_size = 14
+	sb.shadow_offset = Vector2(4, 6)
+	card.add_theme_stylebox_override("panel", sb)
+	card.rotation = 0.04
+	card.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	var v := VBoxContainer.new()
+	card.add_child(v)
+	_keep_photo = TextureRect.new()
+	_keep_photo.custom_minimum_size = Vector2(250, 250)
+	_keep_photo.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_keep_photo.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	v.add_child(_keep_photo)
+	_keep_caption = Label.new()
+	_keep_caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_keep_caption.add_theme_font_size_override("font_size", 24)
+	_keep_caption.add_theme_color_override("font_color", INK.lightened(0.2))
+	v.add_child(_keep_caption)
+	box.add_child(card)
+	box.move_child(card, 1)
 
 
 func _build_note_panel() -> void:

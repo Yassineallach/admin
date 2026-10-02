@@ -17,13 +17,17 @@ func _ready() -> void:
 	Progress.unlocked = 9
 
 	if want("menu"):
+		var root := Node.new()
+		root.add_child(MenuBackdrop.new())
 		var menu := MainMenu.new()
 		var layer := CanvasLayer.new()
 		layer.add_child(menu)
-		add_child(layer)
-		await settle(10)
+		root.add_child(layer)
+		add_child(root)
+		await settle(40)
 		await shot("00_menu")
-		layer.queue_free()
+		root.queue_free()
+		await settle(2)
 
 	if want("hub"):
 		await load_level(-1)
@@ -108,6 +112,12 @@ func _ready() -> void:
 		await settle(40)
 		await pose(Vector3(0, 0, -3), 0, -6)
 		await shot("16_painted_bridge")
+
+	if want("done"):
+		await load_level(0)
+		game.player.global_position = Vector3(0, 0.3, -19)
+		await settle(90)
+		await shot("18_memory_restored")
 
 	if want("l8"):
 		await load_level(7)

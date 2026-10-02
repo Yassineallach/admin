@@ -15,6 +15,10 @@ var _ring_mat: StandardMaterial3D
 var _beam: MeshInstance3D
 var _socket_mats: Array[StandardMaterial3D] = []
 var _t := 0.0
+var _runes: Node3D
+var _rune_mat: StandardMaterial3D
+var _sparks: CPUParticles3D
+var _hum: AudioStreamPlayer3D
 
 
 func setup(need_count: int, label: String = "", is_locked: bool = false, done: bool = false) -> void:
@@ -87,6 +91,66 @@ func setup(need_count: int, label: String = "", is_locked: bool = false, done: b
 	_beam.material_override = beam_mat
 	_beam.visible = false
 	add_child(_beam)
+
+	# Orbiting rune stones.
+	_runes = Node3D.new()
+	_runes.position = Vector3(0, 1.1, 0)
+	add_child(_runes)
+	_rune_mat = StandardMaterial3D.new()
+	_rune_mat.albedo_color = Color(0.85, 0.88, 0.95)
+	_rune_mat.emission_enabled = true
+	_rune_mat.emission = Color(0.45, 0.9, 1.0)
+	_rune_mat.emission_energy_multiplier = 0.0
+	for i in 3:
+		var r := MeshInstance3D.new()
+		var pm := PrismMesh.new()
+		pm.size = Vector3(0.16, 0.28, 0.06)
+		r.mesh = pm
+		var a := TAU * i / 3.0
+		r.position = Vector3(cos(a) * 1.25, 0, sin(a) * 1.25)
+		r.rotation.y = -a
+		r.material_override = _rune_mat
+		_runes.add_child(r)
+
+	# Rising sparkles while powered.
+	_sparks = CPUParticles3D.new()
+	_sparks.amount = 28
+	_sparks.lifetime = 1.8
+	_sparks.emission_shape = CPUParticles3D.EMISSION_SHAPE_RING
+	_sparks.emission_ring_axis = Vector3.UP
+	_sparks.emission_ring_radius = 0.85
+	_sparks.emission_ring_inner_radius = 0.6
+	_sparks.emission_ring_height = 0.05
+	_sparks.direction = Vector3.UP
+	_sparks.spread = 8.0
+	_sparks.gravity = Vector3.ZERO
+	_sparks.initial_velocity_min = 0.8
+	_sparks.initial_velocity_max = 1.6
+	_sparks.position = Vector3(0, 0.25, 0)
+	var sq := QuadMesh.new()
+	sq.size = Vector2(0.06, 0.06)
+	var spark_mat := StandardMaterial3D.new()
+	spark_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	spark_mat.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
+	spark_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	spark_mat.albedo_color = Color(0.8, 1.0, 1.0, 0.9)
+	spark_mat.emission_enabled = true
+	spark_mat.emission = Color(0.6, 1.0, 1.0)
+	sq.material = spark_mat
+	_sparks.mesh = sq
+	var fade := Gradient.new()
+	fade.set_color(0, Color(1, 1, 1, 1))
+	fade.set_color(1, Color(1, 1, 1, 0))
+	_sparks.color_ramp = fade
+	_sparks.emitting = false
+	add_child(_sparks)
+
+	_hum = AudioStreamPlayer3D.new()
+	_hum.stream = Sfx.get_stream("hum")
+	_hum.unit_size = 3.0
+	_hum.volume_db = -6.0
+	_hum.max_distance = 25.0
+	add_child(_hum)
 
 	for i in needs:
 		var ang := PI * 0.5 + (i - (needs - 1) * 0.5) * 0.9
@@ -161,10 +225,19 @@ func _update_power(filled: Array) -> void:
 	powered = count >= needs and not locked
 	_ring_mat.emission_energy_multiplier = 2.5 if powered else 0.0
 	_beam.visible = powered
+	_rune_mat.emission_energy_multiplier = 2.2 if powered else 0.15
+	if _sparks.emitting != powered:
+		_sparks.emitting = powered
+	if powered and not _hum.playing and is_inside_tree():
+		_hum.play()
+	elif not powered and _hum.playing:
+		_hum.stop()
 
 
 func _process(delta: float) -> void:
 	_t += delta
+	_runes.rotation.y = _t * (0.9 if powered else 0.15)
+	_runes.position.y = 1.1 + sin(_t * 1.6) * 0.08
 	if _beam.visible:
 		_beam.rotation.y = _t * 0.8
 		(_beam.material_override as StandardMaterial3D).albedo_color.a = 0.14 + 0.06 * sin(_t * 3.0)

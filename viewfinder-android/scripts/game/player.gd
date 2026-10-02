@@ -15,6 +15,15 @@ var move_input := Vector2.ZERO  # x = strafe, y = forward
 var jump_requested := false
 var frozen := false
 
+signal footstep
+signal landed(strength: float)
+
+var _bob_t := 0.0
+var _bob_amt := 0.0
+var _land_dip := 0.0
+var _was_on_floor := true
+var _fall_speed := 0.0
+
 var head: Node3D
 var camera: Camera3D
 var hold_point: Node3D
@@ -69,6 +78,12 @@ func eye_transform() -> Transform3D:
 	return camera.global_transform
 
 
+## Steady eye position (without head-bob): photos are taken / placed from here
+## so that bobbing never changes where a picture lands.
+func eye_origin() -> Vector3:
+	return head.global_position
+
+
 func _physics_process(delta: float) -> void:
 	if frozen:
 		return
@@ -85,7 +100,34 @@ func _physics_process(delta: float) -> void:
 	var horiz := Vector3(velocity.x, 0, velocity.z).move_toward(target, ACCEL * delta)
 	velocity.x = horiz.x
 	velocity.z = horiz.z
+	if not is_on_floor():
+		_fall_speed = maxf(_fall_speed, -velocity.y)
 	move_and_slide()
+	_update_bob(delta)
+
+
+func _update_bob(delta: float) -> void:
+	var on_floor := is_on_floor()
+	if on_floor and not _was_on_floor and _fall_speed > 2.5:
+		var k := clampf((_fall_speed - 2.5) / 8.0, 0.0, 1.0)
+		_land_dip = 0.05 + 0.1 * k
+		landed.emit(k)
+	if on_floor:
+		_fall_speed = 0.0
+	_was_on_floor = on_floor
+	var speed := Vector2(velocity.x, velocity.z).length()
+	var target_amt := clampf(speed / SPEED, 0.0, 1.0) if on_floor else 0.0
+	_bob_amt = lerpf(_bob_amt, target_amt, clampf(delta * 8.0, 0.0, 1.0))
+	if _bob_amt > 0.05:
+		var prev := _bob_t
+		_bob_t += delta * (6.0 + speed * 0.9)
+		# One step per half bob cycle.
+		if floor(prev / PI) != floor(_bob_t / PI):
+			footstep.emit()
+	_land_dip = move_toward(_land_dip, 0.0, delta * 0.6)
+	camera.position = Vector3(cos(_bob_t) * 0.018 * _bob_amt,
+		absf(sin(_bob_t)) * 0.035 * _bob_amt - _land_dip, 0.0)
+	camera.rotation.z = cos(_bob_t) * 0.006 * _bob_amt
 
 
 ## Push the player upward until the capsule no longer overlaps level geometry.
