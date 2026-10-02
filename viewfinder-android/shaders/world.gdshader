@@ -206,6 +206,27 @@ vec3 procedural_color(int m, vec2 uv, vec3 base, out float emit) {
 		float rune = has_rune * (1.0 - smoothstep(0.015, 0.035, ring));
 		emit += rune * 1.0 * pulse;
 		c = mix(c, glow_col, rune * 0.6);
+	} else if (m == 13) { // glass: sky reflection, mullion-free, diagonal highlights
+		c = mix(base * 0.75, srgb_to_linear(vec3(0.72, 0.84, 0.95)), 0.3 * smoothstep(0.0, 2.5, uv.y + 0.6));
+		float streak = smoothstep(0.82, 0.9, fract((uv.x + uv.y) * 0.6)) * (1.0 - smoothstep(0.9, 0.97, fract((uv.x + uv.y) * 0.6)));
+		float streak2 = smoothstep(0.93, 0.96, fract((uv.x + uv.y) * 0.6 + 0.12)) * (1.0 - smoothstep(0.96, 0.99, fract((uv.x + uv.y) * 0.6 + 0.12)));
+		c = mix(c, srgb_to_linear(vec3(0.86, 0.93, 1.0)), (streak + streak2) * 0.55);
+		c *= 0.9 + 0.15 * smoothstep(0.0, 3.0, uv.y);
+		emit = 0.12 + (streak + streak2) * 0.2;
+	} else if (m == 14) { // board-formed concrete with tie holes
+		float board = fract(uv.y / 0.3);
+		float bid = floor(uv.y / 0.3);
+		c *= 0.93 + 0.06 * hash12(vec2(bid, 2.0)) + 0.05 * fbm(uv * vec2(0.6, 6.0) + bid);
+		c *= mix(0.9, 1.0, smoothstep(0.0, 0.05, min(board, 1.0 - board)));
+		vec2 tie = fract(uv / vec2(1.2, 0.6)) - 0.5;
+		c *= mix(0.75, 1.0, smoothstep(0.02, 0.035, length(tie * vec2(1.2, 0.6))));
+		c *= 0.95 + 0.06 * fbm(uv * 1.7);
+	} else if (m == 15) { // solar cells
+		vec2 f = fract(uv / vec2(0.33, 0.33));
+		float line = 1.0 - smoothstep(0.03, 0.06, min(min(f.x, 1.0 - f.x), min(f.y, 1.0 - f.y)));
+		c = srgb_to_linear(vec3(0.16, 0.22, 0.42)) * (0.9 + 0.2 * f.y);
+		c = mix(c, srgb_to_linear(vec3(0.8, 0.84, 0.9)), line * 0.7);
+		emit = 0.08;
 	}
 	return c;
 }
@@ -221,13 +242,29 @@ vec3 material_color(int m, vec2 uv, vec3 base, out float emit) {
 	if (textured < 0.5) {
 		return proc;
 	}
-	if (m == 0) return painted(tex_plaster, uv * 0.5, base);
+	if (m == 0) {
+		// Whitewash: the painted plaster texture, lifted towards the face colour.
+		vec3 t = texture(tex_plaster, uv * 0.5).rgb;
+		float l = dot(t, vec3(0.3, 0.55, 0.15));
+		return base * (0.82 + 0.3 * l);
+	}
 	if (m == 1) {
 		vec3 g = painted(tex_grass, uv * 0.33, base * vec3(1.05, 1.1, 0.9));
 		// keep the procedural flowers / clover on top of the painted grass
 		return g * (proc / max(base * (0.80 + 0.32 * fbm(uv * 0.8)), vec3(0.05)));
 	}
-	if (m == 2) return painted(tex_cobble, uv * 0.8, base) * 0.86;
+	if (m == 2) {
+		// Big pale pavers (1.5 m) with terrazzo flecks and a faint grain.
+		vec2 q = uv / 1.5;
+		vec2 id = floor(q);
+		vec2 f = fract(q);
+		float edge = min(min(f.x, 1.0 - f.x), min(f.y, 1.0 - f.y));
+		vec3 t = base * (0.86 + 0.08 * hash12(id) + 0.05 * fbm(uv * 1.3));
+		vec2 ch = spots(uv * 9.0, 0.5, 0.18);
+		t = mix(t, t * mix(vec3(0.75, 0.78, 0.82), vec3(1.05, 0.95, 0.9), ch.y), ch.x * 0.6);
+		t *= 0.97 + 0.05 * texture(tex_cobble, uv * 0.35).r;
+		return mix(t * 0.7, t, smoothstep(0.006, 0.016, edge));
+	}
 	if (m == 3) return painted(tex_brick, uv * 0.5, base);
 	if (m == 4 || m == 10) {
 		// grain from the texture, colour mostly from the palette

@@ -102,6 +102,8 @@ static func prop_material(src: Material, style: int) -> Material:
 		else:
 			m.set_shader_parameter("use_tex", 0.0)
 		m.set_shader_parameter("albedo_color", b.albedo_color)
+		if b.has_meta("recolor"):
+			m.set_shader_parameter("recolor", 1.0)
 		if b.transparency != BaseMaterial3D.TRANSPARENCY_DISABLED:
 			m.set_shader_parameter("alpha_cut", 0.5)
 		var name := b.resource_name

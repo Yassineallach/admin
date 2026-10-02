@@ -18,24 +18,38 @@ const ROOF := Color(0.85, 0.47, 0.42)
 const WATER := Color(0.48, 0.74, 0.86)
 const METAL := Color(0.35, 0.36, 0.42)
 const LAMP := Color(1.0, 0.86, 0.55)
+## Viewfinder-ish palette: whitewash, pale concrete, glass and pastel accents.
+const WHITE := Color(0.97, 0.96, 0.93)
+const CONCRETE := Color(0.86, 0.84, 0.82)
+const GLASS := Color(0.50, 0.70, 0.78)
+const CORAL := Color(0.97, 0.66, 0.58)
+const TEAL := Color(0.42, 0.74, 0.74)
+const BUTTER := Color(0.98, 0.84, 0.50)
+const LILAC := Color(0.74, 0.66, 0.92)
+const ACCENTS := [CORAL, TEAL, BUTTER, LILAC]
+const BLOSSOM := Color(1.0, 0.64, 0.80)
+const BLOSSOM_LILAC := Color(0.80, 0.66, 1.0)
+const AUTUMN := Color(1.0, 0.74, 0.40)
 
 
 static func tree(base: Vector3, height: float = 3.6, leaf: Color = LEAF, seed: int = 0) -> Array:
-	# Quaternius stylized trees; pink/gold "leaf" colours pick the pine and
-	# twisted variants so groves still read as varied.
+	# Quaternius stylized trees. Pink and gold "leaf" colours become blossom /
+	# autumn canopies (the same models with repainted leaves); green groves mix
+	# in the odd pine.
 	var rng := RandomNumberGenerator.new()
 	rng.seed = hash(base) + seed
-	var name: String
+	var name := "CommonTree_%d" % (1 + rng.randi() % 5)
+	var tint := Color(0, 0, 0, 0)
 	if leaf == LEAF_PINK:
-		name = "Pine_%d" % (1 + rng.randi() % 3)
+		tint = BLOSSOM if rng.randf() < 0.7 else BLOSSOM_LILAC
 	elif leaf == LEAF_GOLD:
-		name = "CommonTree_%d" % (3 + rng.randi() % 2)
-	else:
-		name = "CommonTree_%d" % [1, 2, 5][rng.randi() % 3]
+		tint = AUTUMN
+	elif rng.randf() < 0.25:
+		name = "Pine_%d" % (1 + rng.randi() % 3)
 	var path := ModelLib.NATURE + name + ".gltf"
 	var model_h := ModelLib.aabb(path).size.y
 	var sc := height / maxf(model_h, 0.1) * 1.25
-	var out: Array = [ModelLib.instance(path, base, rng.randf() * 360.0, sc)]
+	var out: Array = [ModelLib.instance(path, base, rng.randf() * 360.0, sc, tint)]
 	var trunk := Solid.loft(base, Solid.ngon(7, 0.22 * sc * 1.6), 0.0, 2.2, 0.8, TRUNK, Mat.WOOD)
 	trunk.visible = false
 	out.append(trunk)
@@ -65,7 +79,7 @@ static func arch(center: Vector3, axis: Vector3, width: float, height: float, de
 	# Piers.
 	for sgn in [-1.0, 1.0]:
 		var c: Vector3 = center + side * sgn * (r_in + thick * 0.5) + Vector3.UP * spring * 0.5
-		out.append(Solid.obox(c, Vector3(thick, spring, depth), basis, col, Mat.BRICK))
+		out.append(Solid.obox(c, Vector3(thick, spring, depth), basis, col, Mat.PLASTER))
 	# Voussoirs: convex ring segments.
 	var segs := 7
 	for i in segs:
@@ -74,9 +88,9 @@ static func arch(center: Vector3, axis: Vector3, width: float, height: float, de
 		var poly := PackedVector2Array([
 			Vector2(cos(a0), sin(a0)) * r_in, Vector2(cos(a1), sin(a1)) * r_in,
 			Vector2(cos(a1), sin(a1)) * r_out, Vector2(cos(a0), sin(a0)) * r_out])
-		out.append(Solid.extrude(poly, depth, Transform3D(basis, center + Vector3.UP * spring), col, Mat.BRICK))
+		out.append(Solid.extrude(poly, depth, Transform3D(basis, center + Vector3.UP * spring), col, Mat.PLASTER))
 	# Cap stone on top.
-	out.append(Solid.obox(center + Vector3.UP * (height + 0.12), Vector3(r_out * 2 + 0.2, 0.24, depth + 0.1), basis, col.lightened(0.05), Mat.TILE))
+	out.append(Solid.obox(center + Vector3.UP * (height + 0.12), Vector3(r_out * 2 + 0.2, 0.24, depth + 0.1), basis, CONCRETE, Mat.CONCRETE))
 	return out
 
 
@@ -118,13 +132,16 @@ static func railing(a: Vector3, b: Vector3, h: float = 0.9, col: Color = WOOD) -
 
 
 static func lamp(base: Vector3, h: float = 2.6) -> Array:
-	var pole := Solid.loft(base, Solid.ngon(6, 0.06), 0.0, h, 0.8, METAL, Mat.METAL, Color(0, 0, 0, 0), -1, true)
+	# Slim white pole with a ring collar and a glowing globe.
+	var pole := Solid.loft(base, Solid.ngon(8, 0.07), 0.0, h, 0.7, WHITE, Mat.PLASTER, Color(0, 0, 0, 0), -1, true)
 	pole.collide = false
-	var bulb := Solid.sphere(base + Vector3(0, h + 0.15, 0), Vector3(0.2, 0.24, 0.2), LAMP, Mat.GLOW)
+	var foot := Solid.loft(base, Solid.ngon(8, 0.2), 0.0, 0.25, 0.6, CONCRETE, Mat.CONCRETE)
+	foot.collide = false
+	var collar := Solid.loft(base + Vector3(0, h - 0.05, 0), Solid.ngon(10, 0.2), 0.0, 0.08, 1.0, TEAL, Mat.PLASTER)
+	collar.collide = false
+	var bulb := Solid.sphere(base + Vector3(0, h + 0.2, 0), Vector3(0.22, 0.22, 0.22), LAMP, Mat.GLOW)
 	bulb.collide = false
-	var cap := Solid.loft(base + Vector3(0, h + 0.3, 0), Solid.ngon(6, 0.26), 0.0, 0.18, 0.15, METAL, Mat.METAL)
-	cap.collide = false
-	return [pole, bulb, cap]
+	return [pole, foot, collar, bulb]
 
 
 static func bench(c: Vector3, along_x: bool = true) -> Array:
@@ -149,62 +166,109 @@ static func crate(c: Vector3, s: float = 0.8) -> Array:
 	col.visible = false
 	return [col, ModelLib.instance(ModelLib.VILLAGE + "Prop_Crate.gltf", c, c.x * 30.0, s / 1.06)]
 
-## A little house: plaster walls, pitched roof, door and windows.
-## `front` is the direction the door faces (one of the 4 axes).
+## A whitewashed brutalist / solarpunk building: plinth, white block, thick
+## concrete roof slab with a garden and solar panels, a pastel door under a
+## canopy, a round window, glass slot windows and hanging vines.
+## `front` is the direction the door faces (one of the 4 axes). With `tall`
+## a cantilevered glass-fronted upper storey sits on top.
 static func house(base: Vector3, size: Vector3, front: Vector3 = Vector3.BACK,
-		wall: Color = PLASTER, roof: Color = ROOF) -> Array:
-	# Built from the Quaternius modular village kit: 2 m wall panels, corner
-	# beams, a round door, arched windows with open shutters, a tiled roof,
-	# a chimney and a little ivy. An invisible box handles collision.
+		wall: Color = WHITE, accent: Color = Color(0, 0, 0, 0), tall: bool = false) -> Array:
 	var out: Array = []
-	var w: int = 6 if size.x > 5.0 else 4
-	var d: int = 6 if size.z > 5.0 else 4
-	if w == 6 and d == 4:
-		w = 4  # the kit has 4x4, 4x6 and 6x6 roofs
-		d = 6
-	var yaw := rad_to_deg(atan2(front.x, front.z))
-	var basis := Basis(Vector3.UP, deg_to_rad(yaw))
-	var col := Solid.obox(base + Vector3(0, 1.6, 0), Vector3(w, 3.2, d), basis, wall, Mat.PLASTER)
-	col.visible = false
-	out.append(col)
-	var stone := wall.r < 0.9  # darker walls get the stone variant
-	var kit := "Wall_UnevenBrick_" if stone else "Wall_Plaster_"
-	var hw := w * 0.5
-	var hd := d * 0.5
-	# Sides: (centre offset in local space, outward yaw, panel count)
-	var sides := [[Vector3(0, 0, hd), 0.0, w / 2], [Vector3(0, 0, -hd), 180.0, w / 2],
-		[Vector3(hw, 0, 0), 90.0, d / 2], [Vector3(-hw, 0, 0), -90.0, d / 2]]
-	var si := 0
-	for side in sides:
-		var count: int = side[2]
-		var side_yaw: float = side[1]
-		var side_basis := Basis(Vector3.UP, deg_to_rad(side_yaw))
-		for k in count:
-			var along := (k - (count - 1) * 0.5) * 2.0
-			var local: Vector3 = side[0] + side_basis * Vector3(along, 0, 0)
-			var piece := kit + "Straight"
-			if si == 0 and k == count / 2:
-				piece = kit + "Door_Round"
-			elif (k + si) % 2 == 0:
-				piece = kit + "Window_Wide_Round"
-			var pos := base + basis * local
-			out.append(ModelLib.instance(ModelLib.VILLAGE + piece + ".gltf", pos, yaw + side_yaw))
-			if piece.ends_with("Window_Wide_Round"):
-				out.append(ModelLib.instance(ModelLib.VILLAGE + "Window_Wide_Round1.gltf", pos, yaw + side_yaw))
-				out.append(ModelLib.instance(ModelLib.VILLAGE + "WindowShutters_Wide_Round_Open.gltf", pos, yaw + side_yaw))
-			elif piece.ends_with("Door_Round"):
-				out.append(ModelLib.instance(ModelLib.VILLAGE + "Door_1_Round.gltf", pos + basis * Basis(Vector3.UP, deg_to_rad(side_yaw)) * Vector3(-0.53, 0, 0), yaw + side_yaw))
-		si += 1
-	for cx in [-hw, hw]:
-		for cz in [-hd, hd]:
-			out.append(ModelLib.instance(ModelLib.VILLAGE + ("Corner_Exterior_Brick" if stone else "Corner_Exterior_Wood") + ".gltf",
-				base + basis * Vector3(cx, 0, cz), yaw))
-	var roof_name := "Roof_RoundTiles_%dx%d" % [mini(w, d), maxi(w, d)]
-	var roof_yaw := yaw if d >= w else yaw + 90.0
-	out.append(ModelLib.instance(ModelLib.VILLAGE + roof_name + ".gltf", base + Vector3(0, 3.12, 0), roof_yaw))
-	out.append(ModelLib.instance(ModelLib.VILLAGE + "Prop_Chimney.gltf", base + basis * Vector3(hw * 0.5, 3.2, -hd * 0.4), yaw))
-	out.append(ModelLib.instance(ModelLib.VILLAGE + "Prop_Vine5.gltf", base + basis * Vector3(-hw + 0.3, 3.0, hd + 0.15), yaw))
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash(base)
+	if accent.a == 0.0:
+		accent = ACCENTS[rng.randi() % ACCENTS.size()]
+	if wall.r < 0.95:
+		wall = wall.lerp(WHITE, 0.6)  # pastel-tinted whitewash
+	var yaw := atan2(front.x, front.z)
+	var basis := Basis(Vector3.UP, yaw)
+	var w := size.x
+	var d := size.z
+	var h := size.y
+	var at := func(local: Vector3) -> Vector3: return base + basis * local
+	out.append(Solid.obox(at.call(Vector3(0, 0.15, 0)), Vector3(w + 0.3, 0.3, d + 0.3), basis, CONCRETE, Mat.CONCRETE))
+	out.append(Solid.obox(at.call(Vector3(0, h * 0.5, 0)), Vector3(w, h, d), basis, wall, Mat.PLASTER))
+	out.append(Solid.obox(at.call(Vector3(0, h + 0.15, 0)), Vector3(w + 0.6, 0.3, d + 0.6), basis, CONCRETE, Mat.CONCRETE))
+	var band := Solid.obox(at.call(Vector3(0, h - 0.18, 0)), Vector3(w + 0.04, 0.22, d + 0.04), basis, accent, Mat.PLASTER)
+	band.collide = false
+	out.append(band)
+	var fz := d * 0.5
+	# Door + canopy, off-centre so the round window fits beside it.
+	var door_x := -w * 0.22
+	out.append_array(_decor([
+		Solid.obox(at.call(Vector3(door_x, 1.05, fz + 0.03)), Vector3(1.0, 2.1, 0.08), basis, accent, Mat.PLASTER),
+		Solid.obox(at.call(Vector3(door_x, 1.05, fz + 0.02)), Vector3(1.2, 2.25, 0.05), basis, CONCRETE, Mat.CONCRETE),
+		Solid.obox(at.call(Vector3(door_x + 0.3, 1.0, fz + 0.09)), Vector3(0.06, 0.25, 0.06), basis, METAL, Mat.METAL),
+		Solid.obox(at.call(Vector3(door_x, 2.4, fz + 0.45)), Vector3(1.8, 0.12, 0.9), basis, CONCRETE, Mat.CONCRETE),
+	]))
+	# Round window.
+	var r := minf(0.65, h * 0.2)
+	var win_c := Vector3(w * 0.22, h * 0.55, fz)
+	var xf := Transform3D(basis, at.call(win_c + Vector3(0, 0, 0.04)))
+	out.append_array(_decor([
+		Solid.extrude(Solid.ngon(16, r + 0.14), 0.08, xf, CONCRETE, Mat.CONCRETE),
+		Solid.extrude(Solid.ngon(16, r), 0.1, Transform3D(basis, at.call(win_c + Vector3(0, 0, 0.06))), GLASS, Mat.GLASS),
+	]))
+	# Glass slot windows with white fins on the sides and back.
+	for side in [[Vector3(w * 0.5, 0, 0), PI * 0.5, d], [Vector3(-w * 0.5, 0, 0), -PI * 0.5, d], [Vector3(0, 0, -fz), PI, w]]:
+		var sb := basis * Basis(Vector3.UP, side[1])
+		var span: float = side[2]
+		var n := maxi(1, int(span / 1.6))
+		for k in n:
+			var along := (k - (n - 1) * 0.5) * 1.6
+			var c: Vector3 = base + basis * (side[0] as Vector3) + sb * Vector3(along, h * 0.52, 0.04)
+			out.append_array(_decor([
+				Solid.obox(c, Vector3(0.55, h * 0.5, 0.06), sb, GLASS, Mat.GLASS),
+				Solid.obox(c + sb * Vector3(0.38, 0, 0.06), Vector3(0.1, h * 0.62, 0.16), sb, wall, Mat.PLASTER),
+				Solid.obox(c + sb * Vector3(-0.38, 0, 0.06), Vector3(0.1, h * 0.62, 0.16), sb, wall, Mat.PLASTER),
+			]))
+	var roof_y := h + 0.3
+	if tall and w >= 4.0:
+		# Cantilevered upper storey: hangs off one side, glass across the front.
+		var uw := w * 0.6
+		var ud := d * 0.75
+		var ux := w * 0.3
+		out.append(Solid.obox(at.call(Vector3(ux, roof_y + 1.1, 0)), Vector3(uw, 2.2, ud), basis, wall, Mat.PLASTER))
+		out.append(Solid.obox(at.call(Vector3(ux, roof_y + 2.35, 0)), Vector3(uw + 0.5, 0.3, ud + 0.5), basis, CONCRETE, Mat.CONCRETE))
+		out.append_array(_decor([
+			Solid.obox(at.call(Vector3(ux, roof_y + 1.15, ud * 0.5 + 0.03)), Vector3(uw - 0.5, 1.1, 0.06), basis, GLASS, Mat.GLASS),
+			Solid.obox(at.call(Vector3(ux, roof_y + 2.12, ud * 0.5 + 0.02)), Vector3(uw + 0.02, 0.18, 0.06), basis, accent, Mat.PLASTER),
+		]))
+		# Solar panels on the very top.
+		for k in 2:
+			out.append_array(_solar(at.call(Vector3(ux + (k - 0.5) * uw * 0.45, roof_y + 2.5, 0)), basis))
+		# Garden on the remaining roof.
+		out.append_array(_roof_garden(at.call(Vector3(-w * 0.3, roof_y, 0)), basis, w * 0.38, d * 0.8))
+	else:
+		out.append_array(_solar(at.call(Vector3(w * 0.22, roof_y, -d * 0.1)), basis))
+		out.append_array(_roof_garden(at.call(Vector3(-w * 0.22, roof_y, 0)), basis, w * 0.4, d * 0.8))
+	# Vines spill over the front edge; potted plants flank the door.
+	for vx in [-w * 0.42, w * 0.38]:
+		out.append(ModelLib.instance(ModelLib.VILLAGE + "Prop_Vine%d.gltf" % [1, 5, 6][rng.randi() % 3],
+			at.call(Vector3(vx, h + 0.1, fz + 0.32)), rad_to_deg(yaw), 0.9))
+	out.append_array(potted_plant(at.call(Vector3(door_x - 0.95, 0.3, fz + 0.45)), LEAF))
 	return out
+
+
+## A tilted solar panel on two little legs.
+static func _solar(c: Vector3, basis: Basis) -> Array:
+	var tilt := basis * Basis(Vector3.RIGHT, deg_to_rad(-25))
+	return _decor([
+		Solid.obox(c + Vector3(0, 0.45, 0), Vector3(1.3, 0.05, 0.9), tilt, METAL, Mat.SOLAR, Color(0, 0, 0, 0), Mat.SOLAR),
+		Solid.obox(c + basis * Vector3(0, 0.2, 0.25), Vector3(0.08, 0.4, 0.08), basis, METAL, Mat.METAL),
+		Solid.obox(c + basis * Vector3(0, 0.35, -0.25), Vector3(0.08, 0.7, 0.08), basis, METAL, Mat.METAL),
+	])
+
+
+## Grass bed with bushes and flowers on a flat roof.
+static func _roof_garden(c: Vector3, basis: Basis, w: float, d: float) -> Array:
+	var out: Array = []
+	out.append(Solid.obox(c + Vector3(0, 0.15, 0), Vector3(w, 0.3, d), basis, CONCRETE, Mat.CONCRETE, GRASS, Mat.GRASS))
+	out.append_array(bush(c + Vector3(0, 0.3, 0) + basis * Vector3(-w * 0.2, 0, d * 0.15), 0.55, LEAF))
+	out.append_array(bush(c + Vector3(0, 0.3, 0) + basis * Vector3(w * 0.25, 0, -d * 0.2), 0.45, LEAF_PINK))
+	out.append(ModelLib.instance(ModelLib.NATURE + "Grass_Common_Tall.gltf", c + Vector3(0, 0.3, 0) + basis * Vector3(w * 0.2, 0, d * 0.25), c.x * 17.0, 0.5))
+	return _decor(out)
+
 
 ## Floating island: walkable rect top (grass on rock) with a tapered rocky
 ## underside. `mn`/`mx` are the XZ corners of the top surface at height y.
@@ -397,6 +461,14 @@ static func horizon(center: Vector3, radius: float = 140.0, count: int = 6, seed
 		var p := center + Vector3(cos(a) * r, rng.randf_range(-12, 18), sin(a) * r)
 		var w := rng.randf_range(10, 22) * scale
 		out.append_array(island(Vector2(p.x - w, p.z - w * 0.7), Vector2(p.x + w, p.z + w * 0.7), p.y, Mat.GRASS, GRASS, w * 0.9, ROCK, false))
+		# Whitewashed buildings and slender towers on the far islands.
+		if rng.randf() < 0.75:
+			var bp := p + Vector3(rng.randf_range(-w * 0.4, w * 0.1), 0, rng.randf_range(-w * 0.3, w * 0.2))
+			var face: Vector3 = (center - bp) * Vector3(1, 0, 1)
+			face = Vector3(signf(face.x), 0, 0) if absf(face.x) > absf(face.z) else Vector3(0, 0, signf(face.z))
+			out.append_array(house(bp, Vector3(w * 0.5, w * 0.35, w * 0.35), face, WHITE, ACCENTS[rng.randi() % 4], true))
+		if rng.randf() < 0.5:
+			out.append_array(tower(p + Vector3(w * 0.6, 0, -w * 0.3), rng.randf_range(12, 24) * scale, ACCENTS[rng.randi() % 4]))
 		for k in rng.randi_range(1, 3):
 			var tp := p + Vector3(rng.randf_range(-w * 0.6, w * 0.6), 0, rng.randf_range(-w * 0.4, w * 0.4))
 			var leaf: Color = [LEAF, LEAF_PINK, LEAF_GOLD][rng.randi() % 3]
@@ -404,6 +476,20 @@ static func horizon(center: Vector3, radius: float = 140.0, count: int = 6, seed
 	for s in out:
 		(s as Solid).collide = false
 	return out
+
+
+## Slender retro-futurist tower: white shaft, pastel rings, glass crown.
+static func tower(base: Vector3, h: float, accent: Color = TEAL) -> Array:
+	var r := maxf(0.8, h * 0.06)
+	var out: Array = []
+	out.append(Solid.loft(base, Solid.ngon(12, r), 0.0, h, 0.75, WHITE, Mat.PLASTER, Color(0, 0, 0, 0), -1, true))
+	for k in 3:
+		var y := h * (0.35 + 0.2 * k)
+		var rr := r * (1.0 - 0.25 * (y / h)) + 0.35
+		out.append(Solid.loft(base + Vector3(0, y, 0), Solid.ngon(12, rr), 0.0, 0.35, 1.0, accent if k != 1 else WHITE, Mat.PLASTER))
+	out.append(Solid.loft(base + Vector3(0, h, 0), Solid.ngon(12, r * 1.5), 0.0, r * 1.2, 0.6, GLASS, Mat.GLASS))
+	out.append(Solid.loft(base + Vector3(0, h + r * 1.2, 0), Solid.ngon(12, r * 0.95), 0.0, 0.3, 0.2, WHITE, Mat.PLASTER))
+	return _decor(out)
 
 
 static func sea(center: Vector3, y: float = -40.0, size: float = 900.0) -> Solid:

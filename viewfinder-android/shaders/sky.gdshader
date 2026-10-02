@@ -1,13 +1,15 @@
 shader_type sky;
-// Pastel painted sky with drifting clouds and a soft sun, fading into a hazy
-// sea horizon below.
+// Pastel painted sky with drifting clouds and a soft sun. The islands float
+// high above a sea of clouds that stretches to the horizon.
 
-uniform vec3 top_color : source_color = vec3(0.36, 0.62, 0.93);
+uniform vec3 top_color : source_color = vec3(0.30, 0.58, 0.95);
 uniform vec3 horizon_color : source_color = vec3(1.0, 0.86, 0.78);
-uniform vec3 below_color : source_color = vec3(0.60, 0.74, 0.86);
+uniform vec3 below_color : source_color = vec3(0.80, 0.72, 0.90);
+uniform vec3 cloud_sea : source_color = vec3(1.0, 0.95, 0.94);
+uniform vec3 cloud_sea_shade : source_color = vec3(0.82, 0.74, 0.90);
 uniform vec3 cloud_color : source_color = vec3(1.0, 0.97, 0.95);
-uniform vec3 cloud_shade : source_color = vec3(0.92, 0.84, 0.92);
-uniform float cloud_cover = 0.6;
+uniform vec3 cloud_shade : source_color = vec3(0.95, 0.90, 0.95);
+uniform float cloud_cover = 0.66;
 
 float hash12(vec2 p) {
 	vec3 p3 = fract(vec3(p.xyx) * 0.1031);
@@ -39,6 +41,16 @@ void sky() {
 	float h = d.y;
 	vec3 col = mix(horizon_color, top_color, smoothstep(0.0, 0.55, h));
 	col = mix(col, below_color, smoothstep(0.0, -0.25, h));
+	if (h < 0.0) {
+		// Sea of clouds far below: puffy tops lit by the sun, lilac in the gaps,
+		// melting into the horizon haze.
+		vec2 p = d.xz / (-h + 0.03) * 0.35 + vec2(TIME * 0.003, TIME * 0.0015);
+		float n = fbm(p) + 0.35 * fbm(p * 3.1 + 5.0);
+		float puff = smoothstep(0.35, 0.85, n);
+		vec3 sea = mix(cloud_sea_shade, cloud_sea, puff);
+		sea *= 0.92 + 0.12 * smoothstep(0.5, 1.0, n);
+		col = mix(sea, horizon_color, smoothstep(-0.25, 0.0, h) * 0.85);
+	}
 
 	vec3 sun = LIGHT0_DIRECTION;
 	float sd = max(dot(d, sun), 0.0);

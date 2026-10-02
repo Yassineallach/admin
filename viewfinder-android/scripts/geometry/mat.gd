@@ -17,6 +17,12 @@ const PLANKS := 10
 const GLOW := 11
 ## Archive stone (anchored solids): dark slate with glowing rune lines.
 const ARCHIVE := 12
+## Window glass: deep teal with a sky reflection and highlight streaks.
+const GLASS := 13
+## Board-formed concrete (brutalist blocks): pale, with plank imprints.
+const CONCRETE := 14
+## Solar panel cells.
+const SOLAR := 15
 
 const STYLE_NORMAL := 0
 ## Pencil on paper: what you get from a found sketch.

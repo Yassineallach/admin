@@ -256,14 +256,14 @@ static func make_environment(parent: Node) -> void:
 	env.ambient_light_sky_contribution = 0.8
 	env.ambient_light_color = Color(1.0, 0.92, 0.9)
 	env.tonemap_mode = Environment.TONE_MAPPER_AGX
-	env.tonemap_exposure = 1.05
+	env.tonemap_exposure = 1.0
 	env.glow_enabled = q >= 1
-	env.glow_intensity = 0.55
-	env.glow_bloom = 0.08
-	env.glow_hdr_threshold = 0.9
+	env.glow_intensity = 0.6
+	env.glow_bloom = 0.12
+	env.glow_hdr_threshold = 0.85
 	env.fog_enabled = true
-	env.fog_light_color = Color(0.98, 0.88, 0.86)
-	env.fog_density = 0.0016
+	env.fog_light_color = Color(0.99, 0.88, 0.84)
+	env.fog_density = 0.0014
 	env.fog_sky_affect = 0.0
 	env.fog_aerial_perspective = 0.4
 	var we := WorldEnvironment.new()

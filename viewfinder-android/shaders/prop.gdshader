@@ -8,6 +8,7 @@ uniform vec4 albedo_color : source_color = vec4(1.0);
 uniform float use_tex = 1.0;
 uniform float alpha_cut = 0.0;
 uniform float wind = 0.0;
+uniform float recolor = 0.0;
 uniform float style = 0.0;
 uniform float shadow_floor = 0.42;
 
@@ -33,7 +34,12 @@ void vertex() {
 }
 
 void fragment() {
-	vec4 t = mix(vec4(1.0), texture(albedo_tex, UV), use_tex) * albedo_color;
+	vec4 t = mix(vec4(1.0), texture(albedo_tex, UV), use_tex) * mix(albedo_color, vec4(1.0), recolor);
+	if (recolor > 0.5) {
+		// Blossom: keep the texture's shading, take the hue from albedo_color.
+		float l = luma(t.rgb);
+		t.rgb = albedo_color.rgb * (0.35 + l * 1.9);
+	}
 	if (alpha_cut > 0.0 && t.a < alpha_cut) {
 		discard;
 	}

@@ -80,7 +80,8 @@ static func _local_xf(n: Node, root: Node) -> Transform3D:
 
 
 ## A placed copy of a model as a soup Solid.
-static func instance(path: String, pos: Vector3, yaw_deg: float = 0.0, scale: float = 1.0) -> Solid:
+static func instance(path: String, pos: Vector3, yaw_deg: float = 0.0, scale: float = 1.0,
+		leaf_tint: Color = Color(0, 0, 0, 0)) -> Solid:
 	var d := data(path)
 	var s := Solid.new()
 	s.collide = false
@@ -88,11 +89,31 @@ static func instance(path: String, pos: Vector3, yaw_deg: float = 0.0, scale: fl
 	var xf := Transform3D(Basis(Vector3.UP, deg_to_rad(yaw_deg)).scaled(Vector3.ONE * scale), pos)
 	var rot := Transform3D(Basis(Vector3.UP, deg_to_rad(yaw_deg)), Vector3.ZERO)
 	for c in d["chunks"]:
-		s.soup.append({"mat": c["mat"], "v": xf * (c["v"] as PackedVector3Array),
+		var mat: Material = c["mat"]
+		if leaf_tint.a > 0.0 and mat and mat.resource_name.contains("Lea"):
+			mat = recolored(mat, leaf_tint)
+		s.soup.append({"mat": mat, "v": xf * (c["v"] as PackedVector3Array),
 			"n": rot * (c["n"] as PackedVector3Array), "uv": c["uv"]})
 	s._bounds = xf * (d["aabb"] as AABB)
 	s._bounds_cached = true
 	return s
+
+
+static var _recolor: Dictionary = {}
+
+
+## A copy of a foliage material repainted in another colour (blossom trees):
+## the shader keeps the texture's light and shade but swaps the hue.
+static func recolored(src: Material, tint: Color) -> Material:
+	var key := "%d:%s" % [src.get_instance_id(), tint.to_html()]
+	if not _recolor.has(key):
+		var m: Material = src.duplicate()
+		m.resource_name = src.resource_name
+		if m is BaseMaterial3D:
+			(m as BaseMaterial3D).albedo_color = tint
+		m.set_meta("recolor", true)
+		_recolor[key] = m
+	return _recolor[key]
 
 
 static func aabb(path: String) -> AABB:

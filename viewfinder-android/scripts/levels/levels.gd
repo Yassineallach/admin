@@ -111,8 +111,7 @@ const CH1_TEXT := {
 ## Far scenery (islands on the horizon + the sea). Rendered but never sliced.
 static func backdrop(seed: int) -> Array:
 	var s: Array = P.horizon(Vector3.ZERO, 150.0, 7, seed)
-	s.append_array(P.horizon(Vector3(0, -6, -10), 75.0, 5, seed + 101, 0.45))
-	s.append(P.sea(Vector3.ZERO, -45.0))
+	s.append_array(P.horizon(Vector3(0, -6, -10), 62.0, 7, seed + 101, 0.5))
 	return s
 
 
@@ -128,8 +127,9 @@ static func _tag(list: Array, tag: String, style: int = Mat.STYLE_NORMAL) -> Arr
 	return list
 
 
-static func _wall(mn: Vector3, mx: Vector3, col: Color = BRICK_PALE, mat: int = Mat.BRICK) -> Solid:
-	return Solid.box_mm(mn, mx, col, Color(0, 0, 0, 0), mat)
+static func _wall(mn: Vector3, mx: Vector3, col: Color = P.WHITE, mat: int = Mat.PLASTER) -> Solid:
+	# Whitewashed walls with a pale concrete coping on top.
+	return Solid.box_mm(mn, mx, col, P.CONCRETE, mat, Mat.CONCRETE)
 
 
 static func _table(c: Vector3) -> Array:
@@ -148,19 +148,31 @@ static func hub() -> Dictionary:
 	s.append_array(P.island(Vector2(-16, -16), Vector2(16, 16), 0.0, Mat.GRASS, P.GRASS, 10.0))
 	# Central tiled plaza + fountain.
 	s.append(Solid.loft(Vector3.ZERO, Solid.ngon(12, 7.0), -0.2, 0.02, 1.0, TILE_C, Mat.TILE))
-	s.append(Solid.loft(Vector3.ZERO, Solid.ngon(12, 2.2), 0.0, 0.55, 1.0, P.STONE_WARM, Mat.BRICK))
+	s.append(Solid.loft(Vector3.ZERO, Solid.ngon(16, 2.2), 0.0, 0.55, 1.0, P.WHITE, Mat.PLASTER, P.CONCRETE, Mat.CONCRETE))
 	var basin := Solid.loft(Vector3.ZERO, Solid.ngon(12, 1.9), 0.55, 0.5, 1.0, P.WATER, Mat.WATER)
 	basin.collide = false
 	s.append(basin)
-	s.append_array(P.column(Vector3(0, 0.55, 0), 1.6, 0.22, P.STONE))
+	# Sculpture: a white plinth holding a glowing orb inside a pastel ring.
+	s.append(Solid.loft(Vector3(0, 0.55, 0), Solid.ngon(10, 0.32), 0.0, 1.5, 0.7, P.WHITE, Mat.PLASTER, Color(0, 0, 0, 0), -1, true))
+	var orb := Solid.sphere(Vector3(0, 2.45, 0), Vector3(0.4, 0.4, 0.4), P.LAMP, Mat.GLOW, 2)
+	orb.collide = false
+	s.append(orb)
+	for k in 12:
+		var a0 := TAU * k / 12.0
+		var seg := Solid.obox(Vector3(0, 2.45, 0) + Vector3(cos(a0), sin(a0), 0) * 0.75, Vector3(0.12, 0.42, 0.12),
+			Basis(Vector3.BACK, a0), P.TEAL, Mat.PLASTER)
+		seg.collide = false
+		s.append(seg)
 	# Ring of trees, lamps and benches.
 	for i in 8:
 		var a := TAU * (i + 0.5) / 8.0
 		var p := Vector3(cos(a), 0, sin(a))
 		s.append_array(P.tree(p * 14.6, 4.2, [P.LEAF, P.LEAF_PINK, P.LEAF_GOLD][i % 3], i))
 		s.append_array(P.lamp(p * 7.6))
-	s.append_array(P.house(Vector3(0, 0, 13), Vector3(6, 3.4, 3.2), Vector3.FORWARD))
-	s.append_array(P.arch(Vector3(0, 0, -15), Vector3.FORWARD, 3.0, 4.2))
+	s.append_array(P.house(Vector3(0, 0, 13), Vector3(6, 3.4, 3.2), Vector3.FORWARD, P.WHITE, P.CORAL, true))
+	s.append_array(P.arch(Vector3(0, 0, -15), Vector3.FORWARD, 3.0, 4.2, 0.8, P.WHITE))
+	s.append_array(P.house(Vector3(-12.6, 0, -12.6), Vector3(4.2, 3.2, 3.2), Vector3.RIGHT, P.WHITE, P.TEAL))
+	s.append_array(P.house(Vector3(12.6, 0, -12.6), Vector3(4.2, 3.2, 3.2), Vector3.LEFT, P.WHITE, P.BUTTER))
 	# Dressing.
 	for i in 8:
 		var a := TAU * (i + 0.5) / 8.0
