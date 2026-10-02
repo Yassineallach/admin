@@ -119,6 +119,22 @@ func _ready() -> void:
 		await settle(90)
 		await shot("18_memory_restored")
 
+	if want("ch2"):
+		await load_level(8)
+		await pose(Vector3(-1.5, 0, 4.5), 8, -6)
+		await shot("20_power_cut")
+		await pose(Vector3(0.5, 0, -6.4), 0, -5)
+		await shot("20b_gate")
+		await load_level(9)
+		await pose(Vector3(1.5, 0, 6.8), 15, -8)
+		await shot("21_two_keys")
+		await load_level(10)
+		await pose(Vector3(6, 0, 9), -55, 14)
+		await shot("22_watchtower")
+		await load_level(11)
+		await pose(Vector3(0, 0, 7), 0, -2)
+		await shot("23_plan_ahead")
+
 	if want("l8"):
 		await load_level(7)
 		await pose(Vector3(0, 0, 8), 0, -6)

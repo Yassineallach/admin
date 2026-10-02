@@ -183,6 +183,8 @@ static func capture(solids: Array, cam: Transform3D, t: float) -> Array:
 	var inv := cam.affine_inverse()
 	var out: Array = []
 	for s in solids:
+		if (s as Solid).anchored:
+			continue
 		var cls := _classify(s, planes)
 		if cls == 0:
 			continue
@@ -204,6 +206,9 @@ static func carve(solids: Array, cam: Transform3D, t: float) -> Array:
 	var planes := world_frustum(cam, t)
 	var out: Array = []
 	for s in solids:
+		if (s as Solid).anchored:
+			out.append(s)
+			continue
 		var cls := _classify(s, planes)
 		if cls == 0:
 			out.append(s)

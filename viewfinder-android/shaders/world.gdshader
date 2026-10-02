@@ -175,6 +175,24 @@ vec3 material_color(int m, vec2 uv, vec3 base, out float emit) {
 		c = mix(c, srgb_to_linear(vec3(0.74, 0.8, 0.56)), lichen * 0.35);
 	} else if (m == 11) { // glow
 		emit = 2.0;
+	} else if (m == 12) { // archive stone: dark slate blocks with glowing rune seams
+		vec2 b = uv / vec2(1.0, 0.5);
+		b.x += mod(floor(b.y), 2.0) * 0.5;
+		vec2 f = fract(b);
+		float edge = min(min(f.x, 1.0 - f.x), min(f.y, 1.0 - f.y) * 0.5);
+		c = srgb_to_linear(vec3(0.27, 0.28, 0.36)) * (0.85 + 0.25 * hash12(floor(b)) + 0.08 * vnoise(uv * 5.0));
+		float seam = 1.0 - smoothstep(0.0, 0.02, edge);
+		float pulse = 0.6 + 0.4 * sin(TIME * 1.5 + uv.x * 0.6 + uv.y * 0.4);
+		vec3 glow_col = srgb_to_linear(vec3(0.45, 0.85, 1.0));
+		c = mix(c, glow_col * 0.6, seam);
+		emit = seam * 1.2 * pulse;
+		// Occasional carved rune: a small glowing ring inside a block.
+		vec2 rid = floor(b);
+		float has_rune = step(0.88, hash12(rid + 5.0));
+		float ring = abs(length((f - 0.5) * vec2(2.0, 1.0)) - 0.22);
+		float rune = has_rune * (1.0 - smoothstep(0.015, 0.035, ring));
+		emit += rune * 1.0 * pulse;
+		c = mix(c, glow_col, rune * 0.6);
 	}
 	return c;
 }

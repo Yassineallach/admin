@@ -24,6 +24,8 @@ var material: int = Mat.PLASTER
 var style: int = Mat.STYLE_NORMAL
 var collide: bool = true
 var visible: bool = true
+## Archive stone: photos can't cut it, copy it, or even see it.
+var anchored: bool = false
 ## Free-form tag ("source" marks scenery that only exists to be photographed).
 var tag: String = ""
 
@@ -59,6 +61,7 @@ func copy_meta_from(other: Solid) -> void:
 	style = other.style
 	collide = other.collide
 	visible = other.visible
+	anchored = other.anchored
 	tag = other.tag
 
 

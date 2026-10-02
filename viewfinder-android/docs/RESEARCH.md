@@ -90,7 +90,7 @@ Performance with GDScript on desktop is about 0.5–1 ms per capture or placemen
 plus 0.3 ms to rebuild the mesh (see `tests/`). That leaves plenty of headroom on
 phones.
 
-## 5. Level design (hub + 8 original puzzles)
+## 5. Level design (hub + 12 original puzzles in two chapters)
 
 Each level teaches one Viewfinder idea:
 
@@ -119,3 +119,24 @@ Each level teaches one Viewfinder idea:
 * BAFTA – [Creative Bloq interview](https://creativebloq.com/3d/video-game-design/viewfinders-sophie-knowles-reflects-on-her-bafta-breakthrough-joking-how-its-weird-to-be-associated-with-tom-holland-and-florence-pugh)
 * Unreal recreation – [Fab listing](https://www.fab.com/listings/4073449a-9a03-4581-9ac4-3a8159e03860)
 * Godot – [4.7.2 release](https://godotengine.org/download/archive/4.7.2-stable/), [Exporting for Android (4.7)](https://docs.godotengine.org/en/4.7/tutorials/export/exporting_for_android.html)
+
+### Chapter 2: harder puzzles, closer to Viewfinder's later chapters
+
+Viewfinder gets hard because of **plans and consequences**, not mechanical
+skill. Placing a photo destroys whatever was in its frame, film and pictures
+run out, and machines (batteries, cameras, copiers) interact. Chapter 2 is
+built around that:
+
+9. **Power Cut:** the only battery is inside a vault whose gate needs a battery.
+   Copy it *through* the gate, but place that photo sideways. Facing the vault
+   would erase the original. Then power the gate and copy again inside (2 film).
+10. **Two Keys:** you need three batteries and have one battery and one shot.
+    Photocopying the photo copies the battery inside it.
+11. **Watchtower:** two fixed cameras. Only the one whose lens is 1.5 m above
+    the overlook (eye height) gives stairs that start on the ground.
+12. **Plan Ahead:** one causeway photo, two gaps and a cliff 2.6 m higher.
+    Copy the photo first, then place the second copy tilted about 10° up as a
+    ramp. Archive stone stops you from cutting into the cliff instead.
+
+The test suite also checks that the tempting wrong move in each of these
+levels fails.

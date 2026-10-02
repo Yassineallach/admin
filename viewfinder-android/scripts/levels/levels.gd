@@ -32,11 +32,12 @@ const BRICK_PALE := Color(0.93, 0.80, 0.70)
 const SRC := Vector3(1000, 0, 0)
 const SRC2 := Vector3(2000, 0, 0)
 
-const LEVEL_COUNT := 8
+const LEVEL_COUNT := 12
 
 
 const NAMES := ["Found Photograph", "Point and Shoot", "Through the Window", "Breakthrough",
-	"Look Up", "Sketchbook", "Watercolour", "Darkroom"]
+	"Look Up", "Sketchbook", "Watercolour", "Darkroom",
+	"Power Cut", "Two Keys", "Watchtower", "Plan Ahead"]
 
 
 static func count() -> int:
@@ -58,9 +59,53 @@ static func get_level(i: int) -> Dictionary:
 		5: lv = _sketchbook()
 		6: lv = _watercolour()
 		7: lv = _darkroom()
+		8: lv = _power_cut()
+		9: lv = _two_keys()
+		10: lv = _watchtower()
+		11: lv = _plan_ahead()
 		_: lv = _found_photograph()
 	lv["backdrop"] = backdrop(lv.get("backdrop_seed", i + 3))
+	if CH1_TEXT.has(i):
+		# Miso sets the scene; the solution only comes as hints you ask for.
+		lv["cat"]["lines"] = CH1_TEXT[i][0]
+		lv["hints"] = CH1_TEXT[i][1]
 	return lv
+
+
+const CH1_TEXT := {
+	0: [["The bridge in this memory is gone. Someone left a photo of it on the table.", "I'd help, but I'm a cat."],
+		["Walk into the photo on the table to pick it up.",
+		"Tap the photo in the top-left to hold it up. It's a window into another place.",
+		"Stand at the edge, look down at the gap at the same angle as the photo, and PLACE it."]],
+	1: [["Ooh, a camera. The archivists' favourite toy.", "That terrace has no way up. Annoying, isn't it?"],
+		["Look around. Is there anything in this courtyard that goes up?",
+		"A photo of some stairs is as good as the stairs.",
+		"Photograph the stairs behind you from the middle of the courtyard, turn round and place the photo against the cliff from a similar distance."]],
+	2: [["The teleporter needs a battery. There's one in that cottage… which has no door. Classic Tomas."],
+		["You can't get in. But your camera can look in.",
+		"Anything inside a photo gets copied. Batteries too.",
+		"Press right up against the window and photograph the battery, then place the photo out in the open garden."]],
+	3: [["A wall. Rude."],
+		["A photo doesn't only add things. It replaces everything inside its frame.",
+		"What would a picture of an empty corridor do to a wall?",
+		"Photograph the open terrace behind you, stand well back from the wall so the frame covers it from floor to ceiling, and place."]],
+	4: [["That island is much too far to jump. Even for me."],
+		["Have you been inside the tower?",
+		"From the inside, looking straight up, the tower is a long tube.",
+		"Stand in the middle of the tower and photograph straight up. Then stand back from the edge, look straight ahead and place it: a tunnel."]],
+	5: [["Ines used to sketch here. She drew stairs everywhere."],
+		["Drawings work just like photos.",
+		"The sketch was drawn standing on the ground, a few steps from a cliff like this one.",
+		"Pick up the sketch, stand about 5 m from the cliff, look straight ahead and place it."]],
+	6: [["Tomas painted this view before the bridge washed away. Or before he forgot to build it."],
+		["Paintings work like photos too.",
+		"Where you stand matters: too close to the edge and the bridge starts out over thin air.",
+		"Take the painting, stand a few steps back from the edge facing the far island, and place it."]],
+	7: [["This was the darkroom. Every memory was developed here."],
+		["Two batteries, and a high ledge. The postcard might help with one of those.",
+		"Copying a battery copies everything else in the frame too. Aim down so you only take a bit of floor.",
+		"Copy the battery aiming down, place the postcard about 5 m from the ledge looking straight ahead, then carry both batteries up."]],
+}
 
 
 ## Far scenery (islands on the horizon + the sea). Rendered but never sliced.
@@ -155,10 +200,37 @@ static func hub() -> Dictionary:
 	}
 
 
-## Portal pad positions in the hub (one per level).
+## Portal pad positions in the hub (one per level). Chapter 1 fills the far
+## (-Z) semicircle, chapter 2 sits on the near side either side of the house.
 static func hub_pad(i: int) -> Vector3:
-	var a := PI + PI * (i + 0.5) / LEVEL_COUNT  # semicircle on the far (-Z) side
+	var a: float
+	if i < 8:
+		a = PI + PI * (i + 0.5) / 8.0
+	else:
+		a = [0.08, 0.27, 0.73, 0.92][i - 8] * PI
 	return Vector3(cos(a) * 11.5, 0.0, sin(a) * 11.5)
+
+
+static func _archive(mn: Vector3, mx: Vector3) -> Solid:
+	var s := Solid.box_mm(mn, mx, Color(0.32, 0.33, 0.42), Color(0, 0, 0, 0), Mat.ARCHIVE)
+	s.anchored = true
+	return s
+
+
+## Archive-stone enclosure with an optional doorway in the north wall.
+static func _archive_room(mn: Vector2, mx: Vector2, h: float, door_z: float = INF, door_w: float = 2.4, door_h: float = 3.2) -> Array:
+	var s: Array = []
+	var t := 0.4
+	s.append(_archive(Vector3(mn.x - t, 0, mn.y - t), Vector3(mn.x, h, mx.y + t)))
+	s.append(_archive(Vector3(mx.x, 0, mn.y - t), Vector3(mx.x + t, h, mx.y + t)))
+	s.append(_archive(Vector3(mn.x, 0, mx.y), Vector3(mx.x, h, mx.y + t)))
+	s.append(_archive(Vector3(mn.x, 0, mn.y - t), Vector3(mx.x, h, mn.y)))
+	if door_z != INF:
+		var hw := door_w * 0.5
+		s.append(_archive(Vector3(mn.x, 0, door_z - t), Vector3(-hw, h, door_z)))
+		s.append(_archive(Vector3(hw, 0, door_z - t), Vector3(mx.x, h, door_z)))
+		s.append(_archive(Vector3(-hw, door_h, door_z - t), Vector3(hw, h, door_z)))
+	return s
 
 
 # ---------------------------------------------------------------------------
@@ -629,8 +701,193 @@ static func _darkroom() -> Dictionary:
 		"solids": s,
 		"batteries": [Vector3(6, 0.75, 2)],
 		"teleporter": {"pos": Vector3(0, 6, -30), "needs": 2},
-		"camera": true, "film": 3,
+		"camera": true, "film": 2,
 		"found": [{"at": Vector3(0, 1.5, 5.5), "from": _eye(SRC + Vector3(0, 1.5, 0), 0, 0), "title": "Old postcard", "kind": "photo"}],
 		"kill_y": -15.0,
 		"backdrop_seed": 0,
+	}
+
+
+# ===========================================================================
+# Chapter 2 — the Archive's deeper rooms. Archive stone can't be photographed,
+# so these puzzles can't be bypassed by cutting through walls.
+# ===========================================================================
+
+# ---------------------------------------------------------------------------
+# 9. The only battery is behind a gate that needs a battery.
+# ---------------------------------------------------------------------------
+static func _power_cut() -> Dictionary:
+	var s: Array = []
+	s.append(Solid.box_mm(Vector3(-8, -1, -22.4), Vector3(8, 0, 8.4), CREAM, TILE_C, Mat.ROCK, Mat.TILE))
+	s.append_array(P.island(Vector2(-8.4, -22.8), Vector2(8.4, 8.8), -1.0, Mat.ROCK, P.ROCK, 9.0))
+	s.append_array(_archive_room(Vector2(-8, -22), Vector2(8, 8), 5.0, -8.0))
+	s.append(Solid.box_mm(Vector3(-0.5, 0, -11.5), Vector3(0.5, 0.5, -10.5), BUTTER, Color(0, 0, 0, 0), Mat.WOOD))
+	s.append_array(P.planter(Vector3(-6.8, 0, 6.8)))
+	s.append_array(P.planter(Vector3(6.8, 0, 6.8), P.LEAF_GOLD))
+	s.append_array(P.lamp(Vector3(-6.8, 0, -6.6)))
+	s.append_array(P.potted_plant(Vector3(6.8, 0, -20.8), P.LEAF_PINK))
+	s.append_array(P.potted_plant(Vector3(-6.8, 0, -20.8)))
+	s.append_array(P.flowers(Vector3(-5, 0, 1), 1.2, 8))
+	return {
+		"name": "9 · Power Cut",
+		"hint": "",
+		"cat": {"pos": Vector3(-1.6, 0, 4.0), "yaw": 20.0, "lines": [
+			"The deep Archive. See the dark stone? Photos can't touch it. Can't even see it.",
+			"The gate needs power. The teleporter needs power. And there's one battery… on the wrong side.",
+		]},
+		"hints": [
+			"The gate is just light. Your camera can see straight through it.",
+			"A photo of the battery gives you a battery. But careful where you place it: a photo deletes everything inside its frame, including the original.",
+			"Photograph the battery through the gate, place the photo facing sideways (not towards the gate), plug the copy into the socket, then copy the original once more inside.",
+		],
+		"notes": [{"at": Vector3(5.5, 1.1, 6.0), "title": "Maintenance memo",
+			"text": "Reminder: the vault gate draws from the socket by the door. If you take the battery out, the gate shuts. If you are inside when it shuts, that is your problem.\n— Facilities"}],
+		"spawn": Vector3(0, 0, 5), "yaw": 0.0,
+		"solids": s,
+		"batteries": [Vector3(0, 0.8, -11)],
+		"sockets": [{"id": 0, "pos": Vector3(4, 0, -6.5), "cable_to": Vector3(1.3, 0, -8)}],
+		"gates": [{"pos": Vector3(0, 0, -8.2), "size": Vector3(2.4, 3.2, 0.4), "needs": [0]}],
+		"teleporter": {"pos": Vector3(0, 0, -17), "needs": 2},
+		"camera": true, "film": 2,
+		"found": [],
+		"kill_y": -15.0,
+	}
+
+
+# ---------------------------------------------------------------------------
+# 10. Three batteries needed, one battery, one shot of film — and a copier.
+# ---------------------------------------------------------------------------
+static func _two_keys() -> Dictionary:
+	var s: Array = []
+	s.append(Solid.box_mm(Vector3(-9, -1, -26.4), Vector3(9, 0, 9.4), CREAM, TILE_C, Mat.ROCK, Mat.TILE))
+	s.append_array(P.island(Vector2(-9.4, -26.8), Vector2(9.4, 9.8), -1.0, Mat.ROCK, P.ROCK, 9.0))
+	s.append_array(_archive_room(Vector2(-9, -26), Vector2(9, 9), 5.0, -10.0))
+	s.append(Solid.box_mm(Vector3(-5.5, 0, 3.5), Vector3(-4.5, 0.5, 4.5), BUTTER, Color(0, 0, 0, 0), Mat.WOOD))
+	s.append(Solid.box_mm(Vector3(-7, 0, 1), Vector3(-3, 0.04, 7), ROSE, Color(0, 0, 0, 0), Mat.PLASTER))
+	s.append_array(P.potted_plant(Vector3(-8, 0, 8)))
+	s.append_array(P.potted_plant(Vector3(8, 0, 8), P.LEAF_GOLD))
+	s.append_array(P.lamp(Vector3(-8, 0, -8.6)))
+	s.append_array(P.lamp(Vector3(8, 0, -8.6)))
+	s.append_array(P.flowers(Vector3(0, 0, -22), 1.5, 10))
+	return {
+		"name": "10 · Two Keys",
+		"hint": "",
+		"cat": {"pos": Vector3(1.5, 0, 6.0), "yaw": -30.0, "lines": [
+			"Two sockets on the gate, one on the teleporter. That's three batteries.",
+			"We have one battery, one shot of film… and a photocopier. Tomas loved that thing.",
+		]},
+		"hints": [
+			"Count it out: one photo of one battery only gets you to two.",
+			"A photocopier copies a photo — and everything that's in it.",
+			"Photograph the battery (aim down), hold the photo up at the copier and COPY it, then place both photos. Three batteries.",
+		],
+		"notes": [],
+		"spawn": Vector3(0, 0, 6.5), "yaw": 0.0,
+		"solids": s,
+		"batteries": [Vector3(-5, 0.8, 4)],
+		"sockets": [
+			{"id": 0, "pos": Vector3(-4, 0, -8.5), "cable_to": Vector3(-1.3, 0, -10)},
+			{"id": 1, "pos": Vector3(4, 0, -8.5), "cable_to": Vector3(1.3, 0, -10)},
+		],
+		"gates": [{"pos": Vector3(0, 0, -10.2), "size": Vector3(2.4, 3.2, 0.4), "needs": [0, 1]}],
+		"copiers": [{"pos": Vector3(5, 0, 4), "yaw": 0.0}],
+		"teleporter": {"pos": Vector3(0, 0, -18), "needs": 1},
+		"camera": true, "film": 1,
+		"found": [],
+		"kill_y": -15.0,
+	}
+
+
+# ---------------------------------------------------------------------------
+# 11. The right photo has to be taken from the right height.
+# ---------------------------------------------------------------------------
+static func _watchtower() -> Dictionary:
+	var s: Array = []
+	s.append_array(P.island(Vector2(-10, -10), Vector2(26, 10), 0.0, Mat.GRASS, P.GRASS, 9.0))
+	# Archive cliff with the teleporter on top.
+	s.append(_archive(Vector3(-10, 0, -30), Vector3(10, 6, -10)))
+	s.append_array(P.island(Vector2(-10, -30), Vector2(10, -10), 0.0, Mat.ROCK, P.ROCK, 9.0))
+	# The overlook: a floating terrace you can see but not reach.
+	s.append(Solid.box_mm(Vector3(16, 5, -14), Vector3(28, 6, 2), P.STONE_WARM, TILE_C, Mat.BRICK, Mat.TILE))
+	s.append(Solid.loft(Vector3(22, 5, -6), PackedVector2Array([Vector2(-6, -8), Vector2(6, -8), Vector2(6, 8), Vector2(-6, 8)]), -4.0, 0.0, 1.0, P.ROCK, Mat.ROCK))
+	s.append_array(P.stairs(Vector3(22, 6, 0), Vector3.FORWARD, 24, 3.0, 0.25, 0.375))
+	s.append(Solid.box_mm(Vector3(19, 11, -14), Vector3(25, 12, -9), P.STONE_WARM, TILE_C, Mat.BRICK, Mat.TILE))
+	s.append_array(P.column(Vector3(22, 6, -11.5), 5.0, 0.6))
+	s.append_array(P.tree(Vector3(17.5, 6, -12), 3.0, P.LEAF_PINK))
+	s.append_array(P.tree(Vector3(26.5, 6, -3), 2.8, P.LEAF))
+	s.append_array(P.flowers(Vector3(-6, 0, 6), 1.4, 10))
+	s.append_array(P.rocks(Vector3(8, 0, 8), 3, 0.6))
+	return {
+		"name": "11 · Watchtower",
+		"hint": "",
+		"cat": {"pos": Vector3(2, 0, 7), "yaw": 160.0, "lines": [
+			"The archivists left two cameras out here. One on the grass, one up on that tall mast.",
+			"You can't take your own photos in this memory. Choose wisely… or rewind. I won't judge.",
+		]},
+		"hints": [
+			"A photo remembers where the camera was. Placed from your eyes, things in it keep the same height relative to you.",
+			"The stairs on the overlook start 1.5 m below the tall mast's camera. That's exactly how far your eyes are from the ground.",
+			"Press the button at the foot of the tall mast. Stand about 5 m from the cliff, face it, look straight ahead and PLACE. Bring the battery up with you.",
+		],
+		"notes": [],
+		"spawn": Vector3(0, 0, 7), "yaw": 0.0,
+		"solids": s,
+		"batteries": [Vector3(23.8, 6.3, 1)],
+		"fixed_cameras": [
+			{"base": Vector3(22, 0, 6), "eye": _eye(Vector3(22, 7.5, 6), 0, 0)},
+			{"base": Vector3(9, 0, -4), "eye": _eye(Vector3(9, 1.5, -4), -75, 12)},
+		],
+		"teleporter": {"pos": Vector3(0, 6, -20), "needs": 1},
+		"camera": false, "film": 0,
+		"found": [],
+		"kill_y": -15.0,
+	}
+
+
+# ---------------------------------------------------------------------------
+# 12. One bridge, two gaps and a cliff 2.6 m higher than you.
+# ---------------------------------------------------------------------------
+static func _plan_ahead() -> Dictionary:
+	var s: Array = []
+	s.append_array(P.island(Vector2(-6, -4), Vector2(6, 8), 0.0, Mat.GRASS, P.GRASS, 8.0))
+	s.append_array(P.island(Vector2(-6, -24), Vector2(6, -12), 0.0, Mat.GRASS, P.GRASS, 8.0))
+	s.append(_archive(Vector3(-7, -6, -48), Vector3(7, 2.6, -35)))
+	s.append(Solid.box_mm(Vector3(-7, 2.6, -48), Vector3(7, 2.62, -35), P.GRASS, Color(0, 0, 0, 0), Mat.GRASS))
+	s.append_array(_table(Vector3(-3, 0, 4)))
+	s.append_array(P.tree(Vector3(-4.5, 0, 6.5), 3.4, P.LEAF_PINK))
+	s.append_array(P.tree(Vector3(4.5, 0, -22), 3.2, P.LEAF))
+	s.append_array(P.tree(Vector3(-5, 2.6, -46), 3.6, P.LEAF_GOLD))
+	s.append_array(P.flowers(Vector3(-4, 0, -14), 1.2, 8))
+	s.append_array(P.flowers(Vector3(3, 2.6, -44), 1.5, 9))
+	s.append_array(P.lamp(Vector3(3.5, 0, -3)))
+
+	# The photo: a plain stone causeway (no railings — you'll want to step off it).
+	var src: Array = []
+	src.append(Solid.box_mm(SRC + Vector3(-1.5, -0.4, -32), SRC + Vector3(1.5, 0, 2), P.STONE_WARM, TILE_C, Mat.BRICK, Mat.TILE))
+	for x in [-1.45, 1.45]:
+		var curb := Solid.box_mm(SRC + Vector3(x - 0.05, 0, -32), SRC + Vector3(x + 0.05, 0.15, 2), P.STONE, Color(0, 0, 0, 0), Mat.TILE)
+		curb.collide = false
+		src.append(curb)
+	s.append_array(_tag(src, "source"))
+	return {
+		"name": "12 · Plan Ahead",
+		"hint": "",
+		"cat": {"pos": Vector3(1.5, 0, 5.5), "yaw": -150.0, "lines": [
+			"Two gaps, one photograph. And that last cliff is taller than you.",
+			"Photos get used up when you place them. Just saying.",
+		]},
+		"hints": [
+			"Before you place anything: is there a way to have more than one of that photo?",
+			"Holding a photo tilted up makes whatever's in it tilt up too. A bridge can become a ramp.",
+			"COPY the photo first. Place one level across the first gap, then on the middle island tilt your view about 10° up and place the second as a ramp to the cliff top.",
+		],
+		"notes": [],
+		"spawn": Vector3(0, 0, 6), "yaw": 0.0,
+		"solids": s,
+		"batteries": [],
+		"copiers": [{"pos": Vector3(3.5, 0, 4.5), "yaw": -90.0}],
+		"teleporter": {"pos": Vector3(4, 2.62, -41), "needs": 0},
+		"camera": false, "film": 0,
+		"found": [{"at": Vector3(-3, 1.25, 4), "from": _eye(SRC + Vector3(0, 1.5, 0), 0, 0), "title": "Causeway", "kind": "photo"}],
+		"kill_y": -15.0,
 	}

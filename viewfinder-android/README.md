@@ -21,6 +21,8 @@ game and how its mechanic works.
 | ![sketch](docs/screenshots/pencil_stairs.png) | ![painting](docs/screenshots/painted_bridge.png) | ![holding](docs/screenshots/holding_painting.png) |
 | **Main menu over the live island** | **Every level is dressed** | **A keepsake when a memory is restored** |
 | ![menu](docs/screenshots/menu.png) | ![found](docs/screenshots/found_photograph.png) | ![restored](docs/screenshots/memory_restored.png) |
+| **Chapter 2: a battery behind an energy gate** | **Which camera? The tall mast or the ground?** | |
+| ![gate](docs/screenshots/gate.png) | ![watchtower](docs/screenshots/watchtower.png) | |
 
 ## Features
 
@@ -58,6 +60,21 @@ game and how its mechanic works.
 * The main menu floats over the live Station island. Restoring a memory gives
   you a polaroid keepsake of the place.
 
+**Chapter 2 — harder, multi-step puzzles**
+* **Archive stone:** dark glowing walls that photos can't cut, copy or even
+  see, so puzzles can't be skipped by cutting through walls.
+* **Power sockets and energy gates:** a battery in a socket holds a gate open,
+  and a socketed battery isn't powering the teleporter.
+* **Fixed cameras** on masts take photos from heights you can't reach. Photos
+  keep things at the same height relative to the camera, so which camera you
+  use matters.
+* **Photocopiers** duplicate a held photo, including any batteries in it.
+* **Tilted placement:** hold a photo tilted up and a bridge becomes a ramp.
+* Levels 9–12 (Power Cut, Two Keys, Watchtower, Plan Ahead) each need a plan.
+  Careless placement erases what you need, and film and photos run out.
+* **Hints on demand:** Miso sets the scene but doesn't give answers. Tap **?**
+  (or pet her) for hints that go from a nudge to the full solution.
+
 **The world**
 * **The Station:** a hub island with a fountain and a portal pad for each memory.
   Locked and completed states are shown above each pad.
@@ -65,8 +82,9 @@ game and how its mechanic works.
   talks you through puzzles, and purrs (with hearts) when you pet her.
 * **Archivist notes** to read, telling a small original story about the people
   who built the Archive.
-* **8 handcrafted levels:** Found Photograph, Point and Shoot, Through the Window,
-  Breakthrough, Look Up, Sketchbook, Watercolour and Darkroom.
+* **12 handcrafted levels** in two chapters. Chapter 1: Found Photograph, Point and Shoot,
+  Through the Window, Breakthrough, Look Up, Sketchbook, Watercolour, Darkroom. Chapter 2:
+  Power Cut, Two Keys, Watchtower, Plan Ahead.
 * A pastel look: procedural materials (grass, stone tiles, brick, planks, roof
   shingles, rock, foliage, water), soft half-lambert lighting with lifted
   shadows, glow, a painted sky with drifting clouds, floating islands on the
@@ -96,6 +114,7 @@ game and how its mechanic works.
 | Place held photo | PLACE | F |
 | Rotate photo | ⟲ ⟳ | Z / X |
 | Rewind | hold REW | hold R |
+| Hint | ? | H |
 | Pause | II | Esc |
 
 Tip: placement snaps to the photo's original pitch, to level, or to the 90° grid
@@ -160,7 +179,7 @@ exported debug APK is about 28 MB (arm64-v8a, minSdk 24, targetSdk 36).
 
 ```bash
 godot --headless --path . --script res://tests/test_slicer.gd                   # geometry unit tests
-godot --headless --fixed-fps 60 --path . res://tests/level_playthrough.tscn      # solves all 8 levels + rewind + hub
+godot --headless --fixed-fps 60 --path . res://tests/level_playthrough.tscn      # solves all 12 levels, checks wrong moves fail, rewind, hub
 xvfb-run godot --path . --rendering-driver opengl3 res://tests/screenshots.tscn -- /tmp/shots
 # record the scripted gameplay run (PNG frames + WAV) with Movie Maker:
 xvfb-run godot --path . --rendering-driver opengl3 --write-movie /tmp/rec/frame.png --fixed-fps 30 res://tests/record_gameplay.tscn
@@ -168,7 +187,8 @@ xvfb-run godot --path . --rendering-driver opengl3 --write-movie /tmp/rec/frame.
 
 The playthrough test drives the real player physics, slicer, battery copying,
 teleporter sockets, sketch/painting styles, the hub pads and rewind, and checks
-that every level can be completed (43 checks).
+that every level can be completed. It also checks that the obvious wrong
+moves fail, so Chapter 2 can't be cheesed (74 checks).
 
 ## How close is it to the original?
 

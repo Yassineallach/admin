@@ -9,6 +9,7 @@ var solids: Array = []
 var material: Material
 
 var _mesh_instance: MeshInstance3D
+var _anchored_mesh: MeshInstance3D
 var _body: StaticBody3D
 
 
@@ -16,6 +17,11 @@ func _ready() -> void:
 	_mesh_instance = MeshInstance3D.new()
 	_mesh_instance.name = "Mesh"
 	add_child(_mesh_instance)
+	# Archive stone lives on its own mesh on a layer the photo camera can't see.
+	_anchored_mesh = MeshInstance3D.new()
+	_anchored_mesh.name = "Anchored"
+	_anchored_mesh.layers = 4
+	add_child(_anchored_mesh)
 	_body = StaticBody3D.new()
 	_body.name = "Body"
 	_body.collision_layer = 1
@@ -33,7 +39,15 @@ func set_solids(list: Array) -> void:
 
 
 func rebuild() -> void:
-	_mesh_instance.mesh = build_mesh(solids, material)
+	var normal: Array = []
+	var anchored: Array = []
+	for s in solids:
+		if (s as Solid).anchored:
+			anchored.append(s)
+		else:
+			normal.append(s)
+	_mesh_instance.mesh = build_mesh(normal, material)
+	_anchored_mesh.mesh = build_mesh(anchored, material)
 	for c in _body.get_children():
 		_body.remove_child(c)
 		c.queue_free()

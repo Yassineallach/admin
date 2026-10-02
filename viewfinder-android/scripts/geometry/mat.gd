@@ -15,6 +15,8 @@ const FOLIAGE := 8
 const ROCK := 9
 const PLANKS := 10
 const GLOW := 11
+## Archive stone (anchored solids): dark slate with glowing rune lines.
+const ARCHIVE := 12
 
 const STYLE_NORMAL := 0
 ## Pencil on paper: what you get from a found sketch.

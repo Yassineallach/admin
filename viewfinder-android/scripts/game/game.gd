@@ -32,6 +32,11 @@ var teleporter: Teleporter
 var hub_pads: Array = []
 var cat: Cat
 var notes: Array = []
+var sockets: Dictionary = {}  # id -> PowerSocket
+var gates: Array = []
+var fixed_cams: Array = []
+var copiers: Array = []
+var hint_index := 0
 var hud: Hud
 
 var photos: Array = []
@@ -137,6 +142,36 @@ func _ready() -> void:
 
 	for pos in level["batteries"]:
 		_spawn_battery(Transform3D(Basis(), pos))
+	for sd in level.get("sockets", []):
+		var ps := PowerSocket.new()
+		entities.add_child(ps)
+		ps.position = sd["pos"]
+		ps.setup(int(sd["id"]), sd.get("cable_to", Vector3.INF))
+		sockets[int(sd["id"])] = ps
+		_no_photo(ps)
+	for gd in level.get("gates", []):
+		var g := Gate.new()
+		entities.add_child(g)
+		g.position = gd["pos"]
+		g.rotation.y = deg_to_rad(gd.get("yaw", 0.0))
+		g.setup(gd["size"], gd["needs"])
+		gates.append(g)
+		_no_photo(g)
+	for fc in level.get("fixed_cameras", []):
+		var cam_node := FixedCamera.new()
+		entities.add_child(cam_node)
+		cam_node.position = fc["base"]
+		cam_node.setup(fc["eye"])
+		fixed_cams.append(cam_node)
+		_no_photo(cam_node)
+	for cp in level.get("copiers", []):
+		var copier := Photocopier.new()
+		entities.add_child(copier)
+		copier.position = cp["pos"]
+		copier.rotation.y = deg_to_rad(cp.get("yaw", 0.0))
+		copier.setup()
+		copiers.append(copier)
+		_no_photo(copier)
 
 	if level.has("cat"):
 		cat = Cat.new()
@@ -434,7 +469,14 @@ func take_photo() -> void:
 		Sfx.play("denied")
 		hud.toast("Out of film — hold REWIND to get it back")
 		return
-	var xf := _capture_transform()
+	if film > 0:
+		film -= 1
+	camera_mode = false
+	await _capture(_capture_transform())
+
+
+## Take a photo from `xf` (the player's camera or a fixed camera).
+func _capture(xf: Transform3D) -> void:
 	var p := Photo.new()
 	_photo_counter += 1
 	p.title = "Photo %d" % _photo_counter
@@ -450,16 +492,34 @@ func take_photo() -> void:
 		if Slicer.point_in_frustum(xf, Photo.T, bat.global_position):
 			p.items.append({"type": "battery", "xf": inv * bat.global_transform})
 	photos.append(p)
-	if film > 0:
-		film -= 1
 	_commit()
 	Sfx.play("shutter")
 	hud.flash = 1.0
-	camera_mode = false
 	p.texture = await _render_photo(xf)
 	p.taken_ms = Time.get_ticks_msec()
 	Sfx.play("eject", -4.0)
 	hud.eject(photos.find(p))
+
+
+func copy_photo() -> void:
+	if raised < 0:
+		hud.toast("Hold up the picture you want to copy")
+		return
+	var src: Photo = photos[raised]
+	var p := Photo.new()
+	p.solids = src.solids
+	p.items = src.items
+	p.texture = src.texture
+	p.title = src.title + " (copy)"
+	p.kind = src.kind
+	p.pitch = src.pitch
+	p.taken_ms = Time.get_ticks_msec()
+	photos.append(p)
+	_commit()
+	for c in copiers:
+		(c as Photocopier).scan()
+	Sfx.play("eject", -4.0, 1.2)
+	hud.eject(photos.size() - 1)
 
 
 func raise_photo(i: int) -> void:
@@ -626,12 +686,30 @@ func _cat_in_reach() -> bool:
 	return cat != null and cat.global_position.distance_to(player.global_position) < 2.0
 
 
+func _fixed_cam_in_reach() -> FixedCamera:
+	for c in fixed_cams:
+		if (c as FixedCamera).button_pos().distance_to(player.global_position + Vector3(0, 0.9, 0)) < 1.7:
+			return c
+	return null
+
+
+func _copier_in_reach() -> bool:
+	for c in copiers:
+		if (c as Node3D).global_position.distance_to(player.global_position) < 2.2:
+			return true
+	return false
+
+
 ## What the context button would do right now (shown as its label).
 func act_label() -> String:
 	if held:
 		return "DROP"
 	if _battery_in_reach():
 		return "GRAB"
+	if _fixed_cam_in_reach():
+		return "SNAP"
+	if _copier_in_reach():
+		return "COPY"
 	if _note_in_reach():
 		return "READ"
 	if _cat_in_reach():
@@ -657,6 +735,15 @@ func interact() -> void:
 		held = best
 		Sfx.play("click", -4.0, 1.2)
 		return
+	var fc := _fixed_cam_in_reach()
+	if fc:
+		fc.fire()
+		Sfx.play("click", -4.0)
+		await _capture(fc.eye)
+		return
+	if _copier_in_reach():
+		copy_photo()
+		return
 	var note := _note_in_reach()
 	if note:
 		Sfx.play("paper")
@@ -664,12 +751,9 @@ func interact() -> void:
 		return
 	if _cat_in_reach():
 		cat.pet()
-		var extra := ["Mrrrp.", "You're doing great. Probably.", "Purr… where was I? Oh, right:"]
-		var lines: Array = [extra[_cat_line % extra.size()]]
-		if not is_hub:
-			lines.append(level["hint"])
+		var extra := ["Mrrrp.", "Purrrr…", "You're doing great. Probably."]
+		hud.say("Miso", [extra[_cat_line % extra.size()]])
 		_cat_line += 1
-		hud.say("Miso", lines)
 		return
 	hud.toast("Nothing to grab")
 
@@ -711,6 +795,10 @@ func _physics_process(_delta: float) -> void:
 			Sfx.play("pickup")
 			hud.toast("Found: " + pick.photo.title + " — tap it to hold it up")
 
+	for id in sockets.keys():
+		(sockets[id] as PowerSocket).update(batteries)
+	for g in gates:
+		(g as Gate).update(sockets)
 	if teleporter:
 		teleporter.update_sockets(batteries, player.global_position)
 	for pad in hub_pads:
@@ -751,14 +839,28 @@ func _unhandled_input(event: InputEvent) -> void:
 		KEY_Z: rotate_photo(-1)
 		KEY_X: rotate_photo(1)
 		KEY_ESCAPE: hud.toggle_pause()
+		KEY_H: next_hint()
 		_:
 			var n: int = event.physical_keycode - KEY_1
 			if n >= 0 and n < 9:
 				raise_photo(n)
 
 
+## Hints come one at a time, from a gentle nudge to the full answer.
+func next_hint() -> void:
+	var hints: Array = level.get("hints", [level["hint"]])
+	if hints.is_empty():
+		return
+	var i := mini(hint_index, hints.size() - 1)
+	hint_index += 1
+	if cat:
+		cat.pet()
+	hud.say("Miso", ["Hint %d/%d — %s" % [i + 1, hints.size(), hints[i]]])
+
+
 func on_hud_action(name: String) -> void:
 	match name:
+		"hint": next_hint()
 		"jump": player.jump_requested = true
 		"act": interact()
 		"cam": toggle_camera_mode()

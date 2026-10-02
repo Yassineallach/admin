@@ -47,7 +47,7 @@ func _ready() -> void:
 
 	var title := Label.new()
 	title.text = "Lensfold"
-	title.add_theme_font_size_override("font_size", 84)
+	title.add_theme_font_size_override("font_size", 72)
 	title.add_theme_color_override("font_color", INK)
 	left.add_child(title)
 	var sub := Label.new()
@@ -84,7 +84,7 @@ func _ready() -> void:
 	grid.columns = 2
 	grid.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	grid.add_theme_constant_override("h_separation", 12)
-	grid.add_theme_constant_override("v_separation", 10)
+	grid.add_theme_constant_override("v_separation", 7)
 	var chapters := Label.new()
 	chapters.text = "Memories"
 	chapters.add_theme_font_size_override("font_size", 22)
@@ -102,8 +102,8 @@ func _ready() -> void:
 		var label: String = Levels.get_level_name(i)
 		if Progress.completed.has(i):
 			label += "  ✓"
-		var b := styled_button(label, 19)
-		b.custom_minimum_size = Vector2(250, 48)
+		var b := styled_button(label, 17)
+		b.custom_minimum_size = Vector2(250, 40)
 		b.disabled = locked
 		if locked:
 			b.text = "🔒 " + label

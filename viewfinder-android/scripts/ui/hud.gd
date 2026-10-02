@@ -169,6 +169,7 @@ func _layout() -> void:
 		"rotr": {"c": Vector2(s.x - 235 * u, s.y - 385 * u), "r": 38 * u, "label": "⟳"},
 		"rewind": {"c": Vector2(78 * u, s.y * 0.42), "r": 48 * u, "label": ""},
 		"pause": {"c": Vector2(s.x - 48 * u, 48 * u), "r": 30 * u, "label": ""},
+		"hint": {"c": Vector2(s.x - 122 * u, 48 * u), "r": 30 * u, "label": "?"},
 	}
 
 
@@ -190,6 +191,7 @@ func _button_visible(name: String) -> bool:
 		"shutter": return game.camera_mode
 		"place", "rotl", "rotr": return game.raised >= 0 and not game.camera_mode
 		"act": return game.act_label() != ""
+		"hint": return not game.is_hub
 	return true
 
 
