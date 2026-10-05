@@ -221,6 +221,24 @@ vec3 procedural_color(int m, vec2 uv, vec3 base, out float emit) {
 		vec2 tie = fract(uv / vec2(1.2, 0.6)) - 0.5;
 		c *= mix(0.75, 1.0, smoothstep(0.02, 0.035, length(tie * vec2(1.2, 0.6))));
 		c *= 0.95 + 0.06 * fbm(uv * 1.7);
+	} else if (m == 16) { // clapboard siding: overlapping boards with a dark lip
+		float b = uv.y / 0.24;
+		float f = fract(b);
+		float id = floor(b);
+		c *= 0.94 + 0.08 * hash12(vec2(id, floor(uv.x / 3.0)));
+		c *= mix(0.68, 1.0, smoothstep(0.0, 0.12, f));  // shadow under each board
+		c *= 1.0 + 0.06 * smoothstep(0.7, 1.0, f);       // catch-light on the edge
+		c *= 0.97 + 0.04 * vnoise(uv * vec2(0.8, 6.0));
+	} else if (m == 17) { // asphalt shingles, staggered rows, a few odd-coloured tabs
+		vec2 b = uv / vec2(0.5, 0.28);
+		b.x += mod(floor(b.y), 2.0) * 0.5;
+		vec2 id = floor(b);
+		vec2 f = fract(b);
+		float hsh = hash12(id);
+		c *= 0.86 + 0.16 * hsh;
+		if (hsh > 0.93) c *= 0.8;
+		c *= mix(0.62, 1.0, smoothstep(0.0, 0.14, f.y));
+		c *= mix(0.8, 1.0, smoothstep(0.0, 0.05, min(f.x, 1.0 - f.x)));
 	} else if (m == 15) { // solar cells
 		vec2 f = fract(uv / vec2(0.33, 0.33));
 		float line = 1.0 - smoothstep(0.03, 0.06, min(min(f.x, 1.0 - f.x), min(f.y, 1.0 - f.y)));
@@ -329,6 +347,16 @@ void fragment() {
 	ROUGHNESS = 1.0;
 }
 
+// Stylised cartoon light: a soft two-tone ramp, cool blue-violet shade
+// and a bright rim on edges turned to the sun.
+vec3 toon_light(vec3 n, vec3 l, vec3 v, float atten, vec3 lc) {
+	float ndl = dot(n, l);
+	float d = smoothstep(-0.02, 0.28, ndl) * smoothstep(0.15, 0.6, atten);
+	vec3 shade = mix(vec3(0.42, 0.45, 0.66), vec3(1.0), d);
+	float rim = pow(1.0 - clamp(dot(n, v), 0.0, 1.0), 4.0) * smoothstep(-0.2, 0.4, ndl) * 0.45;
+	return lc / PI * (shade * (0.5 + 0.55 * d) + rim * atten);
+}
+
 void light() {
 	int st = int(v_style + 0.5);
 	float ndl = dot(NORMAL, LIGHT);
@@ -343,10 +371,12 @@ void light() {
 		if (lit < 0.2) tone -= 0.22 * h2;
 		DIFFUSE_LIGHT += LIGHT_COLOR / PI * tone;
 	} else {
-		float wrap = clamp(ndl * 0.55 + 0.45, 0.0, 1.0);
 		if (st == 2) {
+			float wrap = clamp(ndl * 0.55 + 0.45, 0.0, 1.0);
 			wrap = floor(wrap * 3.0 + 0.5) / 3.0;
+			DIFFUSE_LIGHT += LIGHT_COLOR / PI * wrap * wrap * shadow;
+		} else {
+			DIFFUSE_LIGHT += toon_light(NORMAL, LIGHT, VIEW, ATTENUATION, LIGHT_COLOR);
 		}
-		DIFFUSE_LIGHT += LIGHT_COLOR / PI * wrap * wrap * shadow;
 	}
 }

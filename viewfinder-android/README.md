@@ -88,11 +88,15 @@ game and how its mechanic works.
 * **12 handcrafted levels** in two chapters. Chapter 1: Found Photograph, Point and Shoot,
   Through the Window, Breakthrough, Look Up, Sketchbook, Watercolour, Darkroom. Chapter 2:
   Power Cut, Two Keys, Watchtower, Plan Ahead.
-* A pastel look: procedural materials (grass, stone tiles, brick, planks, roof
-  shingles, rock, foliage, water), soft half-lambert lighting with lifted
-  shadows, glow, a painted sky with drifting clouds, floating islands on the
-  horizon and a sea below. The horizon is a backdrop that photos never cut, like
-  a skybox.
+* A bright cartoon look in the spirit of battle-royale games like Fortnite
+  (all original, no assets from those games): toon lighting with blue-violet
+  shade and rim light, boosted saturation, chunky cumulus clouds over a
+  turquoise ocean, and floating islands of grass, earth and rock. Every level
+  is ringed by floating suburbs of procedurally varied clapboard houses (gable
+  roofs, porches, shutters, chimneys, garages), picket fences, mailboxes,
+  street lamps, water towers and wooden build ramps. This scenery is a
+  backdrop that photos never cut, like a skybox. Menus use a chunky slanted
+  display style with yellow buttons on deep blue.
 * **All audio is synthesised at runtime:** an ambient music loop, the shutter,
   photo eject, placement whoosh, chimes, rewind and purring. The APK ships no
   audio files.
@@ -203,8 +207,9 @@ geometry, found pictures in their own art styles, an instant camera with limited
 film, battery copying, teleporters, rewind, a hub of memories, a cat companion,
 and notes from the people who built the world. **The assets are not
 Viewfinder's.** Its models, textures, music, story and exact level layouts are
-copyrighted by Sad Owl Studios, so everything here is original work in a similar
-pastel style.
+copyrighted by Sad Owl Studios, so everything here is original work. The same
+goes for the cartoon art style: it is inspired by Fortnite, but no Epic Games
+assets, fonts or designs are used.
 
 ## Ideas for more content
 

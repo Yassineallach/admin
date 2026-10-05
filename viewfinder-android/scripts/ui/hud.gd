@@ -47,7 +47,7 @@ var _note_text: Label
 const STICK_R := 85.0
 const INK := Color(0.22, 0.19, 0.26)
 const PAPER := Color(1, 0.98, 0.94)
-const ACCENT := Color(1.0, 0.6, 0.5)
+const ACCENT := UiStyle.YELLOW
 
 
 func _ready() -> void:
@@ -138,7 +138,7 @@ func show_complete(last: bool, keepsake: Texture2D = null, place_name: String = 
 	var tw := create_tween().set_parallel().set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	tw.tween_property(card, "scale", Vector2.ONE, 0.5)
 	tw.tween_property(card, "modulate:a", 1.0, 0.3)
-	_complete_next.text = "Back to the Station" if not last else "Back to the Station  ✦"
+	_complete_next.text = "BACK TO THE STATION" if not last else "BACK TO THE STATION  ✦"
 	_complete_panel.visible = true
 	_touches.clear()
 	stick_vec = Vector2.ZERO
@@ -498,10 +498,10 @@ func _draw_dialog() -> void:
 		return
 	var u := _u
 	var r := _dialog_rect()
-	_rounded(r, Color(0.16, 0.14, 0.2, 0.72), 18 * u)
-	var tag := Rect2(r.position + Vector2(18, -18) * u, Vector2(96, 34) * u)
-	_rounded(tag, ACCENT, 17 * u)
-	_text(tag.get_center() + Vector2(0, 8 * u), _say_name, 20, Color.WHITE)
+	_rounded(r, Color(UiStyle.NAVY, 0.82), 10 * u, Color(UiStyle.BLUE, 0.9), 3 * u)
+	var tag := Rect2(r.position + Vector2(18, -18) * u, Vector2(104, 34) * u)
+	_rounded(tag, ACCENT, 6 * u)
+	_text(tag.get_center() + Vector2(0, 8 * u), _say_name.to_upper(), 20, UiStyle.INK)
 	var line: String = _say_lines[0]
 	var shown := line.substr(0, int(_say_chars))
 	draw_multiline_string(_font, r.position + Vector2(22, 46) * u, shown, HORIZONTAL_ALIGNMENT_LEFT,
@@ -552,7 +552,7 @@ func _draw_viewfinder() -> void:
 
 func _make_panel(title: String, entries: Array) -> Control:
 	var root := ColorRect.new()
-	root.color = Color(0.12, 0.1, 0.14, 0.6)
+	root.color = Color(UiStyle.NAVY, 0.7)
 	root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	root.process_mode = Node.PROCESS_MODE_ALWAYS
 	root.visible = false
@@ -564,9 +564,13 @@ func _make_panel(title: String, entries: Array) -> Control:
 	box.add_theme_constant_override("separation", 16)
 	center.add_child(box)
 	var lbl := Label.new()
-	lbl.text = title
+	lbl.text = title.to_upper()
 	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	lbl.add_theme_font_size_override("font_size", 44)
+	lbl.add_theme_font_override("font", UiStyle.display_font())
+	lbl.add_theme_font_size_override("font_size", 48)
+	lbl.add_theme_color_override("font_color", UiStyle.YELLOW)
+	lbl.add_theme_color_override("font_outline_color", UiStyle.NAVY)
+	lbl.add_theme_constant_override("outline_size", 10)
 	box.add_child(lbl)
 	for e in entries:
 		var b := MainMenu.styled_button(e[0], 28)

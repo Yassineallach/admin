@@ -252,18 +252,22 @@ static func make_environment(parent: Node) -> void:
 	env.background_mode = Environment.BG_SKY
 	env.sky = sky
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
-	env.ambient_light_energy = 0.55
-	env.ambient_light_sky_contribution = 0.8
-	env.ambient_light_color = Color(1.0, 0.92, 0.9)
+	env.ambient_light_energy = 0.6
+	env.ambient_light_sky_contribution = 0.6
+	env.ambient_light_color = Color(0.72, 0.78, 1.0)
 	env.tonemap_mode = Environment.TONE_MAPPER_AGX
 	env.tonemap_exposure = 1.0
+	# Punchy cartoon colour.
+	env.adjustment_enabled = true
+	env.adjustment_saturation = 1.25
+	env.adjustment_contrast = 1.06
 	env.glow_enabled = q >= 1
 	env.glow_intensity = 0.6
 	env.glow_bloom = 0.12
 	env.glow_hdr_threshold = 0.85
 	env.fog_enabled = true
-	env.fog_light_color = Color(0.99, 0.88, 0.84)
-	env.fog_density = 0.0014
+	env.fog_light_color = Color(0.70, 0.86, 1.0)
+	env.fog_density = 0.0009
 	env.fog_sky_affect = 0.0
 	env.fog_aerial_perspective = 0.4
 	var we := WorldEnvironment.new()
@@ -272,8 +276,8 @@ static func make_environment(parent: Node) -> void:
 
 	var sun := DirectionalLight3D.new()
 	sun.rotation = Vector3(deg_to_rad(-48), deg_to_rad(28), 0)
-	sun.light_energy = 1.25
-	sun.light_color = Color(1.0, 0.95, 0.88)
+	sun.light_energy = 1.45
+	sun.light_color = Color(1.0, 0.93, 0.80)
 	sun.shadow_enabled = q >= 1
 	sun.shadow_bias = 0.06
 	sun.shadow_normal_bias = 1.5

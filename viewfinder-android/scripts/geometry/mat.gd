@@ -23,6 +23,10 @@ const GLASS := 13
 const CONCRETE := 14
 ## Solar panel cells.
 const SOLAR := 15
+## Painted clapboard siding (cartoon suburban houses).
+const SIDING := 16
+## Asphalt shingles for gable roofs.
+const SHINGLE := 17
 
 const STYLE_NORMAL := 0
 ## Pencil on paper: what you get from a found sketch.

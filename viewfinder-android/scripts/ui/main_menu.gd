@@ -4,14 +4,14 @@ extends Control
 
 signal level_chosen(index: int)
 
-const BG := Color(0.96, 0.93, 0.88)
-const INK := Color(0.25, 0.2, 0.28)
-const ACCENT := Color(0.94, 0.62, 0.52)
+const BG := UiStyle.NAVY
+const INK := Color(1, 1, 1)
+const ACCENT := UiStyle.YELLOW
 
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	# The live 3D island shows through on the right; a soft paper wash on the
+	# The live 3D island shows through on the right; a deep-blue wash on the
 	# left keeps the text readable.
 	var g := Gradient.new()
 	g.set_color(0, Color(BG, 0.92))
@@ -46,14 +46,19 @@ func _ready() -> void:
 	row.add_child(left)
 
 	var title := Label.new()
-	title.text = "Lensfold"
-	title.add_theme_font_size_override("font_size", 72)
-	title.add_theme_color_override("font_color", INK)
+	title.text = "LENSFOLD"
+	title.add_theme_font_override("font", UiStyle.display_font())
+	title.add_theme_font_size_override("font_size", 84)
+	title.add_theme_color_override("font_color", UiStyle.YELLOW)
+	title.add_theme_color_override("font_outline_color", UiStyle.NAVY)
+	title.add_theme_constant_override("outline_size", 14)
+	title.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.35))
+	title.add_theme_constant_override("shadow_offset_y", 6)
 	left.add_child(title)
 	var sub := Label.new()
 	sub.text = "Every photo is a place.\nA perspective puzzle inspired by Viewfinder."
 	sub.add_theme_font_size_override("font_size", 26)
-	sub.add_theme_color_override("font_color", INK.lightened(0.25))
+	sub.add_theme_color_override("font_color", Color(0.85, 0.9, 1.0))
 	left.add_child(sub)
 
 	var play := styled_button("Continue" if Progress.unlocked > 1 else "Play", 32)
@@ -87,7 +92,7 @@ func _ready() -> void:
 	q_btn.alignment = HORIZONTAL_ALIGNMENT_LEFT
 	q_btn.add_theme_font_size_override("font_size", 20)
 	q_btn.add_theme_color_override("font_color", INK)
-	q_btn.add_theme_color_override("font_hover_color", ACCENT.darkened(0.2))
+	q_btn.add_theme_color_override("font_hover_color", ACCENT)
 	q_btn.pressed.connect(func():
 		Progress.settings["quality"] = (Progress.quality() + 1) % 3
 		Progress.save_progress()
@@ -100,9 +105,10 @@ func _ready() -> void:
 	grid.add_theme_constant_override("h_separation", 12)
 	grid.add_theme_constant_override("v_separation", 7)
 	var chapters := Label.new()
-	chapters.text = "Memories"
-	chapters.add_theme_font_size_override("font_size", 22)
-	chapters.add_theme_color_override("font_color", INK.lightened(0.25))
+	chapters.text = "MEMORIES"
+	chapters.add_theme_font_override("font", UiStyle.display_font())
+	chapters.add_theme_font_size_override("font_size", 24)
+	chapters.add_theme_color_override("font_color", UiStyle.YELLOW)
 	left.add_child(chapters)
 	left.add_child(grid)
 	# The right half stays empty so the live island shows through.
@@ -120,31 +126,11 @@ func _ready() -> void:
 		b.custom_minimum_size = Vector2(250, 40)
 		b.disabled = locked
 		if locked:
-			b.text = "🔒 " + label
+			b.text = ("🔒 " + label).to_upper()
 		var idx := i
 		b.pressed.connect(func(): level_chosen.emit(idx))
 		grid.add_child(b)
 
 
 static func styled_button(text: String, fsize: int) -> Button:
-	var b := Button.new()
-	b.text = text
-	b.custom_minimum_size = Vector2(320, 80)
-	b.add_theme_font_size_override("font_size", fsize)
-	var sb := StyleBoxFlat.new()
-	sb.bg_color = ACCENT
-	sb.set_corner_radius_all(14)
-	b.add_theme_stylebox_override("normal", sb)
-	var sbh := sb.duplicate()
-	sbh.bg_color = ACCENT.lightened(0.15)
-	b.add_theme_stylebox_override("hover", sbh)
-	b.add_theme_stylebox_override("focus", sbh)
-	var sbp := sb.duplicate()
-	sbp.bg_color = ACCENT.darkened(0.15)
-	b.add_theme_stylebox_override("pressed", sbp)
-	var sbd := sb.duplicate()
-	sbd.bg_color = Color(0.82, 0.8, 0.8)
-	b.add_theme_stylebox_override("disabled", sbd)
-	b.add_theme_color_override("font_color", Color.WHITE)
-	b.add_theme_color_override("font_disabled_color", Color(0.55, 0.52, 0.55))
-	return b
+	return UiStyle.button(text, fsize)

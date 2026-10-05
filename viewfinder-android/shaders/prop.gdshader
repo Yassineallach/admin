@@ -67,9 +67,16 @@ void fragment() {
 	}
 }
 
+// Stylised cartoon light: a soft two-tone ramp, cool blue-violet shade
+// and a bright rim on edges turned to the sun.
+vec3 toon_light(vec3 n, vec3 l, vec3 v, float atten, vec3 lc) {
+	float ndl = dot(n, l);
+	float d = smoothstep(-0.02, 0.28, ndl) * smoothstep(0.15, 0.6, atten);
+	vec3 shade = mix(vec3(0.42, 0.45, 0.66), vec3(1.0), d);
+	float rim = pow(1.0 - clamp(dot(n, v), 0.0, 1.0), 4.0) * smoothstep(-0.2, 0.4, ndl) * 0.45;
+	return lc / PI * (shade * (0.5 + 0.55 * d) + rim * atten);
+}
+
 void light() {
-	float ndl = dot(NORMAL, LIGHT);
-	float wrap = clamp(ndl * 0.55 + 0.45, 0.0, 1.0);
-	float shadow = mix(shadow_floor, 1.0, ATTENUATION);
-	DIFFUSE_LIGHT += LIGHT_COLOR / PI * wrap * wrap * shadow;
+	DIFFUSE_LIGHT += toon_light(NORMAL, LIGHT, VIEW, ATTENUATION, LIGHT_COLOR);
 }

@@ -1,15 +1,15 @@
 shader_type sky;
-// Pastel painted sky with drifting clouds and a soft sun. The islands float
-// high above a sea of clouds that stretches to the horizon.
+// Bright cartoon sky: deep blue zenith, pale cyan horizon, big chunky
+// cumulus clouds with lavender undersides, and a sparkling turquoise ocean
+// far below the floating islands.
 
-uniform vec3 top_color : source_color = vec3(0.30, 0.58, 0.95);
-uniform vec3 horizon_color : source_color = vec3(1.0, 0.86, 0.78);
-uniform vec3 below_color : source_color = vec3(0.80, 0.72, 0.90);
-uniform vec3 cloud_sea : source_color = vec3(1.0, 0.95, 0.94);
-uniform vec3 cloud_sea_shade : source_color = vec3(0.82, 0.74, 0.90);
-uniform vec3 cloud_color : source_color = vec3(1.0, 0.97, 0.95);
-uniform vec3 cloud_shade : source_color = vec3(0.95, 0.90, 0.95);
-uniform float cloud_cover = 0.66;
+uniform vec3 top_color : source_color = vec3(0.10, 0.42, 0.98);
+uniform vec3 horizon_color : source_color = vec3(0.66, 0.88, 1.0);
+uniform vec3 cloud_color : source_color = vec3(1.0, 1.0, 1.0);
+uniform vec3 cloud_shade : source_color = vec3(0.70, 0.74, 0.95);
+uniform vec3 sea_near : source_color = vec3(0.02, 0.36, 0.62);
+uniform vec3 sea_far : source_color = vec3(0.20, 0.72, 0.85);
+uniform float cloud_cover = 0.58;
 
 float hash12(vec2 p) {
 	vec3 p3 = fract(vec3(p.xyx) * 0.1031);
@@ -28,41 +28,40 @@ float vnoise(vec2 p) {
 float fbm(vec2 p) {
 	float a = 0.5;
 	float s = 0.0;
-	for (int i = 0; i < 3; i++) {
+	for (int i = 0; i < 4; i++) {
 		s += a * vnoise(p);
-		p = p * 2.07 + vec2(11.3, 4.7);
+		p = p * 2.03 + vec2(11.3, 4.7);
 		a *= 0.5;
 	}
-	return s * 1.1;
+	return s * 1.07;
 }
 
 void sky() {
 	vec3 d = EYEDIR;
 	float h = d.y;
-	vec3 col = mix(horizon_color, top_color, smoothstep(0.0, 0.55, h));
-	col = mix(col, below_color, smoothstep(0.0, -0.25, h));
-	if (h < 0.0) {
-		// Sea of clouds far below: puffy tops lit by the sun, lilac in the gaps,
-		// melting into the horizon haze.
-		vec2 p = d.xz / (-h + 0.03) * 0.35 + vec2(TIME * 0.003, TIME * 0.0015);
-		float n = fbm(p) + 0.35 * fbm(p * 3.1 + 5.0);
-		float puff = smoothstep(0.35, 0.85, n);
-		vec3 sea = mix(cloud_sea_shade, cloud_sea, puff);
-		sea *= 0.92 + 0.12 * smoothstep(0.5, 1.0, n);
-		col = mix(sea, horizon_color, smoothstep(-0.25, 0.0, h) * 0.85);
-	}
+	vec3 col = mix(horizon_color, top_color, pow(smoothstep(0.0, 0.7, h), 0.7));
 
 	vec3 sun = LIGHT0_DIRECTION;
 	float sd = max(dot(d, sun), 0.0);
-	col += vec3(1.0, 0.9, 0.75) * (pow(sd, 8.0) * 0.18 + pow(sd, 400.0) * 1.2);
+	col += vec3(1.0, 0.95, 0.8) * (pow(sd, 6.0) * 0.25 + smoothstep(0.9985, 0.9995, sd) * 2.0);
 
 	if (h > 0.0) {
-		vec2 p = d.xz / (h + 0.12) * 0.9 + vec2(TIME * 0.004, TIME * 0.002);
+		vec2 p = d.xz / (h + 0.1) * 0.45 + vec2(TIME * 0.006, TIME * 0.003);
 		float n = fbm(p);
-		float cov = smoothstep(cloud_cover, cloud_cover + 0.12, n) * smoothstep(0.02, 0.2, h);
-		float shade = smoothstep(cloud_cover, cloud_cover + 0.45, n * 1.05 - 0.02);
-		vec3 cc = mix(cloud_color, cloud_shade, shade * 0.6);
-		col = mix(col, cc, cov * 0.95);
+		// Chunky, well-defined puffs with a soft cartoon edge.
+		float cov = smoothstep(cloud_cover, cloud_cover + 0.05, n) * smoothstep(0.0, 0.12, h);
+		// Lit tops, lavender bellies: compare with the noise a bit sunward.
+		float lit = smoothstep(-0.04, 0.06, n - fbm(p - sun.xz * 0.06));
+		vec3 cc = mix(cloud_shade, cloud_color, 0.35 + 0.65 * lit);
+		col = mix(col, cc, cov);
+	} else {
+		// Ocean far below, with sun glints and a pale haze at the horizon.
+		vec2 p = d.xz / (-h + 0.02) * 2.0 + vec2(TIME * 0.02, 0.0);
+		float w = vnoise(p * 3.0) * 0.6 + vnoise(p * 7.0 + 3.0) * 0.4;
+		vec3 sea = mix(sea_near, sea_far, smoothstep(-0.6, 0.0, h));
+		sea *= 0.92 + 0.15 * w;
+		sea += vec3(1.0) * smoothstep(0.82, 0.9, w) * 0.25 * smoothstep(-0.5, -0.02, h);
+		col = mix(sea, horizon_color, smoothstep(-0.06, 0.0, h));
 	}
 	COLOR = col;
 }
