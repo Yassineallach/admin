@@ -84,6 +84,9 @@ Lexigo/
 * **Android:** install the Android build template (*Project → Install Android Build Template*),
   set your keystore under *Editor Settings → Export → Android*, then export the **Android** preset.
   It produces an `.aab` for Google Play (min SDK 24, target SDK 35, permissions: Internet and vibrate).
+* **Quick APK for testing (no Android Studio):** the **Android APK** preset uses Godot's prebuilt
+  template. Export it unsigned, then sign it, for example with
+  `java -jar uber-apk-signer.jar -a Lexigo.apk --ks your.keystore --ksAlias your_alias`.
 * **iOS:** fill in your Team ID in the **iOS** preset.
 * **Web:** the **Web** preset builds an installable PWA.
 
