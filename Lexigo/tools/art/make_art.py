@@ -239,59 +239,6 @@ def world_style():
 
 
 # --------------------------------------------------------------------------
-# UI icons (64x64)
-# --------------------------------------------------------------------------
-
-def icon(body):
-    return svg(64, 64, body)
-
-
-ICONS = {
-    "flame": icon(path("M32 4 Q52 22 50 40 Q48 58 32 60 Q16 58 14 40 Q13 28 22 20 Q24 30 30 30 Q26 16 32 4 Z", FLAME)
-                  + path("M32 30 Q42 40 40 48 Q38 56 32 56 Q26 56 24 48 Q24 40 32 30 Z", SUN)),
-    "gem": icon(path("M14 22 L24 10 L40 10 L50 22 L32 54 Z", SKY) + path("M14 22 L50 22 L32 54 Z", SKY_DARK)
-                + path("M24 22 L32 10 L40 22 L32 54 Z", "#6FD3FF") + rect(22, 13, 8, 4, 2, WHITE, 'opacity="0.7"')),
-    "coin": icon(circle(32, 34, 26, SUN_DARK) + circle(32, 30, 26, SUN) + circle(32, 30, 17, "#FFD84D")
-                 + rect(28, 20, 8, 20, 4, SUN_DARK) + rect(18, 14, 12, 5, 2.5, WHITE, 'opacity="0.6"')),
-    "star": icon(path("M32 6 L39.5 22 L57 24 L44 36 L47.5 53 L32 44.5 L16.5 53 L20 36 L7 24 L24.5 22 Z", SUN,
-                      f'stroke="{SUN}" stroke-width="6" stroke-linejoin="round"')),
-    "star_empty": icon(path("M32 6 L39.5 22 L57 24 L44 36 L47.5 53 L32 44.5 L16.5 53 L20 36 L7 24 L24.5 22 Z", CLOUD,
-                            f'stroke="{CLOUD}" stroke-width="6" stroke-linejoin="round"')),
-    "crown": icon(rect(10, 40, 44, 14, 6, SUN_DARK) + path("M10 44 L8 18 L22 30 L32 12 L42 30 L56 18 L54 44 Z", SUN,
-                  'stroke="#FFC800" stroke-width="5" stroke-linejoin="round"') + circle(32, 34, 5, BERRY)),
-    "lock": icon(path("M20 30 L20 22 Q20 10 32 10 Q44 10 44 22 L44 30", "none", f'stroke="{MIST}" stroke-width="7" stroke-linecap="round"')
-                 + rect(12, 28, 40, 30, 10, MIST) + circle(32, 41, 5, WHITE) + rect(30, 42, 4, 9, 2, WHITE)),
-    "speaker": icon(rect(8, 24, 16, 18, 5, SKY) + path("M20 24 L36 10 L36 56 L20 42 Z", SKY, 'stroke="#1CB0F6" stroke-width="4" stroke-linejoin="round"')
-                    + path("M44 22 Q52 33 44 44", "none", f'stroke="{SKY}" stroke-width="5" stroke-linecap="round"')
-                    + path("M50 14 Q64 33 50 52", "none", f'stroke="{SKY}" stroke-width="5" stroke-linecap="round"')),
-    "bulb": icon(circle(32, 26, 18, SUN) + rect(23, 36, 18, 12, 6, SUN) + rect(24, 48, 16, 6, 3, STONE) + rect(26, 54, 12, 5, 2.5, MIST)
-                 + rect(24, 16, 8, 6, 3, WHITE, 'opacity="0.7"')),
-    "shuffle": icon(line([(8, 18), (22, 18), (42, 46), (54, 46)], 6, SKY) + line([(8, 46), (22, 46), (42, 18), (54, 18)], 6, SKY)
-                    + tri(54, 46, 9, SKY, rot=90) + tri(54, 18, 9, SKY, rot=90)),
-    "trim": icon(rect(6, 14, 34, 38, 9, CLOUD) + rect(6, 10, 34, 38, 9, WHITE, f'stroke="{CLOUD}" stroke-width="3"')
-                 + rect(16, 24, 14, 5, 2.5, MIST) + rect(16, 33, 10, 5, 2.5, MIST)
-                 + circle(46, 42, 14, BERRY) + rect(38, 40, 16, 5, 2.5, WHITE)),
-    "sparkle": icon(path("M32 4 Q36 28 60 32 Q36 36 32 60 Q28 36 4 32 Q28 28 32 4 Z", GRAPE) + circle(50, 12, 5, SUN) + circle(14, 52, 4, SKY)),
-    "note": icon(rect(12, 8, 40, 50, 10, WHITE, f'stroke="{CLOUD}" stroke-width="3"') + rect(20, 20, 24, 5, 2.5, GRAPE)
-                 + rect(20, 31, 24, 5, 2.5, CLOUD) + rect(20, 42, 16, 5, 2.5, CLOUD)),
-    "book": icon(rect(8, 12, 24, 42, 8, NAVY) + rect(32, 12, 24, 42, 8, SKY) + rect(28, 12, 8, 42, 3, SKY_DARK)
-                 + rect(14, 20, 12, 4, 2, WHITE, 'opacity="0.6"') + rect(38, 20, 12, 4, 2, WHITE, 'opacity="0.6"')),
-    "gear": icon("".join(rect(27, 4, 10, 16, 4, STONE, f'transform="rotate({a} 32 32)"') for a in range(0, 360, 45))
-                 + circle(32, 32, 20, STONE) + circle(32, 32, 9, WHITE)),
-    "map": icon(rect(6, 12, 52, 42, 10, LEAF) + path("M6 30 Q20 20 32 32 Q44 44 58 30", "none", f'stroke="{SUN}" stroke-width="5" stroke-linecap="round" stroke-dasharray="1 9"')
-                + circle(46, 24, 7, BERRY) + rect(12, 16, 12, 5, 2.5, WHITE, 'opacity="0.5"')),
-    "close": icon(line([(16, 16), (48, 48)], 7, MIST) + line([(48, 16), (16, 48)], 7, MIST)),
-    "check": icon(line([(14, 34), (27, 46), (50, 20)], 8, LEAF)),
-    "review": icon(path("M12 30 A20 20 0 0 1 48 20", "none", f'stroke="{GRAPE}" stroke-width="7" stroke-linecap="round"')
-                   + tri(50, 18, 9, GRAPE, rot=60)
-                   + path("M52 34 A20 20 0 0 1 16 44", "none", f'stroke="{BERRY}" stroke-width="7" stroke-linecap="round"')
-                   + tri(14, 46, 9, BERRY, rot=240)),
-    "calendar": icon(rect(8, 12, 48, 44, 10, WHITE, f'stroke="{CLOUD}" stroke-width="3"') + rect(8, 12, 48, 14, 7, BERRY)
-                     + rect(18, 6, 6, 12, 3, INK) + rect(40, 6, 6, 12, 3, INK) + rect(22, 32, 20, 18, 5, SUN)),
-}
-
-
-# --------------------------------------------------------------------------
 # App icon (512) and store feature graphic (1024x500)
 # --------------------------------------------------------------------------
 
@@ -329,15 +276,12 @@ def adaptive_background():
 def main():
     os.makedirs(os.path.join(OUT, "mascot"), exist_ok=True)
     os.makedirs(os.path.join(OUT, "worlds"), exist_ok=True)
-    os.makedirs(os.path.join(OUT, "icons"), exist_ok=True)
     for pose in ["happy", "wave", "cheer", "think", "oops"]:
         open(os.path.join(OUT, "mascot", f"lexi_{pose}.svg"), "w").write(lexi(pose))
     worlds = {"basics": world_basics, "food": world_food, "animals": world_animals, "home": world_home,
               "travel": world_travel, "body": world_body, "nature": world_nature, "style": world_style}
     for k, fn in worlds.items():
         open(os.path.join(OUT, "worlds", f"{k}.svg"), "w").write(fn())
-    for k, v in ICONS.items():
-        open(os.path.join(OUT, "icons", f"{k}.svg"), "w").write(v)
     open(os.path.join(OUT, "app_icon.svg"), "w").write(app_icon())
     open(os.path.join(OUT, "feature_graphic.svg"), "w").write(feature_graphic())
     open(os.path.join(OUT, "adaptive_foreground.svg"), "w").write(adaptive_foreground())

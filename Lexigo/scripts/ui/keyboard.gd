@@ -22,8 +22,10 @@ func build(_target: String, _accent: Color) -> void:
 	_flow.add_theme_constant_override("v_separation", 12)
 	_flow.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	add_child(_flow)
-	_back = _tile("⌫")
-	_back.custom_minimum_size.x = 120
+	_back = _tile(Loc.t("erase").to_upper())
+	_back.add_theme_font_override("font", UI.font(true, true))
+	_back.add_theme_font_size_override("font_size", 24)
+	_back.custom_minimum_size.x = 150
 	for c in ["font_color", "font_hover_color", "font_pressed_color"]:
 		_back.add_theme_color_override(c, UI.BERRY)
 	_back.pressed.connect(func(): erase.emit())

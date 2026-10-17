@@ -9,7 +9,7 @@ var board: CrosswordBoard
 var keyboard: LetterKeyboard
 var _clue_card: Control
 var _clue_meta: Label
-var _clue_emoji: Label
+var _clue_pic: TextureRect
 var _clue_text: Label
 var _clue_extra: Label
 var _mascot: TextureRect
@@ -45,7 +45,7 @@ func _build() -> void:
 	# Header: close, progress through the grid, timer.
 	var top := HBoxContainer.new()
 	top.add_theme_constant_override("separation", 16)
-	var close := UI.icon_button("close", 48)
+	var close := Widgets.back_button()
 	close.pressed.connect(go_back)
 	top.add_child(close)
 	_progress = UI.progress_bar(0.0, UI.LEAF, 30)
@@ -93,12 +93,13 @@ func _build_clue_card() -> Control:
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 10)
 	bubble.add_child(row)
-	var prev := UI.flat_button("‹", 56, UI.MIST)
-	prev.pressed.connect(func(): state.next_word(-1); _refresh(true))
-	row.add_child(prev)
-	_clue_emoji = UI.label("", 56, UI.INK, false, HORIZONTAL_ALIGNMENT_CENTER)
-	_clue_emoji.custom_minimum_size.x = 76
-	row.add_child(_clue_emoji)
+	# Tapping the bubble moves on to the next word.
+	bubble.gui_input.connect(func(e: InputEvent):
+		if (e is InputEventMouseButton and e.pressed) or (e is InputEventScreenTouch and e.pressed):
+			state.next_word(1)
+			_refresh(true))
+	_clue_pic = UI.art("words/basics/hello.svg", 112)
+	row.add_child(_clue_pic)
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override("separation", 0)
 	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -111,9 +112,6 @@ func _build_clue_card() -> Control:
 	v.add_child(_clue_text)
 	v.add_child(_clue_extra)
 	row.add_child(v)
-	var nxt := UI.flat_button("›", 56, UI.MIST)
-	nxt.pressed.connect(func(): state.next_word(1); _refresh(true))
-	row.add_child(nxt)
 	h.add_child(bubble)
 	_clue_card = h
 	return h
@@ -121,15 +119,13 @@ func _build_clue_card() -> Control:
 func _build_hints() -> HBoxContainer:
 	var h := HBoxContainer.new()
 	h.add_theme_constant_override("separation", 10)
-	var defs := [["letter", "bulb"], ["trim", "trim"], ["listen", "speaker"], ["example", "note"], ["word", "sparkle"]]
+	var defs := [["letter", "hint_letter"], ["trim", "hint_trim_short"], ["listen", "hint_listen"], ["example", "hint_example"], ["word", "hint_word"]]
 	for d in defs:
 		var cost: int = Game.HINT_COST[d[0]]
-		var b := UI.button(str(cost) if cost > 0 else "", "neutral", 24, 76, d[1])
+		var price := "%d %s" % [cost, Loc.t("coins")] if cost > 0 else Loc.t("free")
+		var b := UI.button("%s\n%s" % [Loc.t(d[1]), price], "neutral", 20, 92)
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		b.add_theme_color_override("font_color", UI.SUN_LIP)
-		b.add_theme_color_override("font_pressed_color", UI.SUN_LIP)
-		b.add_theme_color_override("font_hover_color", UI.SUN_LIP)
-		b.icon = UI.icon_texture(d[1], 44)
+		b.add_theme_constant_override("line_spacing", -4)
 		b.tooltip_text = Loc.t("hint_" + d[0])
 		b.pressed.connect(_use_hint.bind(d[0]))
 		h.add_child(b)
@@ -145,9 +141,7 @@ func _feedback(good: bool, title: String, detail := "") -> void:
 	_banner.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var h := HBoxContainer.new()
 	h.add_theme_constant_override("separation", 16)
-	var icon_bg := UI.panel(UI.box(UI.WHITE, 40))
-	icon_bg.add_child(UI.icon("check" if good else "close", 44))
-	h.add_child(icon_bg)
+	h.add_child(UI.mascot("cheer" if good else "oops", 88))
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override("separation", 0)
 	v.add_child(UI.label(title, 36, color, true))
@@ -253,7 +247,7 @@ func _refresh(sound := false) -> void:
 	var word: Dictionary = p["word"]
 	var dir_name := Loc.t("across") if p["dir"] == CrosswordGenerator.ACROSS else Loc.t("down")
 	_clue_meta.text = ("%d %s · %d · " % [p["number"], dir_name, p["answer"].length()]) + Loc.t("write_in") % Vocab.LANG_NAMES[Game.target()]
-	_clue_emoji.text = word["emoji"]
+	_clue_pic.texture = UI.word_texture(word, 112)
 	_clue_text.text = Vocab.display(word, Game.native())
 	var extra := ""
 	if _examples.has(w):
@@ -289,7 +283,7 @@ func _use_hint(kind: String) -> void:
 	if kind == "trim" and state.trimmed.has(w):
 		return
 	if cost > 0 and not Game.spend(cost):
-		main.toast("🪙 " + Loc.t("no_coins"))
+		main.toast(Loc.t("no_coins"))
 		Sfx.play("wrong")
 		return
 	match kind:

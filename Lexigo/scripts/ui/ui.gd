@@ -1,7 +1,8 @@
 class_name UI
 extends RefCounted
 ## Lexigo design system: colour tokens, type scale, chunky "3D" buttons,
-## SVG art loading and motion helpers. See docs/DESIGN.md.
+## illustration loading and motion helpers. The interface uses words, not
+## icons or emoji; the only pictures are Lexi and the world illustrations. See docs/DESIGN.md.
 
 # ---------- colour tokens ----------
 const WHITE := Color("ffffff")
@@ -137,7 +138,7 @@ const KINDS := {
 }
 
 ## Chunky button: the lip collapses and the face drops when pressed.
-static func button(text: String, kind := "primary", size := 28, min_h := 96, icon_name := "") -> Button:
+static func button(text: String, kind := "primary", size := 28, min_h := 96) -> Button:
 	var b := Button.new()
 	b.text = text.to_upper() if kind != "neutral" else text
 	b.custom_minimum_size = Vector2(0, min_h)
@@ -145,10 +146,6 @@ static func button(text: String, kind := "primary", size := 28, min_h := 96, ico
 	b.add_theme_font_override("font", font(true, kind != "neutral"))
 	b.add_theme_font_size_override("font_size", size)
 	style_button(b, kind)
-	if icon_name != "":
-		b.icon = icon_texture(icon_name, size * 1.5)
-		b.add_theme_constant_override("h_separation", 12)
-		b.expand_icon = false
 	b.pressed.connect(func(): Sfx.play("tap"); Sfx.buzz(12))
 	return b
 
@@ -177,17 +174,6 @@ static func style_button(b: Button, kind: String, radius := R_BUTTON) -> void:
 	for c in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color", "font_hover_pressed_color"]:
 		b.add_theme_color_override(c, text)
 	b.add_theme_color_override("font_disabled_color", MIST)
-
-static func icon_button(icon_name: String, size := 56) -> Button:
-	var b := Button.new()
-	b.icon = icon_texture(icon_name, size)
-	b.flat = true
-	b.focus_mode = Control.FOCUS_NONE
-	var empty := StyleBoxEmpty.new()
-	for s in ["normal", "hover", "pressed", "focus", "disabled"]:
-		b.add_theme_stylebox_override(s, empty)
-	b.pressed.connect(func(): Sfx.play("tap"))
-	return b
 
 static func flat_button(text: String, size := 30, color := SKY) -> Button:
 	var b := Button.new()
@@ -223,9 +209,6 @@ static func art_texture(rel_path: String, px: float) -> Texture2D:
 	_tex_cache[key] = tex
 	return tex
 
-static func icon_texture(name: String, px := 48.0) -> Texture2D:
-	return art_texture("icons/%s.svg" % name, px)
-
 static func art(rel_path: String, px: float) -> TextureRect:
 	var r := TextureRect.new()
 	r.texture = art_texture(rel_path, px)
@@ -235,8 +218,13 @@ static func art(rel_path: String, px: float) -> TextureRect:
 	r.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	return r
 
-static func icon(name: String, px := 48.0) -> TextureRect:
-	return art("icons/%s.svg" % name, px)
+## Illustration for a vocabulary word: assets/art/words/<world>/<english>.svg
+static func word_texture(word: Dictionary, px := 112.0) -> Texture2D:
+	return art_texture("words/%s/%s.svg" % [word["world"], word["t"]["en"]], px)
+
+static func word_art(word: Dictionary, px := 112.0) -> TextureRect:
+	var r := art("words/%s/%s.svg" % [word["world"], word["t"]["en"]], px)
+	return r
 
 static func mascot(pose: String, px := 200.0) -> TextureRect:
 	return art("mascot/lexi_%s.svg" % pose, px)
@@ -248,15 +236,17 @@ static func panel(style: StyleBox) -> PanelContainer:
 	p.add_theme_stylebox_override("panel", style)
 	return p
 
-## Icon + number, as used in the top stats bar.
-static func stat(icon_name: String, value: String, color: Color) -> HBoxContainer:
-	var h := HBoxContainer.new()
-	h.add_theme_constant_override("separation", 6)
-	h.add_child(icon(icon_name, 44))
-	var l := label(value, 30, color, true)
+## Number over a small caps caption, as used in the stats bar.
+static func stat(caption: String, value: String, color: Color) -> VBoxContainer:
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", -6)
+	var l := label(value, 32, color, true, HORIZONTAL_ALIGNMENT_CENTER)
 	l.name = "Value"
-	h.add_child(l)
-	return h
+	v.add_child(l)
+	var c := caps(caption, 16, STONE)
+	c.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	v.add_child(c)
+	return v
 
 static func margin(child: Control, left := 24, top := 24, right := 24, bottom := 24) -> MarginContainer:
 	var m := MarginContainer.new()
@@ -311,9 +301,6 @@ static func spacer(h := 16, expand := false) -> Control:
 	if expand:
 		c.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	return c
-
-static func stars_text(n: int, total := 3) -> String:
-	return "★".repeat(n) + "☆".repeat(total - n)
 
 # ---------- motion ----------
 

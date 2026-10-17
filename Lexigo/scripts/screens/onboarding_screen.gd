@@ -23,7 +23,7 @@ func _build() -> void:
 	Loc.lang = _native
 	var root := make_root(32, 24)
 	var top := HBoxContainer.new()
-	var back := UI.icon_button("close" if _step == 0 else "close", 48)
+	var back := Widgets.back_button()
 	back.visible = _step == 1
 	back.pressed.connect(go_back)
 	top.add_child(back)

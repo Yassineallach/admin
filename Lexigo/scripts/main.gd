@@ -94,7 +94,7 @@ func open_settings() -> void:
 func play_level(world: int, level: int) -> void:
 	var t := Game.target()
 	var boss := level == Vocab.LEVELS_PER_WORLD - 1
-	var title := "%s %s · %s" % [Vocab.worlds[world]["emoji"], Vocab.world_name(world, Game.native()),
+	var title := "%s · %s" % [Vocab.world_name(world, Game.native()),
 		Loc.t("boss") if boss else "%s %d" % [Loc.t("level"), level + 1]]
 	_start_puzzle({
 		"mode": "level", "world": world, "level": level, "title": title,
@@ -108,7 +108,7 @@ func play_daily() -> void:
 		toast(Loc.t("daily_done"))
 		return
 	_start_puzzle({
-		"mode": "daily", "title": "📅 " + Loc.t("daily_title"), "color": UI.GOLD.darkened(0.15),
+		"mode": "daily", "title": Loc.t("daily_title"), "color": UI.GOLD.darkened(0.15),
 		"words": Vocab.daily_words(Game.target(), Game.unlocked_worlds(), Game.today()),
 		"seed": hash("daily|%s|%s" % [Game.today(), Game.target()]),
 	})
@@ -119,7 +119,7 @@ func play_review() -> void:
 		toast(Loc.t("no_review"))
 		return
 	_start_puzzle({
-		"mode": "review", "title": "🧠 " + Loc.t("review_title"), "color": UI.ACCENT_2,
+		"mode": "review", "title": Loc.t("review_title"), "color": UI.ACCENT_2,
 		"words": words, "seed": int(Time.get_unix_time_from_system()),
 	})
 
@@ -159,7 +159,7 @@ func pronounce(word: Dictionary, explicit := true) -> void:
 			Sfx.play_stream(stream)
 			return
 	if not Sfx.speak(text, Game.target()) and explicit:
-		toast("🔇 " + text)
+		toast("%s: %s" % [Loc.t("no_voice"), text])
 
 ## Burst of confetti at a point in global coordinates.
 func confetti(at: Vector2, amount := 90) -> void:

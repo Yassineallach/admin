@@ -38,7 +38,7 @@ static func language_list(codes: Array, selected: String, on_pick: Callable, col
 	for code in codes:
 		var on: bool = code == selected
 		var b := Button.new()
-		b.text = "%s  %s" % [Vocab.LANG_FLAGS[code], Vocab.LANG_NAMES[code]]
+		b.text = Vocab.LANG_NAMES[code]
 		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		b.custom_minimum_size = Vector2(0, 96)
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -60,11 +60,11 @@ static func language_list(codes: Array, selected: String, on_pick: Callable, col
 		g.add_child(b)
 	return g
 
-## Header with a back/close button, a title and the coin count.
-static func top_bar(_main: Node, back: Callable, title := "", close_icon := "close") -> HBoxContainer:
+## Header with a back button, a title and the coin count.
+static func top_bar(_main: Node, back: Callable, title := "") -> HBoxContainer:
 	var h := HBoxContainer.new()
 	h.add_theme_constant_override("separation", 14)
-	var b := UI.icon_button(close_icon, 52)
+	var b := back_button()
 	b.pressed.connect(back)
 	h.add_child(b)
 	var t := UI.label(title, 34, UI.INK, true)
@@ -75,8 +75,8 @@ static func top_bar(_main: Node, back: Callable, title := "", close_icon := "clo
 	h.add_child(coin_stat())
 	return h
 
-static func coin_stat() -> HBoxContainer:
-	var s := UI.stat("coin", str(Game.coins()), UI.SUN_LIP)
+static func coin_stat() -> VBoxContainer:
+	var s := UI.stat(Loc.t("coins"), str(Game.coins()), UI.SUN_LIP)
 	var l: Label = s.get_node("Value")
 	var update := func(v: int):
 		l.text = str(v)
@@ -84,6 +84,11 @@ static func coin_stat() -> HBoxContainer:
 	Game.coins_changed.connect(update)
 	s.tree_exiting.connect(func(): Game.coins_changed.disconnect(update))
 	return s
+
+static func back_button() -> Button:
+	var b := UI.flat_button(Loc.t("back").to_upper(), 24, UI.STONE)
+	b.add_theme_font_override("font", UI.font(true, true))
+	return b
 
 ## Thin grey divider that spans the width.
 static func divider() -> ColorRect:

@@ -6,9 +6,6 @@ const LANG_NAMES := {
 	"en": "English", "fr": "Français", "es": "Español",
 	"de": "Deutsch", "it": "Italiano", "pt": "Português",
 }
-const LANG_FLAGS := {
-	"en": "🇬🇧", "fr": "🇫🇷", "es": "🇪🇸", "de": "🇩🇪", "it": "🇮🇹", "pt": "🇵🇹",
-}
 ## Tatoeba / Wiktionary use ISO 639-3 codes.
 const ISO3 := {"en": "eng", "fr": "fra", "es": "spa", "de": "deu", "it": "ita", "pt": "por"}
 

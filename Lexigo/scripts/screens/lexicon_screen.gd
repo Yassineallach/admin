@@ -7,9 +7,9 @@ func _ready() -> void:
 
 	var stats := HBoxContainer.new()
 	stats.add_theme_constant_override("separation", 14)
-	stats.add_child(_stat("%d" % Game.known_count(), Loc.t("learning"), UI.SKY, UI.SKY_LIP, "book"))
-	stats.add_child(_stat("%d" % Game.mastered_count(), Loc.t("mastered"), UI.LEAF, UI.LEAF_LIP, "crown"))
-	stats.add_child(_stat("%d" % Game.due_words().size(), Loc.t("review"), UI.GRAPE, UI.GRAPE_LIP, "review"))
+	stats.add_child(_stat("%d" % Game.known_count(), Loc.t("learning"), UI.SKY_LIP))
+	stats.add_child(_stat("%d" % Game.mastered_count(), Loc.t("mastered"), UI.LEAF_LIP))
+	stats.add_child(_stat("%d" % Game.due_words().size(), Loc.t("review"), UI.GRAPE_LIP))
 	root.add_child(stats)
 
 	var scroll := ScrollContainer.new()
@@ -37,14 +37,13 @@ func _ready() -> void:
 	if not any:
 		list.add_child(Widgets.mascot_says("think", Loc.t("empty_lexicon")))
 
-func _stat(value: String, caption: String, color: Color, lip: Color, icon_name: String) -> PanelContainer:
+func _stat(value: String, caption: String, lip: Color) -> PanelContainer:
 	var p := UI.panel(UI.box(UI.WHITE, UI.R_CARD, UI.BORDER, UI.CLOUD, 2))
 	p.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override("separation", 0)
 	var h := HBoxContainer.new()
 	h.alignment = BoxContainer.ALIGNMENT_CENTER
-	h.add_child(UI.icon(icon_name, 40))
 	h.add_child(UI.label(value, 40, lip, true))
 	v.add_child(h)
 	var c := UI.caps(caption, 18, UI.STONE)
@@ -53,11 +52,17 @@ func _stat(value: String, caption: String, color: Color, lip: Color, icon_name: 
 	p.add_child(v)
 	return p
 
+static func listen_button() -> Button:
+	var b := UI.button(Loc.t("hint_listen"), "outline", 20, 64)
+	b.custom_minimum_size.x = 130
+	b.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	return b
+
 func _row(w: Dictionary, color: Color) -> PanelContainer:
 	var p := UI.panel(UI.card_box(false, 24))
 	var h := HBoxContainer.new()
 	p.add_child(h)
-	h.add_child(UI.label(w["emoji"], 42))
+	h.add_child(UI.word_art(w, 76))
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override("separation", 6)
 	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -70,7 +75,7 @@ func _row(w: Dictionary, color: Color) -> PanelContainer:
 	var strength := float(box) / float(Game.SRS_INTERVALS.size() - 1)
 	v.add_child(UI.progress_bar(strength, UI.LEAF if box >= Game.MASTERED_BOX else color, 18))
 	h.add_child(v)
-	var speak := UI.icon_button("speaker", 48)
+	var speak := listen_button()
 	speak.pressed.connect(main.pronounce.bind(w))
 	h.add_child(speak)
 	return p

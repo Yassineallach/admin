@@ -44,23 +44,18 @@ func _ready() -> void:
 func _stats_bar() -> HBoxContainer:
 	var h := HBoxContainer.new()
 	h.add_theme_constant_override("separation", 22)
-	var flag := Button.new()
-	flag.text = Vocab.LANG_FLAGS[Game.target()]
-	flag.flat = true
-	flag.add_theme_font_size_override("font_size", 44)
-	flag.focus_mode = Control.FOCUS_NONE
-	flag.pressed.connect(main.open_settings)
-	h.add_child(flag)
+	var lang := UI.button(Vocab.LANG_NAMES[Game.target()], "outline", 22, 72)
+	lang.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	lang.pressed.connect(main.open_settings)
+	h.add_child(lang)
 	var sp := Control.new()
 	sp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	h.add_child(sp)
 	var streak := Game.current_streak()
-	h.add_child(UI.stat("flame", str(streak), UI.FLAME if streak > 0 else UI.MIST))
-	h.add_child(UI.stat("star", str(Game.total_stars()), UI.SUN_LIP))
+	h.add_child(UI.stat(Loc.t("streak_short"), str(streak), UI.FLAME if streak > 0 else UI.MIST))
+	h.add_child(UI.stat(Loc.t("stars"), str(Game.total_stars()), UI.SUN_LIP))
 	h.add_child(Widgets.coin_stat())
-	var lvl := UI.stat("gem", "%d" % Game.player_level(), UI.SKY)
-	lvl.tooltip_text = Loc.t("level")
-	h.add_child(lvl)
+	h.add_child(UI.stat(Loc.t("level"), "%d" % Game.player_level(), UI.SKY))
 	return h
 
 func _banner(w: int) -> PanelContainer:
@@ -74,7 +69,7 @@ func _banner(w: int) -> PanelContainer:
 	v.add_theme_constant_override("separation", 2)
 	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	v.alignment = BoxContainer.ALIGNMENT_CENTER
-	v.add_child(UI.caps("%s %d · ★ %d/%d" % [Loc.t("world"), w + 1, Game.world_stars(w), Vocab.LEVELS_PER_WORLD * 3], 22, Color(1, 1, 1, 0.8)))
+	v.add_child(UI.caps("%s %d · %d/%d %s" % [Loc.t("world"), w + 1, Game.world_stars(w), Vocab.LEVELS_PER_WORLD * 3, Loc.t("stars")], 22, Color(1, 1, 1, 0.8)))
 	var name := UI.label(Vocab.world_name(w, Game.native()), 36, UI.WHITE, true)
 	name.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	v.add_child(name)
@@ -149,20 +144,11 @@ func _node(w: int, l: int, color: Color, is_current: bool) -> Control:
 	b.add_theme_stylebox_override("pressed", pressed)
 	b.add_theme_stylebox_override("disabled", normal)
 	b.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
-	b.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	b.expand_icon = false
-	if not unlocked:
-		b.icon = UI.icon_texture("lock", 52)
-	elif boss:
-		b.icon = UI.icon_texture("crown", 60)
-	elif s > 0:
-		b.icon = UI.icon_texture("star", 56)
-	else:
-		b.text = str(l + 1)
-		b.add_theme_font_override("font", UI.font(true))
-		b.add_theme_font_size_override("font_size", 46)
-		for c in ["font_color", "font_hover_color", "font_pressed_color"]:
-			b.add_theme_color_override(c, UI.WHITE)
+	b.text = Loc.t("boss_short").to_upper() if boss else str(l + 1)
+	b.add_theme_font_override("font", UI.font(true, boss))
+	b.add_theme_font_size_override("font_size", 26 if boss else 46)
+	for c in ["font_color", "font_hover_color", "font_pressed_color", "font_disabled_color"]:
+		b.add_theme_color_override(c, UI.WHITE if unlocked else UI.MIST)
 	b.disabled = not unlocked
 	b.pressed.connect(func():
 		Sfx.play("select")
@@ -170,11 +156,10 @@ func _node(w: int, l: int, color: Color, is_current: bool) -> Control:
 	holder.add_child(b)
 
 	if unlocked and s > 0:
-		var stars := HBoxContainer.new()
-		stars.add_theme_constant_override("separation", 0)
-		stars.position = Vector2(NODE * 0.5 - 51, NODE + 2)
-		for i in 3:
-			stars.add_child(UI.icon("star" if i < s else "star_empty", 34))
+		var stars := UI.caps("%d/3 %s" % [s, Loc.t("stars")], 18, UI.SUN_LIP)
+		stars.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		stars.position = Vector2(NODE * 0.5 - 80, NODE + 2)
+		stars.custom_minimum_size.x = 160
 		holder.add_child(stars)
 
 	if is_current:
@@ -207,16 +192,21 @@ func _tab_bar() -> HBoxContainer:
 	var h := HBoxContainer.new()
 	h.add_theme_constant_override("separation", 8)
 	var tabs := [
-		["map", Callable(), true],
-		["calendar", main.play_daily, false],
+		["home", Callable(), true],
+		["daily", main.play_daily, false],
 		["review", main.play_review, false],
-		["book", main.open_lexicon, false],
-		["gear", main.open_settings, false],
+		["lexicon", main.open_lexicon, false],
+		["settings", main.open_settings, false],
 	]
 	for t in tabs:
 		var b := Button.new()
-		b.icon = UI.icon_texture(t[0], 60)
-		b.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		b.text = Loc.t(t[0]).to_upper()
+		b.add_theme_font_override("font", UI.font(true, true))
+		b.add_theme_font_size_override("font_size", 17)
+		b.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		b.clip_text = true
+		for c in ["font_color", "font_hover_color", "font_pressed_color"]:
+			b.add_theme_color_override(c, UI.SKY_LIP if t[2] else UI.STONE)
 		b.focus_mode = Control.FOCUS_NONE
 		b.custom_minimum_size = Vector2(0, 92)
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -241,7 +231,7 @@ func _tab_bar() -> HBoxContainer:
 				sb.content_margin_bottom = 0
 				b.add_child(badge)
 				badge.position = Vector2(70, 2)
-		if t[0] == "calendar" and not Game.daily_done():
+		if t[0] == "daily" and not Game.daily_done():
 			var dot := Panel.new()
 			dot.add_theme_stylebox_override("panel", UI.box(UI.FLAME, 11))
 			dot.size = Vector2(22, 22)

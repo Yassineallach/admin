@@ -38,11 +38,10 @@ func _build() -> void:
 	group.add_theme_constant_override("separation", 0)
 	var card := UI.panel(UI.box(UI.WHITE, UI.R_CARD, UI.BORDER, UI.CLOUD))
 	card.add_child(group)
-	for row in [["speaker", "sound", "sfx"], ["speaker", "voice", "voice"], ["flame", "haptics", "haptics"],
-			["note", "strict", "strict"], ["gem", "online", "online"]]:
+	for row in [["sound", "sfx"], ["voice", "voice"], ["haptics", "haptics"], ["strict", "strict"], ["online", "online"]]:
 		if group.get_child_count() > 0:
 			group.add_child(Widgets.divider())
-		group.add_child(_toggle(row[0], Loc.t(row[1]), row[2]))
+		group.add_child(_toggle(Loc.t(row[0]), row[1]))
 	v.add_child(card)
 
 	var reset := UI.button(Loc.t("reset_confirm") if _reset_armed else Loc.t("reset"), "danger" if _reset_armed else "neutral", 26, 88)
@@ -59,18 +58,17 @@ func _build() -> void:
 
 	v.add_child(UI.caps(Loc.t("credits"), 24))
 	var credits := UI.label(
-		"Lexigo 1.2 · com.mardev.Lexigo · Made with Godot Engine\n" +
+		"Lexigo 1.3 · com.mardev.Lexigo · Made with Godot Engine\n" +
 		"Font: Nunito (SIL Open Font License)\n" +
 		"Example sentences: Tatoeba.org (CC BY 2.0 FR)\n" +
 		"Native pronunciations: Wiktionary, Wikimedia Commons & Lingua Libre contributors (CC BY-SA)", 22, UI.STONE)
 	credits.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	v.add_child(credits)
 
-func _toggle(icon_name: String, text: String, key: String) -> HBoxContainer:
+func _toggle(text: String, key: String) -> HBoxContainer:
 	var h := HBoxContainer.new()
 	h.add_theme_constant_override("separation", 16)
 	h.custom_minimum_size.y = 92
-	h.add_child(UI.icon(icon_name, 44))
 	var l := UI.label(text, 28, UI.INK, true)
 	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
