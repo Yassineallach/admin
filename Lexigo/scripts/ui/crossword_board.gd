@@ -5,7 +5,7 @@ extends Control
 signal cell_tapped(pos: Vector2i)
 
 var state: PuzzleState
-var accent := UI.ACCENT
+var accent := UI.SKY
 var _pop := {}       # Vector2i -> remaining seconds of a bounce
 var _flash := {}     # Vector2i -> remaining seconds of a red flash
 var _glow := {}      # Vector2i -> remaining seconds of the "solved" shimmer
@@ -86,16 +86,12 @@ func _draw() -> void:
 	var active_cells := state.word_cells(active) if active >= 0 else []
 	var f := UI.font(true)
 	var fr := UI.font(false)
-	var radius := int(_cell * 0.18)
+	var radius := int(_cell * 0.2)
+	var border := maxf(2.0, _cell * 0.045)
+	var lip := maxf(3.0, _cell * 0.07)
 	var numbers := {}
 	for p in state.placements:
 		numbers[Vector2i(p["col"], p["row"])] = p["number"]
-
-	# Soft shadow plate under every cell for depth.
-	for pos in state.cells.keys():
-		var r := _cell_rect(pos, 1.0)
-		var sh := UI.box(Color(0, 0, 0, 0.28), radius)
-		draw_style_box(sh, Rect2(r.position + Vector2(0, _cell * 0.07), r.size))
 
 	for pos in state.cells.keys():
 		var cell: Dictionary = state.cells[pos]
@@ -103,45 +99,57 @@ func _draw() -> void:
 		var bounce := 1.0
 		if _pop.has(pos):
 			var k: float = clampf(_pop[pos] / POP_TIME, 0.0, 1.0)
-			bounce = 1.0 + sin(k * PI) * 0.16
+			bounce = 1.0 + sin(k * PI) * 0.14
 		var r := _cell_rect(pos, bounce * lerpf(0.6, 1.0, ease(appear, 0.4)))
-		var bg := UI.PAPER
+		# Tile colours: face / outline / letter.
+		var face := UI.WHITE
+		var edge := UI.CLOUD
+		var ink := UI.INK
 		if cell["locked"]:
-			bg = UI.GREEN.lerp(Color.WHITE, 0.72)
-		if pos in active_cells:
-			bg = accent.lerp(Color.WHITE, 0.62)
-		if pos == state.cursor:
-			bg = accent.lerp(Color.WHITE, 0.15)
+			face = UI.LEAF_PALE
+			edge = Color("a5ed6e")
+			ink = UI.LEAF_LIP
+		if pos in active_cells and not cell["locked"]:
+			face = Color("f1faff")
+			edge = Color("84d8ff")
+			ink = UI.SKY_LIP
+		if pos == state.cursor and not state.is_complete():
+			face = UI.SKY_PALE
+			edge = UI.SKY
+			ink = UI.SKY_LIP
 		if _flash.has(pos):
-			bg = bg.lerp(UI.RED, clampf(_flash[pos] / FLASH_TIME, 0.0, 1.0))
+			var t: float = clampf(_flash[pos] / FLASH_TIME, 0.0, 1.0)
+			face = face.lerp(UI.BERRY_PALE, t)
+			edge = edge.lerp(UI.BERRY, t)
+			ink = ink.lerp(UI.BERRY, t)
 		if _glow.has(pos):
-			var g: float = clampf(_glow[pos] / GLOW_TIME, 0.0, 1.0)
-			bg = bg.lerp(UI.GOLD, sin(g * PI) * 0.8)
-		var face := UI.box(bg, radius)
-		face.border_width_bottom = int(maxf(2.0, _cell * 0.06))
-		face.border_color = bg.darkened(0.18)
-		draw_style_box(face, r)
+			var g: float = sin(clampf(_glow[pos] / GLOW_TIME, 0.0, 1.0) * PI)
+			face = face.lerp(Color("fff5c2"), g * 0.9)
+			edge = edge.lerp(UI.SUN, g)
+		var sb := StyleBoxFlat.new()
+		sb.bg_color = face
+		sb.set_corner_radius_all(radius)
+		sb.set_border_width_all(int(border))
+		sb.border_width_bottom = int(border + lip)
+		sb.border_color = edge
+		sb.anti_aliasing = true
+		draw_style_box(sb, r)
 
 		if numbers.has(pos):
 			var ns := int(_cell * 0.22)
-			draw_string(fr, r.position + Vector2(_cell * 0.09, ns + _cell * 0.05), str(numbers[pos]), HORIZONTAL_ALIGNMENT_LEFT, -1, ns, Color(UI.INK, 0.55))
+			draw_string(fr, r.position + Vector2(_cell * 0.11, ns + _cell * 0.07), str(numbers[pos]), HORIZONTAL_ALIGNMENT_LEFT, -1, ns, Color(UI.STONE, 0.9))
 
 		if cell["val"] != "":
-			var fs := int(_cell * 0.56)
-			var col := UI.INK
-			if cell["locked"]:
-				col = Color("13804a")
-			elif pos == state.cursor:
-				col = Color.WHITE
-			var baseline := r.position.y + r.size.y * 0.5 + fs * 0.36
-			draw_string(f, Vector2(r.position.x, baseline), cell["val"], HORIZONTAL_ALIGNMENT_CENTER, r.size.x, fs, col)
+			var fs := int(_cell * 0.54)
+			var baseline := r.position.y + (r.size.y - lip) * 0.5 + fs * 0.36
+			draw_string(f, Vector2(r.position.x, baseline), cell["val"], HORIZONTAL_ALIGNMENT_CENTER, r.size.x, fs, ink)
 
-	# Caret under the cursor cell.
-	if state.cells.has(state.cursor) and not state.is_complete():
+	# Blinking caret on the cursor tile.
+	if state.cells.has(state.cursor) and not state.is_complete() and state.cells[state.cursor]["val"] == "":
 		var r := _cell_rect(state.cursor, 1.0)
-		var blink := 0.55 + 0.45 * sin(Time.get_ticks_msec() * 0.008)
-		var bar := Rect2(r.position.x + r.size.x * 0.25, r.end.y - _cell * 0.16, r.size.x * 0.5, maxf(3.0, _cell * 0.05))
-		draw_rect(bar, Color(1, 1, 1, blink))
+		var blink := 0.35 + 0.65 * absf(sin(Time.get_ticks_msec() * 0.004))
+		var bar := Rect2(r.get_center().x - _cell * 0.04, r.position.y + _cell * 0.22, maxf(3.0, _cell * 0.07), _cell * 0.44)
+		draw_rect(bar, Color(UI.SKY, blink))
 		queue_redraw()
 
 func _cell_rect(pos: Vector2i, scale_f: float) -> Rect2:

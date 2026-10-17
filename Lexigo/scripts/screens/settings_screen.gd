@@ -10,7 +10,7 @@ func _build() -> void:
 	for c in get_children():
 		c.queue_free()
 	var root := make_root(24, 16)
-	root.add_child(Widgets.top_bar(main, go_back, "⚙️ " + Loc.t("settings")))
+	root.add_child(Widgets.top_bar(main, go_back, Loc.t("settings")))
 	var scroll := ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
@@ -20,26 +20,34 @@ func _build() -> void:
 	scroll.add_child(v)
 	root.add_child(scroll)
 
-	v.add_child(UI.label(Loc.t("i_speak"), 26, UI.MUTED, true))
-	v.add_child(Widgets.language_chips(Loc.LANGS, Game.native(), func(c):
+	v.add_child(UI.caps(Loc.t("i_speak"), 24))
+	v.add_child(Widgets.language_list(Loc.LANGS, Game.native(), func(c):
 		var t := Game.target()
 		if t == c:
 			t = "en" if c != "en" else "fr"
 		Game.set_languages(c, t)
 		_build()))
-	v.add_child(UI.label(Loc.t("i_learn"), 26, UI.MUTED, true))
+	v.add_child(UI.caps(Loc.t("i_learn"), 24))
 	var targets := Vocab.LANG_NAMES.keys().filter(func(c): return c != Game.native())
-	v.add_child(Widgets.language_chips(targets, Game.target(), func(c):
+	v.add_child(Widgets.language_list(targets, Game.target(), func(c):
 		Game.set_languages(Game.native(), c)
 		_build()))
 
-	v.add_child(_toggle("🔈 " + Loc.t("sound"), "sfx"))
-	v.add_child(_toggle("🔊 " + Loc.t("voice"), "voice"))
-	v.add_child(_toggle("📳 " + Loc.t("haptics"), "haptics"))
-	v.add_child(_toggle("✍️ " + Loc.t("strict"), "strict"))
-	v.add_child(_toggle("🌐 " + Loc.t("online"), "online"))
+	v.add_child(UI.spacer(6))
+	var group := VBoxContainer.new()
+	group.add_theme_constant_override("separation", 0)
+	var card := UI.panel(UI.box(UI.WHITE, UI.R_CARD, UI.BORDER, UI.CLOUD))
+	card.add_child(group)
+	for row in [["speaker", "sound", "sfx"], ["speaker", "voice", "voice"], ["flame", "haptics", "haptics"],
+			["note", "strict", "strict"], ["gem", "online", "online"]]:
+		if group.get_child_count() > 0:
+			group.add_child(Widgets.divider())
+		group.add_child(_toggle(row[0], Loc.t(row[1]), row[2]))
+	v.add_child(card)
 
-	var reset := UI.button(Loc.t("reset_confirm") if _reset_armed else "🔄 " + Loc.t("reset"), UI.RED if _reset_armed else Color("3d3275"), 24, 76)
+	var reset := UI.button(Loc.t("reset_confirm") if _reset_armed else Loc.t("reset"), "danger" if _reset_armed else "neutral", 26, 88)
+	if not _reset_armed:
+		reset.add_theme_color_override("font_color", UI.BERRY)
 	reset.pressed.connect(func():
 		if _reset_armed:
 			Game.reset()
@@ -49,28 +57,43 @@ func _build() -> void:
 			_build())
 	v.add_child(reset)
 
-	v.add_child(UI.label(Loc.t("credits"), 26, UI.MUTED, true))
+	v.add_child(UI.caps(Loc.t("credits"), 24))
 	var credits := UI.label(
-		"Lexigo 1.0 · com.mardev.Lexigo · Made with Godot Engine\n" +
+		"Lexigo 1.1 · com.mardev.Lexigo · Made with Godot Engine\n" +
+		"Font: Nunito (SIL Open Font License)\n" +
 		"Example sentences: Tatoeba.org (CC BY 2.0 FR)\n" +
-		"Native pronunciations: Wiktionary, Wikimedia Commons & Lingua Libre contributors (CC BY-SA)\n" +
-		"Emoji rendered with your device's system font.", 20, Color(1, 1, 1, 0.6))
+		"Native pronunciations: Wiktionary, Wikimedia Commons & Lingua Libre contributors (CC BY-SA)", 22, UI.STONE)
 	credits.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	v.add_child(credits)
 
-func _toggle(text: String, key: String) -> PanelContainer:
-	var p := UI.panel(Color(1, 1, 1, 0.07), 22)
+func _toggle(icon_name: String, text: String, key: String) -> HBoxContainer:
 	var h := HBoxContainer.new()
-	p.add_child(h)
-	var l := UI.label(text, 26, Color.WHITE, true)
+	h.add_theme_constant_override("separation", 16)
+	h.custom_minimum_size.y = 92
+	h.add_child(UI.icon(icon_name, 44))
+	var l := UI.label(text, 28, UI.INK, true)
 	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	h.add_child(l)
-	var on := Game.setting(key)
-	var b := UI.button("ON" if on else "OFF", UI.GREEN if on else Color("5a5180"), 22, 60)
-	b.custom_minimum_size.x = 110
-	b.pressed.connect(func():
+	h.add_child(_switch(Game.setting(key), func():
 		Game.set_setting(key, not Game.setting(key))
-		_build())
-	h.add_child(b)
-	return p
+		_build()))
+	return h
+
+## Pill switch: knob slides right and the track fills blue when on.
+func _switch(on: bool, toggle: Callable) -> Button:
+	var b := Button.new()
+	b.focus_mode = Control.FOCUS_NONE
+	b.custom_minimum_size = Vector2(104, 60)
+	b.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	var track := UI.box(UI.SKY if on else UI.CLOUD, 30)
+	for s in ["normal", "hover", "pressed", "focus"]:
+		b.add_theme_stylebox_override(s, track)
+	var knob := Panel.new()
+	knob.add_theme_stylebox_override("panel", UI.box(UI.WHITE, 24, 0, UI.CLOUD, 4, UI.SKY_LIP if on else Color("cecece")))
+	knob.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	knob.size = Vector2(48, 48)
+	knob.position = Vector2(50 if on else 6, 4)
+	b.add_child(knob)
+	b.pressed.connect(func(): Sfx.play("select"); toggle.call())
+	return b

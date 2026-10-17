@@ -29,6 +29,9 @@ func _ready() -> void:
 	main.goto_home()
 	await _wait(1.6)
 	await _shot("2_home")
+	main.current._scroll.scroll_vertical = 0
+	await _wait(0.5)
+	await _shot("2b_home_top")
 	main.play_level(1, 2)
 	await _wait(1.6)
 	var screen = main.current

@@ -7,12 +7,15 @@ var config: Dictionary
 var state := PuzzleState.new()
 var board: CrosswordBoard
 var keyboard: LetterKeyboard
-var _clue_card: PanelContainer
+var _clue_card: Control
 var _clue_meta: Label
 var _clue_emoji: Label
 var _clue_text: Label
 var _clue_extra: Label
-var _timer_label: PanelContainer
+var _mascot: TextureRect
+var _progress: Control
+var _timer_label: Label
+var _banner: PanelContainer
 var _elapsed := 0.0
 var _done := false
 var _shuffled := {}    # placement index -> scrambled letters string
@@ -20,7 +23,7 @@ var _examples := {}    # placement index -> example dict
 var _hint_buttons := {}
 
 func accent() -> Color:
-	return config.get("color", UI.ACCENT)
+	return config.get("color", UI.SKY)
 
 func go_back() -> bool:
 	Game.save_game()
@@ -39,16 +42,30 @@ func _ready() -> void:
 	_refresh()
 
 func _build() -> void:
-	var root := make_root(18, 12)
-	var bar := Widgets.top_bar(main, go_back, config.get("title", ""))
-	_timer_label = UI.pill("⏱ 0:00")
-	bar.add_child(_timer_label)
-	bar.move_child(_timer_label, 2)
-	root.add_child(bar)
+	var root := make_root(20, 12)
+	# Header: close, progress through the grid, timer.
+	var top := HBoxContainer.new()
+	top.add_theme_constant_override("separation", 16)
+	var close := UI.icon_button("close", 48)
+	close.pressed.connect(go_back)
+	top.add_child(close)
+	_progress = UI.progress_bar(0.0, UI.LEAF, 30)
+	_progress.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_progress.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	top.add_child(_progress)
+	_timer_label = UI.label("0:00", 26, UI.STONE, true)
+	top.add_child(_timer_label)
+	top.add_child(Widgets.coin_stat())
+	root.add_child(top)
+	var title := UI.caps(config.get("title", ""), 22, accent().darkened(0.15))
+	title.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	root.add_child(title)
+
+	root.add_child(_build_clue_card())
 
 	board = CrosswordBoard.new()
 	board.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	board.custom_minimum_size.y = 360
+	board.custom_minimum_size.y = 320
 	board.bind(state, accent())
 	board.cell_tapped.connect(func(p):
 		state.tap(p)
@@ -56,7 +73,6 @@ func _build() -> void:
 		_refresh())
 	root.add_child(board)
 
-	root.add_child(_build_clue_card())
 	root.add_child(_build_hints())
 
 	keyboard = LetterKeyboard.new()
@@ -67,62 +83,103 @@ func _build() -> void:
 		_refresh())
 	root.add_child(keyboard)
 
-func _build_clue_card() -> PanelContainer:
-	_clue_card = PanelContainer.new()
-	var st := UI.box(Color.WHITE, 26, 8)
-	st.content_margin_left = 8
-	st.content_margin_right = 8
-	_clue_card.add_theme_stylebox_override("panel", st)
+## Lexi "asks" for the current word from a speech bubble.
+func _build_clue_card() -> Control:
 	var h := HBoxContainer.new()
-	_clue_card.add_child(h)
-	var prev := UI.flat_button("‹", 52, UI.INK)
+	h.add_theme_constant_override("separation", 4)
+	_mascot = UI.mascot("think", 132)
+	h.add_child(_mascot)
+	var bubble := UI.panel(UI.box(UI.WHITE, UI.R_CARD, UI.BORDER, UI.CLOUD))
+	bubble.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 10)
+	bubble.add_child(row)
+	var prev := UI.flat_button("‹", 56, UI.MIST)
 	prev.pressed.connect(func(): state.next_word(-1); _refresh(true))
-	h.add_child(prev)
-	_clue_emoji = UI.label("", 60, UI.INK, false, HORIZONTAL_ALIGNMENT_CENTER)
-	_clue_emoji.custom_minimum_size.x = 84
-	h.add_child(_clue_emoji)
+	row.add_child(prev)
+	_clue_emoji = UI.label("", 56, UI.INK, false, HORIZONTAL_ALIGNMENT_CENTER)
+	_clue_emoji.custom_minimum_size.x = 76
+	row.add_child(_clue_emoji)
 	var v := VBoxContainer.new()
-	v.add_theme_constant_override("separation", 2)
+	v.add_theme_constant_override("separation", 0)
 	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_clue_meta = UI.label("", 20, accent().darkened(0.2), true)
-	_clue_text = UI.label("", 34, UI.INK, true)
+	_clue_meta = UI.caps("", 20, UI.STONE)
+	_clue_text = UI.label("", 36, UI.INK, true)
 	_clue_text.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-	_clue_extra = UI.label("", 22, Color(UI.INK, 0.7))
+	_clue_extra = UI.label("", 24, UI.STONE)
 	_clue_extra.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	v.add_child(_clue_meta)
 	v.add_child(_clue_text)
 	v.add_child(_clue_extra)
-	h.add_child(v)
-	var nxt := UI.flat_button("›", 52, UI.INK)
+	row.add_child(v)
+	var nxt := UI.flat_button("›", 56, UI.MIST)
 	nxt.pressed.connect(func(): state.next_word(1); _refresh(true))
-	h.add_child(nxt)
-	return _clue_card
+	row.add_child(nxt)
+	h.add_child(bubble)
+	_clue_card = h
+	return h
 
 func _build_hints() -> HBoxContainer:
 	var h := HBoxContainer.new()
-	h.add_theme_constant_override("separation", 8)
-	var defs := [
-		["letter", "💡", Loc.t("hint_letter"), Color("ffb703")],
-		["shuffle", "🔀", Loc.t("hint_shuffle"), Color("3a86ff")],
-		["listen", "🔊", Loc.t("hint_listen"), Color("2ec4b6")],
-		["example", "📝", Loc.t("hint_example"), Color("9d4edd")],
-		["word", "✨", Loc.t("hint_word"), Color("ff5ca8")],
-	]
+	h.add_theme_constant_override("separation", 10)
+	var defs := [["letter", "bulb"], ["shuffle", "shuffle"], ["listen", "speaker"], ["example", "note"], ["word", "sparkle"]]
 	for d in defs:
 		var cost: int = Game.HINT_COST[d[0]]
-		var label := "%s %s" % [d[1], ("%d" % cost) if cost > 0 else d[2]]
-		var b := UI.button(label, d[3], 22, 64)
+		var b := UI.button(str(cost) if cost > 0 else "", "neutral", 24, 76, d[1])
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		b.tooltip_text = d[2]
+		b.add_theme_color_override("font_color", UI.SUN_LIP)
+		b.add_theme_color_override("font_pressed_color", UI.SUN_LIP)
+		b.add_theme_color_override("font_hover_color", UI.SUN_LIP)
+		b.icon = UI.icon_texture(d[1], 44)
+		b.tooltip_text = Loc.t("hint_" + d[0])
 		b.pressed.connect(_use_hint.bind(d[0]))
 		h.add_child(b)
 		_hint_buttons[d[0]] = b
 	return h
 
+## Slides a feedback strip in over the keyboard, then away again.
+func _feedback(good: bool, title: String, detail := "") -> void:
+	if is_instance_valid(_banner):
+		_banner.queue_free()
+	var color := UI.LEAF_LIP if good else UI.BERRY_LIP
+	_banner = UI.panel(UI.box(UI.LEAF_PALE if good else UI.BERRY_PALE, UI.R_CARD))
+	_banner.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var h := HBoxContainer.new()
+	h.add_theme_constant_override("separation", 16)
+	var icon_bg := UI.panel(UI.box(UI.WHITE, 40))
+	icon_bg.add_child(UI.icon("check" if good else "close", 44))
+	h.add_child(icon_bg)
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", 0)
+	v.add_child(UI.label(title, 36, color, true))
+	if detail != "":
+		v.add_child(UI.label(detail, 26, color))
+	h.add_child(v)
+	_banner.add_child(h)
+	add_child(_banner)
+	var w := size.x - 40.0
+	_banner.custom_minimum_size.x = w
+	_banner.reset_size()
+	var y := keyboard.get_global_rect().position.y - get_global_rect().position.y
+	_banner.position = Vector2(20, size.y)
+	var tw := _banner.create_tween()
+	tw.tween_property(_banner, "position:y", y - 12, 0.25).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tw.tween_interval(1.1)
+	tw.tween_property(_banner, "position:y", size.y, 0.25).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
+	tw.tween_callback(_banner.queue_free)
+
+func _set_mascot(pose: String, back_after := 1.4) -> void:
+	_mascot.texture = UI.art_texture("mascot/lexi_%s.svg" % pose, 132)
+	UI.pop(_mascot, 1.12)
+	if back_after > 0:
+		get_tree().create_timer(back_after).timeout.connect(func():
+			if is_instance_valid(_mascot) and not _done:
+				_mascot.texture = UI.art_texture("mascot/lexi_think.svg", 132))
+
 func _process(delta: float) -> void:
 	if not _done:
 		_elapsed += delta
-		_timer_label.get_node("Label").text = "⏱ " + UI.format_time(_elapsed)
+		_timer_label.text = UI.format_time(_elapsed)
 
 func _unhandled_key_input(event: InputEvent) -> void:
 	if _done or not (event is InputEventKey) or not event.pressed:
@@ -163,6 +220,11 @@ func _type(c: String) -> void:
 
 func _on_word_solved(i: int) -> void:
 	board.celebrate_word(i)
+	UI.set_progress(_progress, float(state.solved.size()) / maxf(1.0, state.placements.size()))
+	var w: Dictionary = state.placements[i]["word"]
+	if not state.is_complete():
+		_feedback(true, Loc.t("praise%d" % (1 + state.solved.size() % 3)), "%s = %s" % [Vocab.display(w, Game.target()), Vocab.display(w, Game.native())])
+	_set_mascot("cheer")
 	Sfx.play("correct", randf_range(0.97, 1.05))
 	Sfx.buzz(30)
 	UI.pop(_clue_card, 1.04)
@@ -171,6 +233,8 @@ func _on_word_solved(i: int) -> void:
 
 func _on_word_wrong(i: int) -> void:
 	board.flash_word(i)
+	_feedback(false, Loc.t("not_quite"))
+	_set_mascot("oops")
 	Sfx.play("wrong")
 	Sfx.buzz(60)
 	UI.shake(_clue_card)
@@ -189,7 +253,7 @@ func _refresh(sound := false) -> void:
 	var p: Dictionary = state.placements[w]
 	var word: Dictionary = p["word"]
 	var dir_name := Loc.t("across") if p["dir"] == CrosswordGenerator.ACROSS else Loc.t("down")
-	_clue_meta.text = "%d %s · %d" % [p["number"], dir_name, p["answer"].length()] + (" ✓" if state.solved.has(w) else "")
+	_clue_meta.text = ("%d %s · %d · " % [p["number"], dir_name, p["answer"].length()]) + Loc.t("write_in") % Vocab.LANG_NAMES[Game.target()]
 	_clue_emoji.text = word["emoji"]
 	_clue_text.text = Vocab.display(word, Game.native())
 	var extra := ""
@@ -286,6 +350,7 @@ func _on_completed() -> void:
 
 	await get_tree().create_timer(0.35).timeout
 	board.celebrate_all()
+	_set_mascot("cheer", 0)
 	Sfx.play("win")
 	main.confetti(board.global_position + Vector2(board.size.x * 0.5, board.size.y * 0.7))
 	await get_tree().create_timer(1.1).timeout
@@ -296,6 +361,7 @@ func _on_completed() -> void:
 		"stars": stars, "coins": coins, "xp": xp, "time": _elapsed,
 		"mistakes": state.mistakes, "hints": state.hints_used, "new_world": new_world,
 		"words": state.placements.map(func(p): return p["word"]),
+		"clean": state.word_help.values().count(0),
 	})
 	add_child(panel)
 

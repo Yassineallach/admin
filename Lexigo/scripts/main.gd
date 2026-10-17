@@ -133,10 +133,12 @@ func _start_puzzle(cfg: Dictionary) -> void:
 func toast(text: String) -> void:
 	if _toast:
 		_toast.queue_free()
-	_toast = UI.pill(text, Color(0.08, 0.05, 0.2, 0.92))
+	_toast = UI.panel(UI.box(UI.INK, 28))
+	var l := UI.label(text, 28, UI.WHITE, true, HORIZONTAL_ALIGNMENT_CENTER)
+	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_toast.add_child(l)
 	_toast.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	overlay.add_child(_toast)
-	_toast.get_node("Label").autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_toast.custom_minimum_size.x = minf(640.0, size.x - 48.0)
 	_toast.reset_size()
 	_toast.position = Vector2((size.x - _toast.size.x) * 0.5, size.y * 0.16)

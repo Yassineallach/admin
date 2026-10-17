@@ -1,192 +1,251 @@
 extends Screen
-## World map: profile header, daily/review shortcuts and the world journey.
+## Learning path: stats bar, world banners with a winding trail of level
+## nodes, the mascot cheering beside your current level, and a tab bar.
+
+const NODE := 116.0
+const STEP := 226.0
+const ZIGZAG := [0.0, 72.0, 112.0, 72.0, 0.0, -72.0]
 
 var _scroll: ScrollContainer
+var _current_node: Control
 
 func go_back() -> bool:
 	return false
 
 func _ready() -> void:
-	var root := make_root(24, 18)
-	root.add_child(_header())
-	var logo := Widgets.logo(64)
-	root.add_child(logo)
-	var learning := UI.flat_button("%s  %s  ›" % [Vocab.LANG_FLAGS[Game.target()], Vocab.LANG_NAMES[Game.target()]], 26, UI.MUTED)
-	learning.pressed.connect(main.open_settings)
-	root.add_child(learning)
-	root.add_child(_shortcuts())
+	var root := make_root(0, 0)
+	root.add_child(UI.margin(_stats_bar(), 28, 8, 28, 8))
+	root.add_child(Widgets.divider())
 
 	_scroll = ScrollContainer.new()
 	_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	var list := VBoxContainer.new()
 	list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	list.add_theme_constant_override("separation", 20)
-	_scroll.add_child(list)
+	list.add_theme_constant_override("separation", 18)
+	var lm := UI.margin(list, 24, 24, 24, 40)
+	lm.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_scroll.add_child(lm)
 	root.add_child(_scroll)
-	var focus_world := 0
 	for w in Vocab.worlds.size():
-		var card := _world_card(w)
-		list.add_child(card)
-		UI.appear(card, 0.08 + w * 0.05)
+		list.add_child(_banner(w))
 		if Game.world_unlocked(w):
-			focus_world = w
-	var pad := Control.new()
-	pad.custom_minimum_size.y = 24
-	list.add_child(pad)
-	root.add_child(_nav())
-	# Scroll so the newest unlocked world is in view.
-	await get_tree().process_frame
-	await get_tree().process_frame
-	if is_instance_valid(_scroll) and focus_world > 0:
-		var target: Control = list.get_child(focus_world)
-		create_tween().tween_property(_scroll, "scroll_vertical", int(target.position.y), 0.6).set_trans(Tween.TRANS_CUBIC)
+			list.add_child(_path(w))
+	root.add_child(Widgets.divider())
+	root.add_child(UI.margin(_tab_bar(), 20, 8, 20, 8))
 
-func _header() -> HBoxContainer:
+	await get_tree().process_frame
+	await get_tree().process_frame
+	if is_instance_valid(_current_node) and is_instance_valid(_scroll):
+		var y := _current_node.get_global_rect().position.y - _scroll.get_global_rect().position.y - 260.0
+		if y > 0:
+			create_tween().tween_property(_scroll, "scroll_vertical", int(y), 0.7).set_trans(Tween.TRANS_CUBIC)
+
+func _stats_bar() -> HBoxContainer:
 	var h := HBoxContainer.new()
-	var lvl := UI.panel(Color(0, 0, 0, 0.25), 36)
-	var lv := VBoxContainer.new()
-	lv.add_theme_constant_override("separation", 6)
-	lv.custom_minimum_size.x = 190
-	lv.add_child(UI.label("⭐ %s %d" % [Loc.t("level"), Game.player_level()], 24, Color.WHITE, true))
-	lv.add_child(UI.progress_bar(Game.level_progress(), UI.GOLD, 10))
-	lvl.add_child(lv)
-	h.add_child(lvl)
+	h.add_theme_constant_override("separation", 22)
+	var flag := Button.new()
+	flag.text = Vocab.LANG_FLAGS[Game.target()]
+	flag.flat = true
+	flag.add_theme_font_size_override("font_size", 44)
+	flag.focus_mode = Control.FOCUS_NONE
+	flag.pressed.connect(main.open_settings)
+	h.add_child(flag)
 	var sp := Control.new()
 	sp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	h.add_child(sp)
-	h.add_child(UI.pill("🔥 %d" % Game.current_streak()))
-	h.add_child(UI.pill("⭐ %d" % Game.total_stars()))
-	h.add_child(Widgets.coin_pill())
+	var streak := Game.current_streak()
+	h.add_child(UI.stat("flame", str(streak), UI.FLAME if streak > 0 else UI.MIST))
+	h.add_child(UI.stat("star", str(Game.total_stars()), UI.SUN_LIP))
+	h.add_child(Widgets.coin_stat())
+	var lvl := UI.stat("gem", "%d" % Game.player_level(), UI.SKY)
+	lvl.tooltip_text = Loc.t("level")
+	h.add_child(lvl)
 	return h
 
-func _shortcuts() -> HBoxContainer:
-	var h := HBoxContainer.new()
-	h.add_theme_constant_override("separation", 16)
-	var done := Game.daily_done()
-	var daily := UI.button("📅 %s%s" % [Loc.t("daily"), "  ✓" if done else ""], Color("e0a100") if not done else Color("6c6496"), 28, 96)
-	daily.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	daily.pressed.connect(main.play_daily)
-	h.add_child(daily)
-	var due := Game.due_words().size()
-	var review := UI.button("🧠 %s" % Loc.t("review"), UI.ACCENT_2, 28, 96)
-	review.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	review.pressed.connect(main.play_review)
-	if due > 0:
-		var badge := UI.pill(str(due), UI.RED)
-		badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		badge.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-		badge.position = Vector2(-50, -14)
-		review.add_child(badge)
-		var tw := badge.create_tween().set_loops()
-		tw.tween_property(badge, "scale", Vector2.ONE * 1.12, 0.5).set_trans(Tween.TRANS_SINE)
-		tw.tween_property(badge, "scale", Vector2.ONE, 0.5).set_trans(Tween.TRANS_SINE)
-	h.add_child(review)
-	if not done:
-		var tw2 := daily.create_tween().set_loops()
-		tw2.tween_interval(2.0)
-		tw2.tween_callback(func(): UI.pop(daily, 1.05, 0.4))
-	return h
-
-func _world_card(w: int) -> PanelContainer:
+func _banner(w: int) -> PanelContainer:
 	var world: Dictionary = Vocab.worlds[w]
-	var color: Color = world["color"]
 	var unlocked := Game.world_unlocked(w)
-	var card := PanelContainer.new()
-	var st := UI.box(color.darkened(0.45) if unlocked else Color(0.2, 0.18, 0.32, 0.8), 32, 10)
-	st.border_width_top = 6
-	st.border_color = color if unlocked else Color(1, 1, 1, 0.08)
-	st.content_margin_left = 22
-	st.content_margin_right = 22
-	st.content_margin_top = 18
-	st.content_margin_bottom = 22
-	card.add_theme_stylebox_override("panel", st)
+	var color: Color = world["color"] if unlocked else UI.MIST
+	var p := UI.panel(UI.box(color, UI.R_CARD, 0, UI.CLOUD, UI.LIP, color.darkened(0.2)))
+	var h := HBoxContainer.new()
+	p.add_child(h)
 	var v := VBoxContainer.new()
-	v.add_theme_constant_override("separation", 14)
-	card.add_child(v)
-
-	var head := HBoxContainer.new()
-	head.add_child(UI.label(world["emoji"] if unlocked else "🔒", 52))
-	var titles := VBoxContainer.new()
-	titles.add_theme_constant_override("separation", 0)
-	titles.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	var sub := "%s %d" % [Loc.t("world"), w + 1]
-	titles.add_child(UI.label(sub.to_upper(), 18, color.lightened(0.4) if unlocked else UI.MUTED, true))
-	titles.add_child(UI.label(Vocab.world_name(w, Game.native()), 32, Color.WHITE if unlocked else UI.MUTED, true))
-	head.add_child(titles)
-	var max_stars := Vocab.LEVELS_PER_WORLD * 3
-	head.add_child(UI.pill("★ %d/%d" % [Game.world_stars(w), max_stars], Color(0, 0, 0, 0.3)))
-	v.add_child(head)
-
+	v.add_theme_constant_override("separation", 2)
+	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	v.alignment = BoxContainer.ALIGNMENT_CENTER
+	v.add_child(UI.caps("%s %d · ★ %d/%d" % [Loc.t("world"), w + 1, Game.world_stars(w), Vocab.LEVELS_PER_WORLD * 3], 22, Color(1, 1, 1, 0.8)))
+	var name := UI.label(Vocab.world_name(w, Game.native()), 36, UI.WHITE, true)
+	name.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	v.add_child(name)
 	if not unlocked:
-		var hint := UI.label(Loc.t("locked"), 22, UI.MUTED)
+		var hint := UI.label(Loc.t("locked"), 22, Color(1, 1, 1, 0.9))
 		hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		v.add_child(hint)
-		return card
+	h.add_child(v)
+	var badge := UI.art("worlds/%s.svg" % world["id"], 112)
+	if not unlocked:
+		badge.modulate = Color(1, 1, 1, 0.45)
+	h.add_child(badge)
+	return p
 
-	# Preview of the words waiting in this world, in the target language.
-	var preview := ""
-	var ws := Vocab.playable_words(w, Game.target())
-	for i in mini(5, ws.size()):
-		preview += ws[i]["emoji"] + " "
-	v.add_child(UI.label(preview + "…", 26, Color(1, 1, 1, 0.75)))
-
-	var path := HBoxContainer.new()
-	path.alignment = BoxContainer.ALIGNMENT_CENTER
-	path.add_theme_constant_override("separation", 10)
+func _path(w: int) -> Control:
+	var area := Control.new()
+	area.custom_minimum_size.y = Vocab.LEVELS_PER_WORLD * STEP + 40
+	area.mouse_filter = Control.MOUSE_FILTER_PASS
+	var color: Color = Vocab.worlds[w]["color"]
+	var current := -1
 	for l in Vocab.LEVELS_PER_WORLD:
-		path.add_child(_level_node(w, l, color))
-	v.add_child(path)
-	return card
+		if Game.level_unlocked(w, l) and Game.stars(w, l) == 0 and current < 0:
+			current = l
+	for l in Vocab.LEVELS_PER_WORLD:
+		var node := _node(w, l, color, l == current)
+		var x: float = ZIGZAG[l % ZIGZAG.size()]
+		node.anchor_left = 0.5
+		node.anchor_right = 0.5
+		node.offset_left = x - NODE * 0.5
+		node.offset_right = x + NODE * 0.5
+		node.offset_top = 70 + l * STEP
+		node.offset_bottom = node.offset_top + NODE + 40
+		area.add_child(node)
+		if l == current:
+			_current_node = node
+	# The mascot keeps you company beside the current stretch of trail.
+	if current >= 0 or w == Game.unlocked_worlds() - 1:
+		var spot := clampi(current if current >= 0 else 2, 0, Vocab.LEVELS_PER_WORLD - 1)
+		var side := -1.0 if ZIGZAG[spot % ZIGZAG.size()] >= 0 else 1.0
+		var m := UI.mascot("happy" if current >= 0 else "cheer", 170)
+		m.anchor_left = 0.5
+		m.anchor_right = 0.5
+		m.offset_left = side * 190 - 85
+		m.offset_right = m.offset_left + 170
+		m.offset_top = 60 + spot * STEP
+		m.offset_bottom = m.offset_top + 170
+		if side > 0:
+			m.flip_h = true
+		area.add_child(m)
+		UI.bob(m, 6.0, 2.2)
+	return area
 
-func _level_node(w: int, l: int, color: Color) -> VBoxContainer:
-	var col := VBoxContainer.new()
-	col.add_theme_constant_override("separation", 4)
-	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+func _node(w: int, l: int, color: Color, is_current: bool) -> Control:
+	var holder := Control.new()
+	holder.mouse_filter = Control.MOUSE_FILTER_PASS
 	var unlocked := Game.level_unlocked(w, l)
 	var s := Game.stars(w, l)
 	var boss := l == Vocab.LEVELS_PER_WORLD - 1
-	var is_next := unlocked and s == 0
-	var face := color if unlocked else Color(1, 1, 1, 0.12)
-	if s > 0:
-		face = color.lightened(0.15)
-	var text := "👑" if boss else str(l + 1)
+	var b := Button.new()
+	b.focus_mode = Control.FOCUS_NONE
+	b.custom_minimum_size = Vector2(NODE, NODE - 8)
+	b.size = b.custom_minimum_size
+	b.position = Vector2(0, 0)
+	var face := color if unlocked else UI.CLOUD
+	var lip := color.darkened(0.25) if unlocked else Color("cecece")
+	var normal := UI.box(face, int(NODE * 0.5), 0, UI.CLOUD, 12, lip)
+	var pressed := normal.duplicate()
+	pressed.border_width_bottom = 0
+	pressed.expand_margin_top = -12
+	b.add_theme_stylebox_override("normal", normal)
+	b.add_theme_stylebox_override("hover", normal)
+	b.add_theme_stylebox_override("pressed", pressed)
+	b.add_theme_stylebox_override("disabled", normal)
+	b.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
+	b.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	b.expand_icon = false
 	if not unlocked:
-		text = "🔒"
-	var b := UI.button(text, face, 30, 84)
-	var round_st: StyleBoxFlat = b.get_theme_stylebox("normal").duplicate()
-	round_st.set_corner_radius_all(42)
-	if is_next:
-		round_st.set_border_width_all(4)
-		round_st.border_width_bottom = 8
-		round_st.border_color = Color.WHITE
-	b.add_theme_stylebox_override("normal", round_st)
-	b.add_theme_stylebox_override("hover", round_st)
-	var pressed_st: StyleBoxFlat = b.get_theme_stylebox("pressed").duplicate()
-	pressed_st.set_corner_radius_all(42)
-	b.add_theme_stylebox_override("pressed", pressed_st)
+		b.icon = UI.icon_texture("lock", 52)
+	elif boss:
+		b.icon = UI.icon_texture("crown", 60)
+	elif s > 0:
+		b.icon = UI.icon_texture("star", 56)
+	else:
+		b.text = str(l + 1)
+		b.add_theme_font_override("font", UI.font(true))
+		b.add_theme_font_size_override("font_size", 46)
+		for c in ["font_color", "font_hover_color", "font_pressed_color"]:
+			b.add_theme_color_override(c, UI.WHITE)
 	b.disabled = not unlocked
-	b.custom_minimum_size = Vector2(84, 84)
-	b.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	b.pressed.connect(main.play_level.bind(w, l))
-	col.add_child(b)
-	var st := UI.label(UI.stars_text(s) if unlocked else " ", 18, UI.GOLD, true, HORIZONTAL_ALIGNMENT_CENTER)
-	col.add_child(st)
-	if is_next:
-		var tw := b.create_tween().set_loops()
-		tw.tween_callback(func(): UI.pop(b, 1.1, 0.5))
-		tw.tween_interval(1.4)
-	return col
+	b.pressed.connect(func():
+		Sfx.play("select")
+		main.play_level(w, l))
+	holder.add_child(b)
 
-func _nav() -> HBoxContainer:
+	if unlocked and s > 0:
+		var stars := HBoxContainer.new()
+		stars.add_theme_constant_override("separation", 0)
+		stars.position = Vector2(NODE * 0.5 - 51, NODE + 2)
+		for i in 3:
+			stars.add_child(UI.icon("star" if i < s else "star_empty", 34))
+		holder.add_child(stars)
+
+	if is_current:
+		# Pulsing ring + "START" bubble above the node.
+		var ring := Panel.new()
+		ring.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var rs := StyleBoxFlat.new()
+		rs.draw_center = false
+		rs.set_border_width_all(8)
+		rs.border_color = Color(color, 0.35)
+		rs.set_corner_radius_all(int(NODE * 0.5 + 14))
+		rs.anti_aliasing = true
+		ring.add_theme_stylebox_override("panel", rs)
+		ring.position = Vector2(-14, -14)
+		ring.size = Vector2(NODE + 28, NODE + 20)
+		holder.add_child(ring)
+		holder.move_child(ring, 0)
+		var start := UI.panel(UI.box(UI.WHITE, 22, UI.BORDER, UI.CLOUD, 2))
+		var sl := UI.caps(Loc.t("start_node"), 24, color.darkened(0.1))
+		sl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		start.add_child(sl)
+		start.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		holder.add_child(start)
+		start.position = Vector2(NODE * 0.5 - 80, -74)
+		start.custom_minimum_size = Vector2(160, 0)
+		UI.bob(start, 6.0, 1.4)
+	return holder
+
+func _tab_bar() -> HBoxContainer:
 	var h := HBoxContainer.new()
-	h.add_theme_constant_override("separation", 14)
-	var words := UI.button("📚 " + Loc.t("lexicon"), Color("2c2360"), 26, 80)
-	words.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	words.pressed.connect(main.open_lexicon)
-	h.add_child(words)
-	var settings := UI.button("⚙️ " + Loc.t("settings"), Color("2c2360"), 26, 80)
-	settings.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	settings.pressed.connect(main.open_settings)
-	h.add_child(settings)
+	h.add_theme_constant_override("separation", 8)
+	var tabs := [
+		["map", Callable(), true],
+		["calendar", main.play_daily, false],
+		["review", main.play_review, false],
+		["book", main.open_lexicon, false],
+		["gear", main.open_settings, false],
+	]
+	for t in tabs:
+		var b := Button.new()
+		b.icon = UI.icon_texture(t[0], 60)
+		b.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		b.focus_mode = Control.FOCUS_NONE
+		b.custom_minimum_size = Vector2(0, 92)
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		var st: StyleBox = UI.box(UI.SKY_PALE, 22, UI.BORDER, Color("84d8ff")) if t[2] else StyleBoxEmpty.new()
+		for s in ["normal", "hover", "pressed", "focus"]:
+			b.add_theme_stylebox_override(s, st)
+		if t[1].is_valid():
+			b.pressed.connect(t[1])
+		b.pressed.connect(func(): Sfx.play("tap"))
+		h.add_child(b)
+		if t[0] == "review":
+			var due := Game.due_words().size()
+			if due > 0:
+				var badge := UI.panel(UI.box(UI.BERRY, 20))
+				var bl := UI.label(str(due), 20, UI.WHITE, true, HORIZONTAL_ALIGNMENT_CENTER)
+				badge.add_child(bl)
+				badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
+				var sb: StyleBoxFlat = badge.get_theme_stylebox("panel")
+				sb.content_margin_left = 10
+				sb.content_margin_right = 10
+				sb.content_margin_top = 0
+				sb.content_margin_bottom = 0
+				b.add_child(badge)
+				badge.position = Vector2(70, 2)
+		if t[0] == "calendar" and not Game.daily_done():
+			var dot := Panel.new()
+			dot.add_theme_stylebox_override("panel", UI.box(UI.FLAME, 11))
+			dot.size = Vector2(22, 22)
+			dot.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			b.add_child(dot)
+			dot.position = Vector2(80, 8)
 	return h

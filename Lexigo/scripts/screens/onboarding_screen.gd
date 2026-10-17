@@ -1,9 +1,9 @@
 extends Screen
-## First launch: pick the language you speak and the one you want to learn.
+## First launch, in two steps: the language you speak, then the one to learn.
 
 var _native := "en"
 var _target := "fr"
-var _animated := false
+var _step := 0
 
 func _ready() -> void:
 	_native = Game.native()
@@ -11,46 +11,57 @@ func _ready() -> void:
 	_build()
 
 func go_back() -> bool:
+	if _step == 1:
+		_step = 0
+		_build()
+		return true
 	return false
 
 func _build() -> void:
 	for c in get_children():
 		c.queue_free()
 	Loc.lang = _native
-	var root := make_root(32, 22)
-	root.alignment = BoxContainer.ALIGNMENT_CENTER
-	root.add_child(Widgets.logo(92))
-	var tag := UI.label(Loc.t("tagline"), 28, UI.MUTED, false, HORIZONTAL_ALIGNMENT_CENTER)
-	tag.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	root.add_child(tag)
-	root.add_child(_spacer(20))
-	root.add_child(UI.label(Loc.t("i_speak"), 30, Color.WHITE, true))
-	root.add_child(Widgets.language_chips(Loc.LANGS, _native, func(c):
-		_native = c
-		if _target == c:
-			_target = "en" if c != "en" else "fr"
-		_build()))
-	root.add_child(_spacer(10))
-	root.add_child(UI.label(Loc.t("i_learn"), 30, Color.WHITE, true))
-	var targets := Vocab.LANG_NAMES.keys().filter(func(c): return c != _native)
-	root.add_child(Widgets.language_chips(targets, _target, func(c):
-		_target = c
-		_build()))
-	root.add_child(_spacer(30))
-	var go := UI.button(Loc.t("start"), UI.GREEN, 36, 104)
-	go.pressed.connect(_finish)
+	var root := make_root(32, 24)
+	var top := HBoxContainer.new()
+	var back := UI.icon_button("close" if _step == 0 else "close", 48)
+	back.visible = _step == 1
+	back.pressed.connect(go_back)
+	top.add_child(back)
+	var bar := UI.progress_bar(0.5 if _step == 0 else 1.0, UI.LEAF, 28)
+	bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	bar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	top.add_child(bar)
+	root.add_child(top)
+	if _step == 0:
+		root.add_child(Widgets.logo(84))
+		var says := Widgets.mascot_says("wave", "%s\n%s" % [Loc.t("hello_lexi"), Loc.t("ask_native")])
+		root.add_child(says)
+		root.add_child(Widgets.language_list(Loc.LANGS, _native, func(c):
+			_native = c
+			if _target == c:
+				_target = "en" if c != "en" else "fr"
+			_build()))
+	else:
+		root.add_child(UI.spacer(20))
+		root.add_child(Widgets.mascot_says("happy", Loc.t("ask_target")))
+		var targets := Vocab.LANG_NAMES.keys().filter(func(c): return c != _native)
+		root.add_child(Widgets.language_list(targets, _target, func(c):
+			_target = c
+			_build()))
+	root.add_child(UI.spacer(10, true))
+	root.add_child(Widgets.divider())
+	var go := UI.button(Loc.t("continue"), "primary", 30, 104)
+	go.pressed.connect(_next)
 	root.add_child(go)
-	if not _animated:
-		_animated = true
-		for i in root.get_child_count():
-			UI.appear(root.get_child(i), i * 0.05)
+	var says_node: Control = root.get_child(2 if _step == 0 else 2)
+	UI.appear(says_node)
 
-func _spacer(h: int) -> Control:
-	var c := Control.new()
-	c.custom_minimum_size.y = h
-	return c
-
-func _finish() -> void:
+func _next() -> void:
+	if _step == 0:
+		_step = 1
+		Sfx.play("whoosh")
+		_build()
+		return
 	Game.set_languages(_native, _target)
 	Game.data["onboarded"] = true
 	Game.save_game()

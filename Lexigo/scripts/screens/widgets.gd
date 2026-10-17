@@ -2,75 +2,93 @@ class_name Widgets
 extends RefCounted
 ## Composite widgets shared by several screens.
 
-## Crossword-tile logo: each letter on its own bouncing tile.
-static func logo(tile := 86) -> HBoxContainer:
+## Lower-case rounded wordmark.
+static func logo(size := 72) -> Label:
+	var l := UI.label("lexigo", size, UI.LEAF, true, HORIZONTAL_ALIGNMENT_CENTER)
+	var f := FontVariation.new()
+	f.base_font = load("res://assets/fonts/Nunito.ttf")
+	f.variation_opentype = {TextServerManager.get_primary_interface().name_to_tag("wght"): 1000}
+	f.spacing_glyph = -2
+	l.add_theme_font_override("font", f)
+	return l
+
+## Mascot with a speech bubble beside it.
+static func mascot_says(pose: String, text: String, mascot_px := 170) -> HBoxContainer:
 	var h := HBoxContainer.new()
-	h.alignment = BoxContainer.ALIGNMENT_CENTER
-	h.add_theme_constant_override("separation", 8)
-	var colors := [Color("7c5cff"), Color("ff5ca8"), Color("ffc93c"), Color("2ec4b6"), Color("3a86ff"), Color("ff6b6b")]
-	var word := "LEXIGO"
-	for i in word.length():
-		var p := PanelContainer.new()
-		var s := UI.box(Color.WHITE, int(tile * 0.22))
-		s.border_width_bottom = int(tile * 0.1)
-		s.border_color = colors[i].darkened(0.1)
-		s.content_margin_left = 0
-		s.content_margin_right = 0
-		s.content_margin_top = 0
-		s.content_margin_bottom = 0
-		p.add_theme_stylebox_override("panel", s)
-		p.custom_minimum_size = Vector2(tile, tile)
-		var l := UI.label(word[i], int(tile * 0.62), colors[i], true, HORIZONTAL_ALIGNMENT_CENTER)
-		p.add_child(l)
-		h.add_child(p)
-		var tw := p.create_tween().set_loops()
-		tw.tween_interval(i * 0.12)
-		tw.tween_property(p, "position:y", -10.0, 0.35).as_relative().set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
-		tw.tween_property(p, "position:y", 10.0, 0.35).as_relative().set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
-		tw.tween_interval(2.6 - i * 0.12)
+	h.add_theme_constant_override("separation", 6)
+	var m := UI.mascot(pose, mascot_px)
+	h.add_child(m)
+	var v := VBoxContainer.new()
+	v.alignment = BoxContainer.ALIGNMENT_CENTER
+	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var l := UI.label(text, 32, UI.INK, true)
+	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	l.name = "Text"
+	var b := UI.bubble(l)
+	v.add_child(b)
+	h.add_child(v)
 	return h
 
-## Selectable language chips. on_pick(code) is called when one is chosen.
-static func language_chips(codes: Array, selected: String, on_pick: Callable, columns := 3) -> GridContainer:
+## Selectable list of languages as outlined cards with flags.
+static func language_list(codes: Array, selected: String, on_pick: Callable, columns := 2) -> GridContainer:
 	var g := GridContainer.new()
 	g.columns = columns
-	g.add_theme_constant_override("h_separation", 12)
-	g.add_theme_constant_override("v_separation", 12)
+	g.add_theme_constant_override("h_separation", 14)
+	g.add_theme_constant_override("v_separation", 14)
 	for code in codes:
 		var on: bool = code == selected
-		var b := UI.button("%s  %s" % [Vocab.LANG_FLAGS[code], Vocab.LANG_NAMES[code]], UI.ACCENT if on else Color("2c2360"), 24, 76)
+		var b := Button.new()
+		b.text = "%s  %s" % [Vocab.LANG_FLAGS[code], Vocab.LANG_NAMES[code]]
+		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		b.custom_minimum_size = Vector2(0, 96)
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		if on:
-			var st: StyleBoxFlat = b.get_theme_stylebox("normal").duplicate()
-			st.set_border_width_all(4)
-			st.border_width_bottom = 8
-			st.border_color = UI.GOLD
-			b.add_theme_stylebox_override("normal", st)
-			b.add_theme_stylebox_override("hover", st)
-		b.pressed.connect(on_pick.bind(code))
+		b.focus_mode = Control.FOCUS_NONE
+		b.add_theme_font_override("font", UI.font(true))
+		b.add_theme_font_size_override("font_size", 30)
+		var st := UI.card_box(on, UI.R_BUTTON)
+		var pressed := st.duplicate()
+		pressed.border_width_bottom = UI.BORDER
+		pressed.expand_margin_top = -2
+		b.add_theme_stylebox_override("normal", st)
+		b.add_theme_stylebox_override("hover", st)
+		b.add_theme_stylebox_override("pressed", pressed)
+		b.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
+		var ink := UI.SKY_LIP if on else UI.INK
+		for c in ["font_color", "font_hover_color", "font_pressed_color"]:
+			b.add_theme_color_override(c, ink)
+		b.pressed.connect(func(): Sfx.play("select"); on_pick.call(code))
 		g.add_child(b)
 	return g
 
-static func top_bar(main: Node, back: Callable, title := "") -> HBoxContainer:
+## Header with a back/close button, a title and the coin count.
+static func top_bar(_main: Node, back: Callable, title := "", close_icon := "close") -> HBoxContainer:
 	var h := HBoxContainer.new()
-	h.add_theme_constant_override("separation", 12)
-	var b := UI.button("‹", Color("2c2360"), 40, 72)
-	b.custom_minimum_size.x = 72
+	h.add_theme_constant_override("separation", 14)
+	var b := UI.icon_button(close_icon, 52)
 	b.pressed.connect(back)
 	h.add_child(b)
-	var t := UI.label(title, 30, Color.WHITE, true)
+	var t := UI.label(title, 34, UI.INK, true)
 	t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	t.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	t.name = "Title"
 	h.add_child(t)
-	h.add_child(coin_pill())
+	h.add_child(coin_stat())
 	return h
 
-static func coin_pill() -> PanelContainer:
-	var p := UI.pill("🪙 %d" % Game.coins())
-	var l: Label = p.get_node("Label")
+static func coin_stat() -> HBoxContainer:
+	var s := UI.stat("coin", str(Game.coins()), UI.SUN_LIP)
+	var l: Label = s.get_node("Value")
 	var update := func(v: int):
-		l.text = "🪙 %d" % v
-		UI.pop(p, 1.2)
+		l.text = str(v)
+		UI.pop(s, 1.2)
 	Game.coins_changed.connect(update)
-	p.tree_exiting.connect(func(): Game.coins_changed.disconnect(update))
-	return p
+	s.tree_exiting.connect(func(): Game.coins_changed.disconnect(update))
+	return s
+
+## Thin grey divider that spans the width.
+static func divider() -> ColorRect:
+	var c := ColorRect.new()
+	c.color = UI.CLOUD
+	c.custom_minimum_size.y = 4
+	c.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return c
