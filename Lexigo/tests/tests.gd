@@ -12,6 +12,7 @@ func _ready() -> void:
 	_test_levels_generate()
 	_test_puzzle_flow()
 	_test_srs()
+	_test_letter_bank()
 	print("\n%d checks, %d failures" % [_checks, _fails])
 	get_tree().quit(1 if _fails else 0)
 
@@ -125,3 +126,28 @@ func _test_srs() -> void:
 	check(int(Game.memory(id)["box"]) == 1, "revealed word drops back to box 1")
 	check(Game.due_words().is_empty(), "nothing is due right after practice")
 	Game.load_game()
+
+func _test_letter_bank() -> void:
+	var t := "es"
+	var built := Vocab.crossword_entries(Vocab.level_words(2, 1, t), t)
+	var s := PuzzleState.new()
+	s.setup(CrosswordGenerator.generate(built[0], 3, built[1]))
+	for i in s.placements.size():
+		var ans: String = s.placements[i]["answer"]
+		var tiles := s.bank_tiles(i)
+		var need := Array(ans.split(""))
+		var spare := tiles.duplicate()
+		for ch in need:
+			check(spare.has(ch), "bank for %s has letter %s" % [ans, ch])
+			spare.erase(ch)
+		check(spare.size() == (2 if ans.length() <= 5 else 3), "bank for %s has 2-3 decoys" % ans)
+		for ch in spare:
+			check(not need.has(ch), "decoy %s is not in %s" % [ch, ans])
+		check(tiles == s.bank_tiles(i), "bank order is stable for %s" % ans)
+		s.trimmed[i] = true
+		check(s.bank_tiles(i).size() == ans.length(), "trim removes decoys for %s" % ans)
+	# Typing from the bank marks tiles used.
+	s.select_word(0)
+	var tiles0 := s.bank_tiles(0)
+	s.type_letter(s.cells[s.cursor]["sol"])
+	check(s.bank_used(0, tiles0).count(true) == 1, "typed letter uses one tile")

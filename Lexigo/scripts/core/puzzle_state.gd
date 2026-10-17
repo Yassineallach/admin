@@ -17,6 +17,7 @@ var strict_accents := false
 var mistakes := 0
 var hints_used := 0
 var word_help := {}               # placement index -> 0 clean, 1 helped, 2 revealed
+var trimmed := {}                 # placement index -> true once decoys were removed
 
 func setup(layout: Dictionary) -> void:
 	width = layout["width"]
@@ -218,6 +219,56 @@ func reveal_word() -> int:
 	if not is_complete():
 		next_word(1)
 	return w
+
+# ---------- letter bank ----------
+
+## Tiles offered for word i: the letters its open cells need, plus a few
+## decoys taken from the grid's other answers. Order is stable per word.
+func bank_tiles(i: int) -> Array:
+	var tiles := []
+	var own := {}
+	for c in word_cells(i):
+		own[cells[c]["sol"]] = true
+		if not cells[c]["locked"]:
+			tiles.append(cells[c]["sol"])
+	if tiles.is_empty():
+		return tiles
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash("bank|%d|%s" % [i, placements[i]["answer"]])
+	if not trimmed.has(i):
+		var pool := []
+		for p in placements:
+			for ch in p["answer"]:
+				if not own.has(ch) and not pool.has(ch):
+					pool.append(ch)
+		for ch in "AEIOURSTLN":
+			if not own.has(ch) and not pool.has(ch):
+				pool.append(ch)
+		var decoys := 2 if placements[i]["answer"].length() <= 5 else 3
+		for k in decoys:
+			if pool.is_empty():
+				break
+			tiles.append(pool.pop_at(rng.randi_range(0, pool.size() - 1)))
+	for k in range(tiles.size() - 1, 0, -1):
+		var j := rng.randi_range(0, k)
+		var t = tiles[k]
+		tiles[k] = tiles[j]
+		tiles[j] = t
+	return tiles
+
+## For each tile, whether a letter typed in the word's open cells uses it.
+func bank_used(i: int, tiles: Array) -> Array:
+	var typed := []
+	for c in word_cells(i):
+		if not cells[c]["locked"] and cells[c]["val"] != "":
+			typed.append(cells[c]["val"])
+	var used := []
+	for t in tiles:
+		var k := typed.find(t)
+		used.append(k >= 0)
+		if k >= 0:
+			typed.remove_at(k)
+	return used
 
 func stars() -> int:
 	if mistakes <= 1 and hints_used == 0:

@@ -49,9 +49,8 @@ func _ready() -> void:
 		w += 1
 	st.select_word(w)
 	screen._type(st.cells[st.cursor]["sol"])
-	screen._shuffled[w] = "  ".join(Array(st.placements[w]["answer"].split("")).map(func(x): return x))
 	screen._refresh()
-	await _wait(1.2)
+	await _wait(2.6)
 	await _shot("3_puzzle")
 	for i in st.placements.size():
 		if not st.solved.has(i):

@@ -18,9 +18,10 @@ remember them for good.
 | 🧩 **Procedural crosswords** | Every grid is generated from the level's words: compact, fully interlocked, at most 13×13, and the same each time you replay a level |
 | 🧠 **Spaced repetition** | Leitner boxes (0.5 → 35 days). A clean solve moves a word up a box; a solve with hints moves it down; a revealed word goes back to box 1. The **Review** grid is built from words that are due |
 | 📅 **Daily challenge** | The same grid for everyone each day, drawn from all your unlocked worlds. Bonus coins, plus a 🔥 streak |
-| 💡 **Hints** | Reveal a letter (10 🪙), show the word's letters shuffled (15 🪙), reveal the word (30 🪙), listen to the word, see an example sentence |
+| 🔤 **Letter bank** | No full keyboard: only the tiles the current word needs, shuffled, plus 2–3 decoys from the grid's other answers. Used tiles leave an empty slot and come back when you erase |
+| 💡 **Hints** | Reveal a letter (10 🪙), remove the decoy letters (15 🪙), reveal the word (30 🪙), listen to the word, see an example sentence |
 | 🔊 **Pronunciation** | A native speaker's recording from Wikimedia Commons / Lingua Libre when online, otherwise the device's own text-to-speech |
-| ✍️ **Accent-friendly** | `E` is accepted for `É` unless *strict accents* is on; the correct spelling is shown once the word is solved. The keyboard has an accent row and AZERTY/QWERTZ layouts |
+| ✍️ **Accents** | Bank tiles carry the exact accented letter (É, Ñ, Ü…). With a physical keyboard, `E` is accepted for `É` unless *strict accents* is on |
 | ✨ **Polish** | Lexi reacts to every answer; slide-up feedback strips; letter tiles that bounce and glow; confetti; stars that land one by one; generated sound effects; vibration |
 | 📚 **Word list** | Every word you've met, with its memory strength and pronunciation |
 | 🌐 **Works offline** | The vocabulary is bundled with the game. Online features are optional extras and fall back silently |
@@ -37,7 +38,7 @@ graphic. Tokens, components and the research behind them are in
 
 ## Research summary: what makes this kind of game work
 
-* **Recall beats recognition.** Typing the answer, as a crossword makes you do, builds the active recall you need to speak. Tapping one answer out of several choices doesn't. Lexigo therefore uses a real keyboard rather than a letter wheel.
+* **Recall beats recognition.** Building the answer letter by letter, as a crossword makes you do, builds more active recall than tapping one answer out of several choices. Lexigo's letter bank keeps input fast on a phone, and its decoy letters keep you spelling rather than just unscrambling.
 * **Spaced repetition decides what you see.** The best vocabulary-crossword apps (Cranki, Vocabulary Builder with SM-2) let the review schedule choose which words appear, so Lexigo has a dedicated review grid and recap words in each level.
 * **Sound.** crosswort plays a word's pronunciation from its clue, so you learn how it sounds as well as how it's spelled. Lexigo says each word aloud when you solve it, and has a free 🔊 hint.
 * **Words in context.** Showing an example sentence with the word blanked out ("Je mange une ＿＿＿") gives a harder, more meaningful review. That is the 📝 hint, using Tatoeba.

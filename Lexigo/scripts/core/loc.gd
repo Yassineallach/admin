@@ -41,7 +41,7 @@ const STRINGS := {
 	"hint_letter": ["Letter", "Lettre", "Letra", "Buchstabe", "Lettera", "Letra"],
 	"hint_word": ["Word", "Mot", "Palabra", "Wort", "Parola", "Palavra"],
 	"hint_listen": ["Listen", "Écouter", "Escuchar", "Anhören", "Ascolta", "Ouvir"],
-	"hint_shuffle": ["Letters", "Lettres", "Letras", "Buchstaben", "Lettere", "Letras"],
+	"hint_trim": ["Remove extra letters", "Retirer les lettres en trop", "Quitar letras sobrantes", "Überflüssige Buchstaben entfernen", "Togli le lettere in più", "Remover letras extras"],
 	"hint_example": ["Example", "Exemple", "Ejemplo", "Beispiel", "Esempio", "Exemplo"],
 	"no_coins": ["Not enough coins", "Pas assez de pièces", "No tienes monedas", "Nicht genug Münzen", "Monete insufficienti", "Moedas insuficientes"],
 	"perfect": ["Perfect!", "Parfait !", "¡Perfecto!", "Perfekt!", "Perfetto!", "Perfeito!"],

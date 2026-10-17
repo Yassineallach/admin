@@ -59,7 +59,7 @@ func _build() -> void:
 
 	v.add_child(UI.caps(Loc.t("credits"), 24))
 	var credits := UI.label(
-		"Lexigo 1.1 · com.mardev.Lexigo · Made with Godot Engine\n" +
+		"Lexigo 1.2 · com.mardev.Lexigo · Made with Godot Engine\n" +
 		"Font: Nunito (SIL Open Font License)\n" +
 		"Example sentences: Tatoeba.org (CC BY 2.0 FR)\n" +
 		"Native pronunciations: Wiktionary, Wikimedia Commons & Lingua Libre contributors (CC BY-SA)", 22, UI.STONE)

@@ -12,7 +12,7 @@ const SAVE_VERSION := 1
 const SRS_INTERVALS := [0.0, 0.5, 1.0, 3.0, 7.0, 16.0, 35.0]
 const MASTERED_BOX := 4
 
-const HINT_COST := {"letter": 10, "shuffle": 15, "word": 30, "listen": 0, "example": 0}
+const HINT_COST := {"letter": 10, "trim": 15, "word": 30, "listen": 0, "example": 0}
 const START_COINS := 150
 
 var data := {}

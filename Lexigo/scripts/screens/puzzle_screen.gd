@@ -1,5 +1,5 @@
 extends Screen
-## Playing a crossword: board, clue card, hints and keyboard.
+## Playing a crossword: board, clue card, hints and the letter bank.
 
 const ResultPanel := preload("res://scripts/screens/result_panel.gd")
 
@@ -18,7 +18,6 @@ var _timer_label: Label
 var _banner: PanelContainer
 var _elapsed := 0.0
 var _done := false
-var _shuffled := {}    # placement index -> scrambled letters string
 var _examples := {}    # placement index -> example dict
 var _hint_buttons := {}
 
@@ -122,7 +121,7 @@ func _build_clue_card() -> Control:
 func _build_hints() -> HBoxContainer:
 	var h := HBoxContainer.new()
 	h.add_theme_constant_override("separation", 10)
-	var defs := [["letter", "bulb"], ["shuffle", "shuffle"], ["listen", "speaker"], ["example", "note"], ["word", "sparkle"]]
+	var defs := [["letter", "bulb"], ["trim", "trim"], ["listen", "speaker"], ["example", "note"], ["word", "sparkle"]]
 	for d in defs:
 		var cost: int = Game.HINT_COST[d[0]]
 		var b := UI.button(str(cost) if cost > 0 else "", "neutral", 24, 76, d[1])
@@ -257,8 +256,6 @@ func _refresh(sound := false) -> void:
 	_clue_emoji.text = word["emoji"]
 	_clue_text.text = Vocab.display(word, Game.native())
 	var extra := ""
-	if _shuffled.has(w):
-		extra = "🔀 " + _shuffled[w]
 	if _examples.has(w):
 		var ex: Dictionary = _examples[w]
 		if ex.is_empty():
@@ -272,6 +269,8 @@ func _refresh(sound := false) -> void:
 	_clue_extra.visible = extra != ""
 	for k in _hint_buttons.keys():
 		_hint_buttons[k].disabled = _done or state.solved.has(w)
+	_hint_buttons["trim"].disabled = _hint_buttons["trim"].disabled or state.trimmed.has(w)
+	keyboard.show_word(state, w)
 
 func _mask(sentence: String, word: String) -> String:
 	var low := sentence.to_lower()
@@ -287,7 +286,7 @@ func _use_hint(kind: String) -> void:
 	if w < 0 or state.solved.has(w):
 		return
 	var cost: int = Game.HINT_COST[kind]
-	if kind == "shuffle" and _shuffled.has(w):
+	if kind == "trim" and state.trimmed.has(w):
 		return
 	if cost > 0 and not Game.spend(cost):
 		main.toast("🪙 " + Loc.t("no_coins"))
@@ -302,10 +301,8 @@ func _use_hint(kind: String) -> void:
 		"word":
 			state.reveal_word()
 			Sfx.play("hint")
-		"shuffle":
-			var letters: Array = Array(state.placements[w]["answer"].split(""))
-			letters.shuffle()
-			_shuffled[w] = " ".join(letters)
+		"trim":
+			state.trimmed[w] = true
 			state.word_help[w] = maxi(state.word_help[w], 1)
 			state.hints_used += 1
 			Sfx.play("hint")

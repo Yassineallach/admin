@@ -1,62 +1,91 @@
 class_name LetterKeyboard
 extends VBoxContainer
-## On-screen keyboard using the target language's layout plus its accented
-## letters. Keys look like word-bank tiles: white, outlined, with a lip.
+## Letter bank: only the tiles the current word needs, shuffled, plus a few
+## decoys. Used tiles grey out and come back when a letter is erased.
 
 signal letter(c: String)
 signal erase
 
-func build(target: String, _accent: Color) -> void:
-	for c in get_children():
-		c.queue_free()
-	add_theme_constant_override("separation", 10)
-	var info: Array = Vocab.keyboard_rows(target)
-	var rows: Array = info[0]
-	var extras: Array = info[1]
-	if not extras.is_empty():
-		add_child(_row(extras, true, false))
-	for i in rows.size():
-		add_child(_row(Array(rows[i].split("")), false, i == rows.size() - 1))
+var _flow: HFlowContainer
+var _tiles: Array = []
+var _buttons: Array[Button] = []
+var _back: Button
+var _word := -2
+var _signature := ""
 
-func _row(chars: Array, accent_row: bool, with_erase: bool) -> HBoxContainer:
-	var h := HBoxContainer.new()
-	h.alignment = BoxContainer.ALIGNMENT_CENTER
-	h.add_theme_constant_override("separation", 8)
-	for ch in chars:
-		var b := _key(ch, accent_row)
+func build(_target: String, _accent: Color) -> void:
+	add_theme_constant_override("separation", 12)
+	custom_minimum_size.y = 2 * 100 + 12
+	_flow = HFlowContainer.new()
+	_flow.alignment = FlowContainer.ALIGNMENT_CENTER
+	_flow.add_theme_constant_override("h_separation", 10)
+	_flow.add_theme_constant_override("v_separation", 12)
+	_flow.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	add_child(_flow)
+	_back = _tile("⌫")
+	_back.custom_minimum_size.x = 120
+	for c in ["font_color", "font_hover_color", "font_pressed_color"]:
+		_back.add_theme_color_override(c, UI.BERRY)
+	_back.pressed.connect(func(): erase.emit())
+	_flow.add_child(_back)
+
+## Rebuilds the tiles when the word (or its tile set) changes, otherwise
+## just refreshes which tiles are used.
+func show_word(state: PuzzleState, w: int) -> void:
+	var tiles: Array = [] if w < 0 or state.solved.has(w) else state.bank_tiles(w)
+	var sig := "%d|%s" % [w, "".join(tiles)]
+	if sig != _signature:
+		_signature = sig
+		_rebuild(tiles, w != _word)
+		_word = w
+	_back.visible = not tiles.is_empty()
+	if tiles.is_empty():
+		return
+	var used := state.bank_used(w, tiles)
+	for k in _buttons.size():
+		_buttons[k].disabled = used[k]
+
+func _rebuild(tiles: Array, animate: bool) -> void:
+	for b in _buttons:
+		b.queue_free()
+	_buttons.clear()
+	_tiles = tiles
+	for k in tiles.size():
+		var b := _tile(tiles[k])
+		var ch: String = tiles[k]
 		b.pressed.connect(func(): letter.emit(ch))
-		h.add_child(b)
-	if with_erase:
-		var e := _key("⌫", false)
-		e.custom_minimum_size.x = 100
-		e.add_theme_color_override("font_color", UI.BERRY)
-		e.add_theme_color_override("font_pressed_color", UI.BERRY)
-		e.add_theme_color_override("font_hover_color", UI.BERRY)
-		e.pressed.connect(func(): erase.emit())
-		h.add_child(e)
-	return h
+		_flow.add_child(b)
+		_buttons.append(b)
+		_flow.move_child(_back, -1)
+		if animate:
+			b.modulate.a = 0.0
+			b.scale = Vector2.ONE * 0.6
+			var tw := b.create_tween().set_parallel()
+			tw.tween_interval(k * 0.035)
+			tw.chain().tween_property(b, "modulate:a", 1.0, 0.15)
+			tw.tween_property(b, "scale", Vector2.ONE, 0.3).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+			b.resized.connect(func(): b.pivot_offset = b.size * 0.5, CONNECT_ONE_SHOT)
 
-func _key(ch: String, accent_row: bool) -> Button:
+func _tile(ch: String) -> Button:
 	var b := Button.new()
 	b.text = ch
 	b.focus_mode = Control.FOCUS_NONE
-	b.custom_minimum_size = Vector2(56, 88)
-	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	b.custom_minimum_size = Vector2(88, 100)
 	b.add_theme_font_override("font", UI.font(true))
-	b.add_theme_font_size_override("font_size", 34)
-	UI.style_button(b, "neutral", 18)
-	for s in ["normal", "hover", "pressed"]:
+	b.add_theme_font_size_override("font_size", 44)
+	UI.style_button(b, "neutral", 20)
+	for s in ["normal", "hover", "pressed", "disabled"]:
 		var st: StyleBoxFlat = b.get_theme_stylebox(s).duplicate()
 		st.content_margin_left = 0
 		st.content_margin_right = 0
-		st.content_margin_top = 8
-		st.content_margin_bottom = 8 + (0 if s == "pressed" else 0)
-		if accent_row:
-			st.bg_color = UI.SKY_PALE if s != "hover" else Color("cdeefe")
-			st.border_color = Color("84d8ff")
+		if s == "disabled":
+			# An empty slot where the tile was.
+			st.bg_color = UI.CLOUD
+			st.border_color = UI.CLOUD
+			st.border_width_bottom = UI.BORDER
 		b.add_theme_stylebox_override(s, st)
-	var ink := UI.SKY_LIP if accent_row else UI.INK
 	for c in ["font_color", "font_hover_color", "font_pressed_color"]:
-		b.add_theme_color_override(c, ink)
+		b.add_theme_color_override(c, UI.INK)
+	b.add_theme_color_override("font_disabled_color", Color(0, 0, 0, 0))
 	b.button_down.connect(func(): Sfx.play("key", randf_range(0.95, 1.08)); Sfx.buzz(8))
 	return b

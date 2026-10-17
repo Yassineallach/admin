@@ -268,6 +268,9 @@ ICONS = {
                  + rect(24, 16, 8, 6, 3, WHITE, 'opacity="0.7"')),
     "shuffle": icon(line([(8, 18), (22, 18), (42, 46), (54, 46)], 6, SKY) + line([(8, 46), (22, 46), (42, 18), (54, 18)], 6, SKY)
                     + tri(54, 46, 9, SKY, rot=90) + tri(54, 18, 9, SKY, rot=90)),
+    "trim": icon(rect(6, 14, 34, 38, 9, CLOUD) + rect(6, 10, 34, 38, 9, WHITE, f'stroke="{CLOUD}" stroke-width="3"')
+                 + rect(16, 24, 14, 5, 2.5, MIST) + rect(16, 33, 10, 5, 2.5, MIST)
+                 + circle(46, 42, 14, BERRY) + rect(38, 40, 16, 5, 2.5, WHITE)),
     "sparkle": icon(path("M32 4 Q36 28 60 32 Q36 36 32 60 Q28 36 4 32 Q28 28 32 4 Z", GRAPE) + circle(50, 12, 5, SUN) + circle(14, 52, 4, SKY)),
     "note": icon(rect(12, 8, 40, 50, 10, WHITE, f'stroke="{CLOUD}" stroke-width="3"') + rect(20, 20, 24, 5, 2.5, GRAPE)
                  + rect(20, 31, 24, 5, 2.5, CLOUD) + rect(20, 42, 16, 5, 2.5, CLOUD)),

@@ -61,7 +61,9 @@ level nodes and its badge.
 * **Crossword tile.** White with a `CLOUD` border and lip. Active word
   `#F1FAFF`/`#84D8FF`, cursor `SKY_PALE`/`SKY`, solved `LEAF_PALE`/`#A5ED6E` with
   `LEAF_LIP` letters, wrong flash `BERRY_PALE`/`BERRY`, celebration shimmer `SUN`.
-* **Keyboard key.** A neutral button, radius 18. The accent row is `SKY_PALE`.
+* **Letter bank tile.** An 88×100 neutral button, radius 20, Nunito 44. Only
+  the current word's letters plus 2–3 decoys. A used tile becomes an empty
+  `CLOUD` slot; ⌫ sits at the end in `BERRY`. Tiles pop in, staggered, when the word changes.
 * **Progress bar.** `CLOUD` track, `LEAF` fill, with a white 30% highlight stripe.
 * **Level node.** A 116px circle with a 12px lip, in the world colour (`CLOUD`
   when locked). It shows a star when done, a crown on the boss level, and a
