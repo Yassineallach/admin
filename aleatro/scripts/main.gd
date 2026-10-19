@@ -67,10 +67,10 @@ func _ready() -> void:
 	var margin := MarginContainer.new()
 	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	var safe := _safe_margins()
-	margin.add_theme_constant_override("margin_left", 20)
-	margin.add_theme_constant_override("margin_right", 20)
-	margin.add_theme_constant_override("margin_top", safe.x)
-	margin.add_theme_constant_override("margin_bottom", safe.y)
+	margin.add_theme_constant_override("margin_left", safe[0])
+	margin.add_theme_constant_override("margin_top", safe[1])
+	margin.add_theme_constant_override("margin_right", safe[2])
+	margin.add_theme_constant_override("margin_bottom", safe[3])
 	add_child(margin)
 	screen = VBoxContainer.new()
 	screen.add_theme_constant_override("separation", 12)
@@ -85,17 +85,19 @@ func _ready() -> void:
 	show_title()
 
 
-func _safe_margins() -> Vector2i:
-	var top := 24
-	var bottom := 20
+## Margins [left, top, right, bottom] that keep the UI clear of notches and rounded corners.
+func _safe_margins() -> Array:
+	var m := [24, 16, 24, 16]
 	if OS.has_feature("mobile"):
 		var safe := DisplayServer.get_display_safe_area()
 		var screen_size := DisplayServer.screen_get_size()
-		if screen_size.y > 0:
+		if screen_size.x > 0 and screen_size.y > 0:
 			var k := get_viewport_rect().size.y / float(screen_size.y)
-			top = maxi(top, int(safe.position.y * k) + 8)
-			bottom = maxi(bottom, int((screen_size.y - safe.end.y) * k) + 8)
-	return Vector2i(top, bottom)
+			m[0] = maxi(m[0], int(safe.position.x * k) + 8)
+			m[1] = maxi(m[1], int(safe.position.y * k) + 8)
+			m[2] = maxi(m[2], int((screen_size.x - safe.end.x) * k) + 8)
+			m[3] = maxi(m[3], int((screen_size.y - safe.end.y) * k) + 8)
+	return m
 
 
 # --- Building blocks ----------------------------------------------------------
@@ -255,6 +257,14 @@ func _show_tooltip(target: Control, title: String, body: String) -> void:
 	)
 
 
+func _vbox(sep := 12, expand := true) -> VBoxContainer:
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", sep)
+	if expand:
+		v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	return v
+
+
 func _spacer() -> Control:
 	var c := Control.new()
 	c.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -278,10 +288,10 @@ func _clear() -> void:
 	info_label = null
 
 
-func _info_bar() -> void:
+func _info_bar(parent: Control = null) -> void:
 	info_label = _wrapped("", 20, SOFT_TEXT)
-	info_label.custom_minimum_size = Vector2(0, 56)
-	screen.add_child(info_label)
+	info_label.custom_minimum_size = Vector2(0, 52)
+	(parent if parent else screen).add_child(info_label)
 
 
 func _toast(text: String) -> void:
@@ -292,14 +302,14 @@ func _toast(text: String) -> void:
 	create_tween().tween_property(info_label, "modulate", Color.WHITE, 0.2)
 
 
-func _header() -> void:
+func _header(parent: Control = null) -> void:
 	var h := _hbox(12, BoxContainer.ALIGNMENT_BEGIN)
 	var left := _label("Floor %d / %d" % [Run.floor_num, Run.FLOORS], 24, TEXT, HORIZONTAL_ALIGNMENT_LEFT)
 	left.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	h.add_child(left)
 	lbl.coins = _label("%d coins" % Run.coins, 26, GOLD, HORIZONTAL_ALIGNMENT_RIGHT)
 	h.add_child(lbl.coins)
-	screen.add_child(h)
+	(parent if parent else screen).add_child(h)
 
 
 func _refresh_coins() -> void:
@@ -307,7 +317,7 @@ func _refresh_coins() -> void:
 		lbl.coins.text = "%d coins" % Run.coins
 
 
-func _charms_row() -> void:
+func _charms_row(parent: Control = null) -> void:
 	var h := _hbox(8)
 	for i in Run.MAX_CHARMS:
 		var ch: Dictionary = Run.charms[i] if i < Run.charms.size() else {}
@@ -316,7 +326,7 @@ func _charms_row() -> void:
 		h.add_child(v)
 		if not ch.is_empty():
 			charm_views.append(v)
-	screen.add_child(h)
+	(parent if parent else screen).add_child(h)
 
 
 func _on_charm_tapped(v: CharmView) -> void:
@@ -359,27 +369,33 @@ static func fmt_mult(x: float) -> String:
 
 func show_title() -> void:
 	_clear()
-	screen.add_child(_spacer())
-	var title := _label("ALEATRO", 104, GOLD)
+	var cols := _hbox(40)
+	cols.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	var left := _vbox(10)
+	left.alignment = BoxContainer.ALIGNMENT_CENTER
+	var title := _label("ALEATRO", 112, GOLD)
 	title.add_theme_constant_override("outline_size", 12)
 	title.add_theme_color_override("font_outline_color", Color("#1b1030"))
-	screen.add_child(title)
-	screen.add_child(_wrapped("a roguelike of chance and combinations", 24, SOFT_TEXT))
+	left.add_child(title)
+	left.add_child(_wrapped("a roguelike of chance and combinations", 26, SOFT_TEXT))
 	var fan := _hbox(-18)
-	fan.custom_minimum_size = Vector2(0, 170)
+	fan.custom_minimum_size = Vector2(0, 190)
 	var sample := [[14, 0], [13, 3], [12, 1], [11, 2], [10, 0]]
 	for i in sample.size():
 		var cv := CardView.new().setup({"id": -1 - i, "rank": sample[i][0], "suit": sample[i][1], "enh": ""}, false)
 		cv.rotation = deg_to_rad(-12 + i * 6)
 		fan.add_child(cv)
-	screen.add_child(fan)
-	screen.add_child(_spacer())
-	for b in [_button("New Run", _start_run, 380), _button("Challenges", show_challenges, 380), _button("How to Play", show_help, 380)]:
-		b.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-		screen.add_child(b)
+	left.add_child(fan)
+	cols.add_child(left)
+	var right := _vbox(16, false)
+	right.alignment = BoxContainer.ALIGNMENT_CENTER
+	right.custom_minimum_size = Vector2(400, 0)
+	for b in [_button("New Run", _start_run, 400), _button("Challenges", show_challenges, 400), _button("How to Play", show_help, 400)]:
+		right.add_child(b)
 	if Run.best_floor > 0:
-		screen.add_child(_wrapped("Best: cleared a trial on floor %d" % Run.best_floor, 20, SOFT_TEXT))
-	screen.add_child(_spacer())
+		right.add_child(_wrapped("Best: cleared a trial on floor %d" % Run.best_floor, 20, SOFT_TEXT))
+	cols.add_child(right)
+	screen.add_child(cols)
 
 
 func show_help() -> void:
@@ -409,12 +425,15 @@ func show_challenges() -> void:
 	var scroll := ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	var list := VBoxContainer.new()
+	var list := GridContainer.new()
+	list.columns = 2
 	list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	list.add_theme_constant_override("separation", 12)
+	list.add_theme_constant_override("h_separation", 14)
+	list.add_theme_constant_override("v_separation", 14)
 	for c in Challenges.LIST:
 		var done: bool = Run.completed_challenges.get(c.id, false)
 		var p := _panel(PANEL, Color("#7be0a1") if done else Color(0, 0, 0, 0))
+		p.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		var h := _hbox(12, BoxContainer.ALIGNMENT_BEGIN)
 		var v := VBoxContainer.new()
 		v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -452,33 +471,39 @@ func show_select() -> void:
 	if _challenge_note() != "":
 		screen.add_child(_wrapped(_challenge_note(), 20, Color("#7be0a1")))
 	screen.add_child(_label("Choose your next trial", 28))
+	var trials := _hbox(16)
+	trials.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	for t in 3:
 		var current := t == Run.trial_idx
 		var p := _panel(PANEL if current else PANEL_DIM, GOLD if current else Color(0, 0, 0, 0))
+		p.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		p.size_flags_stretch_ratio = 1.0
 		var v := VBoxContainer.new()
-		v.add_theme_constant_override("separation", 6)
+		v.add_theme_constant_override("separation", 8)
+		v.alignment = BoxContainer.ALIGNMENT_CENTER
 		var title: String = Run.TRIAL_NAMES[t]
 		if t == 2:
 			title += ": " + Run.warden_name()
 		v.add_child(_label(title, 28, GOLD if current else SOFT_TEXT))
 		if t == 2:
 			v.add_child(_wrapped(Run.warden_desc(), 22, MULT_COLOR))
-		v.add_child(_label("Target %s  ·  Reward %d coins" % [fmt(Run.target(t)), Run.TRIAL_REWARD[t]], 22))
+		v.add_child(_label("Target %s" % fmt(Run.target(t)), 26))
+		v.add_child(_label("Reward %d coins" % Run.TRIAL_REWARD[t], 22, GOLD))
 		if t < Run.trial_idx:
 			v.add_child(_label("Done", 20, SOFT_TEXT))
 		elif current:
 			var row := _hbox()
-			row.add_child(_button("Play", _on_play_trial, 200))
+			row.add_child(_button("Play", _on_play_trial, 150))
 			if t < 2:
-				row.add_child(_button("Skip", _on_skip_trial, 200))
+				row.add_child(_button("Skip", _on_skip_trial, 150))
 			v.add_child(row)
 			if t < 2:
 				v.add_child(_wrapped("Skipping gives +5 coins or a free hand level, but you miss the shop.", 18, SOFT_TEXT))
 		p.add_child(v)
-		screen.add_child(p)
+		trials.add_child(p)
 		if current:
 			_pulse_border(p)
-	screen.add_child(_spacer())
+	screen.add_child(trials)
 	_info_bar()
 	_toast("Tip: tap a charm to read it. Hold a card to inspect it.")
 
@@ -499,8 +524,16 @@ func _on_skip_trial() -> void:
 
 func show_round() -> void:
 	_clear()
-	_header()
+	var cols := _hbox(20, BoxContainer.ALIGNMENT_BEGIN)
+	cols.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	screen.add_child(cols)
+	var side := _vbox(10, false)
+	side.custom_minimum_size = Vector2(360, 0)
+	cols.add_child(side)
+	var table := _vbox(10)
+	cols.add_child(table)
 
+	_header(side)
 	var top := _panel()
 	var th := _hbox(12, BoxContainer.ALIGNMENT_BEGIN)
 	var tl := VBoxContainer.new()
@@ -517,20 +550,18 @@ func show_round() -> void:
 	tr.add_child(lbl.score)
 	th.add_child(tr)
 	top.add_child(th)
-	screen.add_child(top)
+	side.add_child(top)
 	if Run.trial_idx == 2:
-		screen.add_child(_wrapped(Run.warden_desc(), 20, MULT_COLOR))
+		side.add_child(_wrapped(Run.warden_desc(), 20, MULT_COLOR))
 	if Run.floor_muted_suit() >= 0:
-		screen.add_child(_wrapped("%s are muted this floor" % HandEval.SUIT_NAMES[Run.floor_muted_suit()], 20, MULT_COLOR))
+		side.add_child(_wrapped("%s are muted this floor" % HandEval.SUIT_NAMES[Run.floor_muted_suit()], 20, MULT_COLOR))
 
 	var stats := _hbox(40)
 	lbl.hands = _label("", 24, POINTS_COLOR)
 	lbl.discards = _label("", 24, MULT_COLOR)
 	stats.add_child(lbl.hands)
 	stats.add_child(lbl.discards)
-	screen.add_child(stats)
-
-	_charms_row()
+	side.add_child(stats)
 
 	var hp := _panel(PANEL_DIM)
 	var hv := VBoxContainer.new()
@@ -542,16 +573,19 @@ func show_round() -> void:
 	pm.add_child(_score_box("mult", MULT_COLOR))
 	hv.add_child(pm)
 	hp.add_child(hv)
-	screen.add_child(hp)
+	side.add_child(hp)
+	side.add_child(_spacer())
+	_info_bar(side)
 
+	_charms_row(table)
 	played_row = _hbox(6)
-	played_row.custom_minimum_size = Vector2(0, 140)
-	screen.add_child(played_row)
-	screen.add_child(_spacer())
+	played_row.custom_minimum_size = Vector2(0, CardView.CARD_SIZE.y + 30)
+	played_row.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	table.add_child(played_row)
 
 	hand_row = _hbox(4)
 	hand_row.custom_minimum_size = Vector2(0, CardView.CARD_SIZE.y + CardView.RAISE + 6)
-	screen.add_child(hand_row)
+	table.add_child(hand_row)
 
 	var buttons := _hbox(10)
 	buttons.add_child(_button("Sort", _on_sort, 120))
@@ -559,8 +593,7 @@ func show_round() -> void:
 	play_btn = _button("Play Hand", _on_play, 230)
 	buttons.add_child(discard_btn)
 	buttons.add_child(play_btn)
-	screen.add_child(buttons)
-	_info_bar()
+	table.add_child(buttons)
 
 	_refresh_hand()
 	_refresh_stats()
@@ -569,8 +602,8 @@ func show_round() -> void:
 
 func _score_box(key: String, color: Color) -> PanelContainer:
 	var p := _panel(color.darkened(0.55), color)
-	p.custom_minimum_size = Vector2(200, 0)
-	lbl[key] = _label("0", 38, TEXT)
+	p.custom_minimum_size = Vector2(140, 0)
+	lbl[key] = _label("0", 34, TEXT)
 	p.add_child(lbl[key])
 	lbl[key + "_box"] = p
 	return p
@@ -768,6 +801,8 @@ func show_trial_cleared() -> void:
 	screen.add_child(_label("Score %s  /  Target %s" % [fmt(Run.score), fmt(Run.target())], 24, SOFT_TEXT))
 	var rows := Run.trial_rewards()
 	var p := _panel()
+	p.custom_minimum_size = Vector2(560, 0)
+	p.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	var v := VBoxContainer.new()
 	var total := 0
 	for row in rows:
@@ -799,7 +834,14 @@ func _on_continue_to_shop() -> void:
 func show_shop() -> void:
 	_clear()
 	_header()
-	screen.add_child(_label("Shop", 40, GOLD))
+	var cols := _hbox(28, BoxContainer.ALIGNMENT_BEGIN)
+	cols.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	screen.add_child(cols)
+	var left := _vbox(10)
+	var right := _vbox(8)
+	cols.add_child(left)
+	cols.add_child(right)
+	left.add_child(_label("Shop", 36, GOLD, HORIZONTAL_ALIGNMENT_LEFT))
 	for i in Run.shop_offers.size():
 		var o: Dictionary = Run.shop_offers[i]
 		var p := _panel(PANEL if o.type != "sold" else PANEL_DIM)
@@ -817,13 +859,14 @@ func show_shop() -> void:
 			b.disabled = Run.coins < o.price
 			h.add_child(b)
 		p.add_child(h)
-		screen.add_child(p)
+		left.add_child(p)
 	var rr := _button("Reroll  (%d)" % Run.reroll_cost, _on_reroll, 260)
 	rr.disabled = Run.coins < Run.reroll_cost
 	rr.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	screen.add_child(rr)
+	left.add_child(rr)
 
-	screen.add_child(_wrapped("Your charms (%d/%d). They score left to right." % [Run.charms.size(), Run.MAX_CHARMS], 20, SOFT_TEXT))
+	right.add_child(_label("Your charms", 36, GOLD, HORIZONTAL_ALIGNMENT_LEFT))
+	right.add_child(_wrapped("%d/%d slots. They score left to right." % [Run.charms.size(), Run.MAX_CHARMS], 20, SOFT_TEXT, HORIZONTAL_ALIGNMENT_LEFT))
 	for i in Run.charms.size():
 		var ch: Dictionary = Run.charms[i]
 		var h := _hbox(8, BoxContainer.ALIGNMENT_BEGIN)
@@ -836,7 +879,7 @@ func show_shop() -> void:
 			if i > 0 and not Run.charms[i - 1].get("locked", false):
 				h.add_child(_button("<", _on_move_charm.bind(i, -1), 56))
 			h.add_child(_button("Sell %d" % Charms.sell_value(ch), _on_sell.bind(i), 110))
-		screen.add_child(h)
+		right.add_child(h)
 
 	var levels := GridContainer.new()
 	levels.columns = 2
@@ -845,15 +888,17 @@ func show_shop() -> void:
 		if Run.hand_levels[h_id] > 1:
 			levels.add_child(_label("%s Lv.%d" % [HandEval.INFO[h_id].name, Run.hand_levels[h_id]], 18, SOFT_TEXT, HORIZONTAL_ALIGNMENT_LEFT))
 	if levels.get_child_count() > 0:
-		screen.add_child(levels)
+		right.add_child(levels)
 	else:
 		levels.free()
 
-	screen.add_child(_spacer())
-	var next := _button("Next Trial", _on_leave_shop, 380)
-	next.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	screen.add_child(next)
-	_info_bar()
+	right.add_child(_spacer())
+	var bottom := _hbox(16, BoxContainer.ALIGNMENT_END)
+	var info_box := _vbox(0)
+	bottom.add_child(info_box)
+	_info_bar(info_box)
+	bottom.add_child(_button("Next Trial", _on_leave_shop, 300))
+	screen.add_child(bottom)
 
 
 func _on_buy(i: int) -> void:

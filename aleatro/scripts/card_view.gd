@@ -6,7 +6,9 @@ signal tapped(view: CardView)
 ## Emitted when the card is held down instead of tapped.
 signal inspected(view: CardView)
 
-const CARD_SIZE := Vector2(80, 116)
+const CARD_SIZE := Vector2(96, 140)
+## The card art was laid out at 80 px wide; everything inside is scaled from that.
+const ART_WIDTH := 80.0
 const FACE := Color("#f6f1e7")
 const SUIT_COLORS := [Color("#d93a55"), Color("#e8841c"), Color("#16927f"), Color("#2b3a67")]
 const ENH_COLORS := {
@@ -107,12 +109,13 @@ func _draw() -> void:
 
 	var col: Color = SUIT_COLORS[card.suit]
 	var font := ThemeDB.fallback_font
-	draw_string(font, r.position + Vector2(8, 30), HandEval.rank_text(card.rank), HORIZONTAL_ALIGNMENT_LEFT, -1, 26, col)
-	draw_suit(self, card.suit, r.position + Vector2(18, 46), 8.0, col)
-	draw_suit(self, card.suit, r.position + Vector2(r.size.x * 0.58, r.size.y * 0.62), 20.0, col)
+	var k := r.size.x / ART_WIDTH
+	draw_string(font, r.position + Vector2(8, 30) * k, HandEval.rank_text(card.rank), HORIZONTAL_ALIGNMENT_LEFT, -1, int(26 * k), col)
+	draw_suit(self, card.suit, r.position + Vector2(18, 46) * k, 8.0 * k, col)
+	draw_suit(self, card.suit, r.position + Vector2(r.size.x * 0.58, r.size.y * 0.62), 20.0 * k, col)
 	if enh != "":
 		var label: String = Scoring.ENHANCEMENTS[enh].name.to_upper()
-		draw_string(font, r.position + Vector2(0, r.size.y - 8), label, HORIZONTAL_ALIGNMENT_CENTER, r.size.x, 13, ENH_COLORS[enh].darkened(0.25))
+		draw_string(font, r.position + Vector2(0, r.size.y - 8 * k), label, HORIZONTAL_ALIGNMENT_CENTER, r.size.x, int(13 * k), ENH_COLORS[enh].darkened(0.25))
 	if dimmed:
 		var dim := StyleBoxFlat.new()
 		dim.bg_color = Color(0.05, 0.03, 0.12, 0.55)

@@ -39,7 +39,7 @@ godot --headless --path . --export-debug "Android" build/Aleatro.apk
 
 - **Package:** `com.mardev.Aleatro`
 - **Architectures:** arm64-v8a and armeabi-v7a
-- **Display:** portrait, immersive mode
+- **Display:** landscape (either way up), immersive mode
 
 ### Release builds
 
