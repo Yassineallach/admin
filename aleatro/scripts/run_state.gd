@@ -58,23 +58,33 @@ var muted_suit := 0
 var reroll_cost := BASE_REROLL
 var shop_offers: Array = []
 var best_floor := 0
+var challenge: Dictionary = {}
+var completed_challenges := {}
 
 
 func _ready() -> void:
 	var cfg := ConfigFile.new()
 	if cfg.load(SAVE_PATH) == OK:
 		best_floor = cfg.get_value("stats", "best_floor", 0)
+		completed_challenges = cfg.get_value("stats", "challenges", {})
 
 
-func new_run(seed_in := 0) -> void:
+func new_run(seed_in := 0, challenge_id := "") -> void:
+	challenge = Challenges.find(challenge_id)
 	seed_value = seed_in if seed_in != 0 else randi()
 	rng.seed = seed_value
 	next_uid = 0
 	deck.clear()
 	for s in 4:
-		for r in range(2, 15):
-			deck.append(make_card(r, s))
+		for r in range(rule("ranks_min", 2), 15):
+			deck.append(make_card(r, s, rule("deck_enh", "")))
 	charms.clear()
+	for id in rule("start_charms", []):
+		charms.append(Charms.make(id))
+	for id in rule("locked_charms", []):
+		var ch := Charms.make(id)
+		ch["locked"] = true
+		charms.append(ch)
 	hand.clear()
 	draw_pile.clear()
 	coins = START_COINS
@@ -84,6 +94,13 @@ func new_run(seed_in := 0) -> void:
 	for h in HandEval.ORDER:
 		hand_levels[h] = 1
 	_pick_warden()
+
+
+## A challenge rule, or `default` when not in a challenge or the rule is unset.
+func rule(key: String, default: Variant) -> Variant:
+	if challenge.is_empty():
+		return default
+	return challenge.rules.get(key, default)
 
 
 func make_card(rank: int, suit: int, enh := "") -> Dictionary:
@@ -117,7 +134,14 @@ func warden_desc() -> String:
 
 
 func is_muted(card: Dictionary) -> bool:
-	return current_warden() == "blight" and card.suit == muted_suit
+	if current_warden() == "blight" and card.suit == muted_suit:
+		return true
+	return floor_muted_suit() == card.suit
+
+
+## The suit Silent Suits mutes on this floor, or -1.
+func floor_muted_suit() -> int:
+	return (floor_num - 1) % 4 if rule("floor_mute", false) else -1
 
 
 func target(trial := -1) -> float:
@@ -135,13 +159,13 @@ func hand_size() -> int:
 func start_trial() -> void:
 	score = 0.0
 	trial_won = false
-	hands_left = HANDS_PER_TRIAL
-	discards_left = DISCARDS_PER_TRIAL
+	hands_left = rule("hands", HANDS_PER_TRIAL)
+	discards_left = rule("discards", DISCARDS_PER_TRIAL)
 	match current_warden():
 		"miser":
 			discards_left = 0
 		"sentinel":
-			hands_left = 2
+			hands_left = mini(hands_left, 2)
 	draw_pile = deck.duplicate()
 	shuffle(draw_pile)
 	hand.clear()
@@ -183,7 +207,7 @@ func play(selected: Array) -> Dictionary:
 		coins = maxi(0, coins - selected.size())
 	var broken := []
 	for c in result.scoring:
-		if c.enh == "glass" and rng.randi_range(1, 4) == 1:
+		if c.enh == "glass" and rng.randi_range(1, rule("glass_odds", 4)) == 1:
 			broken.append(c)
 			deck.erase(c)
 	result["broken"] = broken
@@ -208,16 +232,17 @@ func discard(selected: Array) -> bool:
 	return true
 
 
+## Lost when out of hands, or out of cards to play (Glass Cannon can empty the deck).
 func is_lost() -> bool:
-	return not trial_won and hands_left <= 0
+	return not trial_won and (hands_left <= 0 or hand.is_empty())
 
 
 ## Rows of [label, coins] earned for clearing the current trial.
 func trial_rewards() -> Array:
 	var rows := [[TRIAL_NAMES[trial_idx] + " cleared", TRIAL_REWARD[trial_idx]]]
-	if hands_left > 0:
+	if hands_left > 0 and not rule("no_hand_money", false):
 		rows.append(["Unused hands (%d)" % hands_left, hands_left])
-	var interest := mini(coins / 5, 5)
+	var interest := 0 if rule("no_interest", false) else mini(coins / 5, 5)
 	if interest > 0:
 		rows.append(["Interest (1 per 5 held)", interest])
 	for ch in charms:
@@ -240,6 +265,9 @@ func advance() -> String:
 		floor_num += 1
 		if floor_num > FLOORS:
 			floor_num = FLOORS
+			if not challenge.is_empty():
+				completed_challenges[challenge.id] = true
+				save_stats()
 			return "victory"
 		_pick_warden()
 	return "select"
@@ -262,13 +290,18 @@ func skip_trial() -> String:
 func save_stats() -> void:
 	var cfg := ConfigFile.new()
 	cfg.set_value("stats", "best_floor", best_floor)
+	cfg.set_value("stats", "challenges", completed_challenges)
 	cfg.save(SAVE_PATH)
 
 
 # --- Shop -------------------------------------------------------------------
 
+func price(base: int) -> int:
+	return maxi(1, roundi(base * rule("price_mult", 1.0)))
+
+
 func open_shop() -> void:
-	reroll_cost = BASE_REROLL
+	reroll_cost = price(BASE_REROLL)
 	roll_shop()
 
 
@@ -290,16 +323,18 @@ func _owned_ids() -> Array:
 
 func _random_offer() -> Dictionary:
 	var roll := rng.randf()
+	if rule("no_shop_charms", false):
+		roll = 0.6 + roll * 0.4
 	if roll < 0.6:
 		var id := Charms.random_id(rng, _owned_ids())
 		if id != "":
-			return {"type": "charm", "id": id, "price": Charms.DEFS[id].price}
+			return {"type": "charm", "id": id, "price": price(Charms.DEFS[id].price)}
 	if roll < 0.85:
 		var h: String = HandEval.ORDER[rng.randi_range(0, HandEval.ORDER.size() - 1)]
-		return {"type": "rune", "hand": h, "price": RUNE_PRICE}
+		return {"type": "rune", "hand": h, "price": price(RUNE_PRICE)}
 	var keys := SIGILS.keys()
 	var s: String = keys[rng.randi_range(0, keys.size() - 1)]
-	return {"type": "sigil", "id": s, "price": SIGILS[s].price}
+	return {"type": "sigil", "id": s, "price": price(SIGILS[s].price)}
 
 
 func offer_title(o: Dictionary) -> String:
@@ -360,6 +395,8 @@ func buy(i: int) -> Dictionary:
 
 func sell_charm(i: int) -> String:
 	var ch: Dictionary = charms[i]
+	if ch.get("locked", false):
+		return "%s is fixed by this challenge" % Charms.name_of(ch)
 	var value := Charms.sell_value(ch)
 	coins += value
 	charms.remove_at(i)
@@ -369,6 +406,8 @@ func sell_charm(i: int) -> String:
 func move_charm(i: int, delta: int) -> void:
 	var j := i + delta
 	if j < 0 or j >= charms.size():
+		return
+	if charms[i].get("locked", false) or charms[j].get("locked", false):
 		return
 	var tmp = charms[i]
 	charms[i] = charms[j]
@@ -392,6 +431,8 @@ func apply_sigil(id: String) -> String:
 				names.append(HandEval.card_name(c))
 			return "Destroyed " + ", ".join(names)
 		"mirror":
+			if deck.is_empty():
+				return "Your deck is empty"
 			var names := PackedStringArray()
 			for n in 2:
 				var src: Dictionary = deck[rng.randi_range(0, deck.size() - 1)]

@@ -78,10 +78,16 @@ func _test_scoring() -> void:
 
 ## Plays whole runs with a greedy bot to catch runtime errors and gauge difficulty.
 func _test_simulated_runs() -> void:
+	_simulate("", 40)
+	for c in Challenges.LIST:
+		_simulate(c.id, 12)
+
+
+func _simulate(challenge_id: String, count: int) -> void:
 	var floors := []
-	for s in 40:
+	for s in count:
 		var run = RunState.new()
-		run.new_run(1000 + s)
+		run.new_run(1000 + s, challenge_id)
 		var guard := 0
 		var done := false
 		while not done and guard < 200:
@@ -108,11 +114,15 @@ func _test_simulated_runs() -> void:
 				floors.append(99)
 		if floors.size() <= s:
 			floors.append(run.floor_num)
-		check(run.deck.size() > 0, "deck never empties")
+		if challenge_id != "glass_cannon":
+			check(run.deck.size() > 0, "deck never empties")
+		for ch in run.charms:
+			if ch.get("locked", false):
+				check(run.sell_charm(run.charms.find(ch)).contains("fixed"), "locked charms cannot be sold")
 		run.free()
 	floors.sort()
 	var wins := floors.count(99)
-	print("Simulated 40 bot runs. Floors reached: %s  (wins: %d)" % [str(floors), wins])
+	print("%s: %d bot runs, floors reached %s (wins: %d)" % [challenge_id if challenge_id != "" else "standard", count, str(floors), wins])
 
 
 func _best_play(run) -> Dictionary:

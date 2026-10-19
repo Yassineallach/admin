@@ -9,6 +9,12 @@ func _ready() -> void:
 	main = load("res://scenes/main.tscn").instantiate()
 	add_child(main)
 	await _shot("1_title")
+	Run.completed_challenges = {"royal_blood": true}
+	main.show_challenges()
+	await _shot("1b_challenges")
+	Run.new_run(7, "silent_suits")
+	main.show_select()
+	await _shot("1c_challenge_select")
 	Run.new_run(42)
 	Run.charms = [Charms.make("lucky_penny"), Charms.make("twin_flame"), Charms.make("loaded_die")]
 	main.show_select()

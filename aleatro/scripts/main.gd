@@ -374,7 +374,7 @@ func show_title() -> void:
 		fan.add_child(cv)
 	screen.add_child(fan)
 	screen.add_child(_spacer())
-	for b in [_button("New Run", _start_run, 380), _button("How to Play", show_help, 380)]:
+	for b in [_button("New Run", _start_run, 380), _button("Challenges", show_challenges, 380), _button("How to Play", show_help, 380)]:
 		b.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 		screen.add_child(b)
 	if Run.best_floor > 0:
@@ -397,9 +397,50 @@ func show_help() -> void:
 	screen.add_child(b)
 
 
-func _start_run() -> void:
-	Run.new_run()
+func _start_run(challenge_id := "") -> void:
+	Run.new_run(0, challenge_id)
 	show_select()
+
+
+func show_challenges() -> void:
+	_clear()
+	screen.add_child(_label("Challenges", 40, GOLD))
+	screen.add_child(_wrapped("Preset runs with changed rules. Clear all %d floors to complete one." % Run.FLOORS, 20, SOFT_TEXT))
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	var list := VBoxContainer.new()
+	list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	list.add_theme_constant_override("separation", 12)
+	for c in Challenges.LIST:
+		var done: bool = Run.completed_challenges.get(c.id, false)
+		var p := _panel(PANEL, Color("#7be0a1") if done else Color(0, 0, 0, 0))
+		var h := _hbox(12, BoxContainer.ALIGNMENT_BEGIN)
+		var v := VBoxContainer.new()
+		v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		v.add_child(_label(c.name + ("   Completed" if done else ""), 26, Color("#7be0a1") if done else GOLD, HORIZONTAL_ALIGNMENT_LEFT))
+		v.add_child(_wrapped(c.desc, 19, TEXT, HORIZONTAL_ALIGNMENT_LEFT))
+		h.add_child(v)
+		var b := _button("Start", _start_run.bind(c.id), 120)
+		b.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		h.add_child(b)
+		p.add_child(h)
+		list.add_child(p)
+	scroll.add_child(list)
+	screen.add_child(scroll)
+	var back := _button("Back", show_title, 380)
+	back.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	screen.add_child(back)
+
+
+## One line describing the active challenge and this floor's muted suit, or "".
+func _challenge_note() -> String:
+	if Run.challenge.is_empty():
+		return ""
+	var note: String = "Challenge: " + Run.challenge.name
+	if Run.floor_muted_suit() >= 0:
+		note += "  ·  %s are muted this floor" % HandEval.SUIT_NAMES[Run.floor_muted_suit()]
+	return note
 
 
 # --- Trial selection -------------------------------------------------------------
@@ -408,6 +449,8 @@ func show_select() -> void:
 	_clear()
 	_header()
 	_charms_row()
+	if _challenge_note() != "":
+		screen.add_child(_wrapped(_challenge_note(), 20, Color("#7be0a1")))
 	screen.add_child(_label("Choose your next trial", 28))
 	for t in 3:
 		var current := t == Run.trial_idx
@@ -477,6 +520,8 @@ func show_round() -> void:
 	screen.add_child(top)
 	if Run.trial_idx == 2:
 		screen.add_child(_wrapped(Run.warden_desc(), 20, MULT_COLOR))
+	if Run.floor_muted_suit() >= 0:
+		screen.add_child(_wrapped("%s are muted this floor" % HandEval.SUIT_NAMES[Run.floor_muted_suit()], 20, MULT_COLOR))
 
 	var stats := _hbox(40)
 	lbl.hands = _label("", 24, POINTS_COLOR)
@@ -785,9 +830,12 @@ func show_shop() -> void:
 		var l := _wrapped("%s: %s" % [Charms.name_of(ch), Charms.describe(ch)], 18, TEXT, HORIZONTAL_ALIGNMENT_LEFT)
 		l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		h.add_child(l)
-		if i > 0:
-			h.add_child(_button("<", _on_move_charm.bind(i, -1), 56))
-		h.add_child(_button("Sell %d" % Charms.sell_value(ch), _on_sell.bind(i), 110))
+		if ch.get("locked", false):
+			h.add_child(_label("Fixed", 20, SOFT_TEXT))
+		else:
+			if i > 0 and not Run.charms[i - 1].get("locked", false):
+				h.add_child(_button("<", _on_move_charm.bind(i, -1), 56))
+			h.add_child(_button("Sell %d" % Charms.sell_value(ch), _on_sell.bind(i), 110))
 		screen.add_child(h)
 
 	var levels := GridContainer.new()
@@ -843,6 +891,10 @@ func show_game_over() -> void:
 	screen.add_child(_label("Run Over", 64, MULT_COLOR))
 	screen.add_child(_label("Floor %d · %s" % [Run.floor_num, Run.TRIAL_NAMES[Run.trial_idx]], 28))
 	screen.add_child(_label("Scored %s of %s" % [fmt(Run.score), fmt(Run.target())], 24, SOFT_TEXT))
+	if Run.hand.is_empty() and Run.hands_left > 0:
+		screen.add_child(_label("You ran out of cards", 24, MULT_COLOR))
+	if not Run.challenge.is_empty():
+		screen.add_child(_label("Challenge: " + Run.challenge.name, 24, Color("#7be0a1")))
 	screen.add_child(_spacer())
 	_end_buttons()
 
@@ -852,12 +904,15 @@ func show_victory() -> void:
 	screen.add_child(_spacer())
 	screen.add_child(_label("Victory!", 72, GOLD))
 	screen.add_child(_label("You cleared all %d floors." % Run.FLOORS, 28))
+	if not Run.challenge.is_empty():
+		screen.add_child(_label("Challenge complete: " + Run.challenge.name, 26, Color("#7be0a1")))
 	screen.add_child(_spacer())
 	_end_buttons()
 
 
 func _end_buttons() -> void:
-	for b in [_button("New Run", _start_run, 380), _button("Title", show_title, 380)]:
+	var again := _button("Try Again" if not Run.challenge.is_empty() else "New Run", _start_run.bind(Run.challenge.get("id", "")), 380)
+	for b in [again, _button("Title", show_title, 380)]:
 		b.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 		screen.add_child(b)
 	screen.add_child(_spacer())
