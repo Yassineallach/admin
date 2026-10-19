@@ -104,6 +104,7 @@ static func draw_suit(ci: CanvasItem, suit: int, c: Vector2, s: float, col: Colo
 			ci.draw_circle(c + Vector2(0, -0.5 * s), 0.42 * s, col)
 			ci.draw_circle(c + Vector2(-0.48 * s, 0.1 * s), 0.42 * s, col)
 			ci.draw_circle(c + Vector2(0.48 * s, 0.1 * s), 0.42 * s, col)
+			ci.draw_circle(c + Vector2(0, -0.05 * s), 0.3 * s, col)
 			ci.draw_colored_polygon(PackedVector2Array([c + Vector2(0, -0.1 * s), c + Vector2(-0.32 * s, 1.0 * s), c + Vector2(0.32 * s, 1.0 * s)]), col)
 		3: # spade
 			ci.draw_circle(c + Vector2(-0.5 * s, 0.2 * s), 0.5 * s, col)
