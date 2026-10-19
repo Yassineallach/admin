@@ -10,6 +10,7 @@ const TEXT := Color("#f3ecff")
 const SOFT_TEXT := Color("#b5a8d6")
 const PANEL := Color("#24184d")
 const PANEL_DIM := Color("#171033")
+const BUTTON_DEPTH := 6
 
 const HELP_TEXT := """Each floor has three trials: a Minor Trial, a Major Trial and a Warden. Reach the target score to clear a trial. Clear all 8 floors to win.
 
@@ -41,6 +42,7 @@ var sort_by_suit := false
 var blip: AudioStreamPlayer
 var step_count := 0
 var pending_rewards: Array = []
+var tooltip: PanelContainer
 
 
 func _ready() -> void:
@@ -103,35 +105,51 @@ func _make_theme() -> Theme:
 	t.default_font_size = 22
 	t.set_color("font_color", "Label", TEXT)
 
-	var normal := StyleBoxFlat.new()
-	normal.bg_color = GOLD
-	normal.set_corner_radius_all(12)
-	normal.content_margin_left = 18
-	normal.content_margin_right = 18
-	normal.content_margin_top = 12
-	normal.content_margin_bottom = 12
-	var hover := normal.duplicate()
-	hover.bg_color = GOLD.lightened(0.12)
-	var pressed := normal.duplicate()
-	pressed.bg_color = GOLD.darkened(0.2)
-	var disabled := normal.duplicate()
-	disabled.bg_color = Color("#4a4163")
-	t.set_stylebox("normal", "Button", normal)
-	t.set_stylebox("hover", "Button", hover)
-	t.set_stylebox("pressed", "Button", pressed)
-	t.set_stylebox("disabled", "Button", disabled)
+	t.set_stylebox("normal", "Button", _button_style(GOLD, BUTTON_DEPTH))
+	t.set_stylebox("hover", "Button", _button_style(GOLD.lightened(0.12), BUTTON_DEPTH))
+	t.set_stylebox("pressed", "Button", _button_style(GOLD.darkened(0.08), 0))
+	t.set_stylebox("disabled", "Button", _button_style(Color("#4a4163"), 2))
 	t.set_stylebox("focus", "Button", StyleBoxEmpty.new())
 	for c in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
 		t.set_color(c, "Button", Color("#1b1030"))
 	t.set_color("font_disabled_color", "Button", Color("#8d84a6"))
 	t.set_font_size("font_size", "Button", 24)
 
-	var panel := StyleBoxFlat.new()
-	panel.bg_color = PANEL
-	panel.set_corner_radius_all(14)
-	panel.set_content_margin_all(14)
-	t.set_stylebox("panel", "PanelContainer", panel)
+	t.set_stylebox("panel", "PanelContainer", _panel_style(PANEL))
 	return t
+
+
+## A raised button face: the darker bottom edge is its base. With depth 0 the face
+## is drawn lower by BUTTON_DEPTH, so the button looks pushed down.
+func _button_style(color: Color, depth: int) -> StyleBoxFlat:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = color
+	sb.set_corner_radius_all(12)
+	sb.border_width_bottom = depth
+	sb.border_color = color.darkened(0.38)
+	sb.content_margin_left = 18
+	sb.content_margin_right = 18
+	sb.content_margin_top = 12 + (BUTTON_DEPTH - depth)
+	sb.content_margin_bottom = 12
+	sb.expand_margin_top = -(BUTTON_DEPTH - depth)
+	sb.shadow_color = Color(0, 0, 0, 0.35)
+	sb.shadow_size = 6 if depth > 0 else 2
+	sb.shadow_offset = Vector2(0, 4 if depth > 0 else 1)
+	return sb
+
+
+func _panel_style(color: Color, border := Color(0, 0, 0, 0)) -> StyleBoxFlat:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = color
+	sb.set_corner_radius_all(14)
+	sb.set_content_margin_all(14)
+	sb.shadow_color = Color(0, 0, 0, 0.3)
+	sb.shadow_size = 10
+	sb.shadow_offset = Vector2(0, 6)
+	if border.a > 0:
+		sb.set_border_width_all(3)
+		sb.border_color = border
+	return sb
 
 
 func _label(text: String, font_size := 22, color := TEXT, align := HORIZONTAL_ALIGNMENT_CENTER) -> Label:
@@ -156,20 +174,85 @@ func _button(text: String, cb: Callable, min_width := 0) -> Button:
 	b.text = text
 	b.custom_minimum_size = Vector2(min_width, 64)
 	b.pressed.connect(cb)
+	b.button_down.connect(_squash.bind(b, 0.95))
+	b.button_up.connect(_squash.bind(b, 1.0))
 	return b
+
+
+func _squash(c: Control, to: float) -> void:
+	c.pivot_offset = c.size / 2.0
+	var tw := c.create_tween().set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tw.tween_property(c, "scale", Vector2(to, to), 0.12 if to < 1.0 else 0.22)
 
 
 func _panel(color := PANEL, border := Color(0, 0, 0, 0)) -> PanelContainer:
 	var p := PanelContainer.new()
-	var sb := StyleBoxFlat.new()
-	sb.bg_color = color
-	sb.set_corner_radius_all(14)
-	sb.set_content_margin_all(14)
-	if border.a > 0:
-		sb.set_border_width_all(3)
-		sb.border_color = border
-	p.add_theme_stylebox_override("panel", sb)
+	p.add_theme_stylebox_override("panel", _panel_style(color, border))
 	return p
+
+
+## Loops the panel's border between its color and a lighter one, to mark the active choice.
+func _pulse_border(p: PanelContainer) -> void:
+	var sb := p.get_theme_stylebox("panel") as StyleBoxFlat
+	var base := sb.border_color
+	var tw := p.create_tween().set_loops()
+	tw.tween_property(sb, "border_color", base.lightened(0.45), 0.7).set_trans(Tween.TRANS_SINE)
+	tw.tween_property(sb, "border_color", base, 0.7).set_trans(Tween.TRANS_SINE)
+
+
+func _shake(strength: float) -> void:
+	var tw := create_tween()
+	for i in 6:
+		var k := strength * (1.0 - i / 6.0)
+		tw.tween_property(self, "position", Vector2(randf_range(-k, k), randf_range(-k, k)), 0.035)
+	tw.tween_property(self, "position", Vector2.ZERO, 0.05)
+
+
+# --- Tooltips ---------------------------------------------------------------------
+
+func _input(event: InputEvent) -> void:
+	if tooltip and event is InputEventMouseButton and event.pressed:
+		_hide_tooltip()
+
+
+func _hide_tooltip() -> void:
+	if is_instance_valid(tooltip):
+		tooltip.queue_free()
+	tooltip = null
+
+
+func _show_tooltip(target: Control, title: String, body: String) -> void:
+	_hide_tooltip()
+	var p := _panel(Color("#33236b"), GOLD)
+	p.custom_minimum_size = Vector2(320, 0)
+	p.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	p.z_index = 30
+	var v := VBoxContainer.new()
+	v.add_child(_label(title, 24, GOLD))
+	v.add_child(_wrapped(body, 19, TEXT))
+	p.add_child(v)
+	add_child(p)
+	tooltip = p
+	p.modulate.a = 0.0
+	await get_tree().process_frame
+	if not is_instance_valid(p):
+		return
+	p.reset_size()
+	var pos := target.global_position + Vector2(target.size.x / 2.0 - p.size.x / 2.0, -p.size.y - 16)
+	if pos.y < 12:
+		pos.y = target.global_position.y + target.size.y + 16
+	pos.x = clampf(pos.x, 12, size.x - p.size.x - 12)
+	p.global_position = pos
+	p.pivot_offset = p.size / 2.0
+	p.scale = Vector2(0.85, 0.85)
+	var tw := p.create_tween().set_parallel().set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tw.tween_property(p, "scale", Vector2.ONE, 0.18)
+	tw.tween_property(p, "modulate:a", 1.0, 0.12)
+	var shown_id := p.get_instance_id()
+	get_tree().create_timer(3.5).timeout.connect(func():
+		if is_instance_valid(tooltip) and tooltip.get_instance_id() == shown_id:
+			_hide_tooltip()
+	)
 
 
 func _spacer() -> Control:
@@ -237,7 +320,18 @@ func _charms_row() -> void:
 
 
 func _on_charm_tapped(v: CharmView) -> void:
-	_toast("%s: %s" % [Charms.name_of(v.charm), Charms.describe(v.charm)])
+	var rarity: String = Charms.RARITY_NAMES[Charms.rarity_of(v.charm)]
+	_show_tooltip(v, Charms.name_of(v.charm), "%s\n%s charm · sells for %d" % [Charms.describe(v.charm), rarity, Charms.sell_value(v.charm)])
+
+
+func _on_card_inspected(v: CardView) -> void:
+	var c := v.card
+	var body := "+%d Points when scored" % HandEval.card_points(c)
+	if c.enh != "":
+		body += "\n%s: %s" % [Scoring.ENHANCEMENTS[c.enh].name, Scoring.ENHANCEMENTS[c.enh].desc]
+	if Run.is_muted(c):
+		body += "\nMuted by %s" % Run.warden_name()
+	_show_tooltip(v, HandEval.card_name(c), body)
 
 
 static func fmt(x: float) -> String:
@@ -339,8 +433,11 @@ func show_select() -> void:
 				v.add_child(_wrapped("Skipping gives +5 coins or a free hand level, but you miss the shop.", 18, SOFT_TEXT))
 		p.add_child(v)
 		screen.add_child(p)
+		if current:
+			_pulse_border(p)
 	screen.add_child(_spacer())
 	_info_bar()
+	_toast("Tip: tap a charm to read it. Hold a card to inspect it.")
 
 
 func _on_play_trial() -> void:
@@ -457,6 +554,7 @@ func _refresh_hand() -> void:
 		var v := CardView.new().setup(card)
 		v.selected = selected.has(card)
 		v.tapped.connect(_on_card_tapped)
+		v.inspected.connect(_on_card_inspected)
 		hand_row.add_child(v)
 		card_views[card.id] = v
 
@@ -473,8 +571,6 @@ func _on_card_tapped(v: CardView) -> void:
 	else:
 		_toast("You can select up to %d cards" % Run.MAX_SELECT)
 		return
-	if v.card.enh != "":
-		_toast("%s: %s" % [Scoring.ENHANCEMENTS[v.card.enh].name, Scoring.ENHANCEMENTS[v.card.enh].desc])
 	_update_preview()
 
 
@@ -547,6 +643,8 @@ func _on_play() -> void:
 	var tw := create_tween()
 	tw.tween_method(func(x: float): lbl.score.text = fmt(x), before, Run.score, 0.6)
 	await tw.finished
+	if Run.trial_won or result.total >= Run.target() * 0.35:
+		_shake(10.0 if Run.trial_won else 6.0)
 	if not result.broken.is_empty():
 		var names := PackedStringArray()
 		for c in result.broken:

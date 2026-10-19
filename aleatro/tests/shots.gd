@@ -19,6 +19,13 @@ func _ready() -> void:
 	for i in 3:
 		main._on_card_tapped(main.hand_row.get_child(i))
 	await _shot("3_round_selected")
+	main._on_card_inspected(main.hand_row.get_child(0))
+	await get_tree().create_timer(0.4).timeout
+	await _shot("3b_card_tooltip")
+	main._on_charm_tapped(main.charm_views[2])
+	await get_tree().create_timer(0.4).timeout
+	await _shot("3c_charm_tooltip")
+	main._hide_tooltip()
 	main._on_play()
 	await get_tree().create_timer(1.2).timeout
 	await _shot("4_scoring")

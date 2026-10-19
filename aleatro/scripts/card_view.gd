@@ -3,6 +3,8 @@ extends Control
 ## A playing card drawn entirely in code. Emits `tapped` when touched.
 
 signal tapped(view: CardView)
+## Emitted when the card is held down instead of tapped.
+signal inspected(view: CardView)
 
 const CARD_SIZE := Vector2(80, 116)
 const FACE := Color("#f6f1e7")
@@ -15,6 +17,7 @@ const ENH_COLORS := {
 }
 const SELECTED_BORDER := Color("#f2b544")
 const RAISE := 24.0
+const HOLD_TIME := 0.4
 
 var card: Dictionary = {}
 var interactive := true
@@ -26,6 +29,9 @@ var dimmed := false:
 	set(v):
 		dimmed = v
 		queue_redraw()
+var _press_time := -1.0
+var _hold_fired := false
+var _glow_t := 0.0
 var lift := 0.0:
 	set(v):
 		lift = v
@@ -44,9 +50,25 @@ func setup(c: Dictionary, can_tap := true) -> CardView:
 func _gui_input(event: InputEvent) -> void:
 	if not interactive:
 		return
-	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-		tapped.emit(self)
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
+		if event.pressed:
+			_press_time = Time.get_ticks_msec() / 1000.0
+			_hold_fired = false
+		elif _press_time >= 0.0:
+			_press_time = -1.0
+			if not _hold_fired:
+				tapped.emit(self)
 		accept_event()
+
+
+func _process(delta: float) -> void:
+	if _press_time >= 0.0 and not _hold_fired and Time.get_ticks_msec() / 1000.0 - _press_time >= HOLD_TIME:
+		_hold_fired = true
+		inspected.emit(self)
+		bump()
+	if selected:
+		_glow_t += delta
+		queue_redraw()
 
 
 func bump() -> void:
@@ -63,6 +85,13 @@ func _draw() -> void:
 	shadow.bg_color = Color(0, 0, 0, 0.35)
 	shadow.set_corner_radius_all(10)
 	draw_style_box(shadow, Rect2(r.position + Vector2(3, 5), r.size))
+	if selected:
+		var glow := StyleBoxFlat.new()
+		glow.bg_color = Color(0, 0, 0, 0)
+		glow.set_corner_radius_all(12)
+		glow.shadow_color = Color(SELECTED_BORDER, 0.35 + 0.25 * sin(_glow_t * 5.0))
+		glow.shadow_size = 12
+		draw_style_box(glow, r)
 
 	var enh: String = card.enh
 	var sb := StyleBoxFlat.new()
