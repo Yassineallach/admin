@@ -236,10 +236,11 @@ class Dust:
         return out_im.convert("RGB")
 
 
-_rng = np.random.default_rng(3)
-_GRAIN = [(_rng.normal(0, 5.0, (H, W, 1))).astype(np.int16) for _ in range(6)]
+# One fixed grain layer: the artwork already carries paper texture, and grain
+# that changes every frame makes the video several times larger to encode.
+_GRAIN = np.random.default_rng(3).normal(0, 3.0, (H, W, 1)).astype(np.int16)
 
 
 def grain(frame, i):
-    arr = np.asarray(frame, dtype=np.int16) + _GRAIN[i % len(_GRAIN)]
+    arr = np.asarray(frame, dtype=np.int16) + _GRAIN
     return Image.fromarray(np.clip(arr, 0, 255).astype(np.uint8), "RGB")
