@@ -80,9 +80,33 @@ def s05(t, d):
     return actor(f, "A04", h, 1250, H + 60 + (h - 980) * 0.6, t, enter=(1350, 0.0, 0.7), breathe=False)
 
 
+@lru_cache(maxsize=None)
+def _s06_plate():
+    # Darrow alone in the dark mine, tunnel sunk into red-black behind him.
+    bg = background("A01", blur=5, dim=0.62)
+    return place(bg, character("A02", round(bg.height * 0.92)), bg.width * 0.5, bg.height * 1.04)
+
+
 def s06(t, d):
-    # Pure black; let "Welcome to Red Rising." land.
-    return Image.new("RGB", (W, H), (0, 0, 0))
+    # "Welcome to Red Rising." Slow push toward Darrow's face, lamp glowing.
+    f = move(_s06_plate(), t, d, 1.0, 2.1, (0.5, 0.55), (0.5, 0.27))
+    f = _vignette(f, 0.75)
+    f = _dust.draw(f, t, 0.6)
+    return fade(f, t, d, fin=0.4, fout=0.5)
+
+
+@lru_cache(maxsize=None)
+def _vignette_mask():
+    from PIL import ImageDraw, ImageFilter
+    m = Image.new("L", (W, H), 255)
+    ImageDraw.Draw(m).ellipse((-W * 0.15, -H * 0.2, W * 1.15, H * 1.2), fill=0)
+    return m.filter(ImageFilter.GaussianBlur(160))
+
+
+def _vignette(frame, strength):
+    dark = Image.new("RGB", (W, H), (20, 4, 6))
+    mask = _vignette_mask().point(lambda v: int(v * strength))
+    return Image.composite(dark, frame, mask)
 
 
 def s07(t, d):
