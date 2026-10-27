@@ -54,12 +54,13 @@ def enclosed_pockets(rgb, removed, bg, tol, min_area):
     return out
 
 
-def cutout(path, out_path, thresh=34, tol=16, min_area=60):
+def cutout(path, out_path, thresh=34, tol=16, min_area=60, pockets=True):
     im = Image.open(path).convert("RGB")
     rgb = np.asarray(im)
     removed = border_fill_mask(im, thresh)
     bg = np.median(rgb[removed], axis=0) if removed.any() else rgb[0, 0]
-    removed |= enclosed_pockets(rgb, removed, bg, tol, min_area)
+    if pockets:
+        removed |= enclosed_pockets(rgb, removed, bg, tol, min_area)
     mask = Image.fromarray(np.where(removed, 0, 255).astype(np.uint8), "L")
     mask = mask.filter(ImageFilter.MinFilter(3)).filter(ImageFilter.GaussianBlur(0.8))
     rgba = im.convert("RGBA")
@@ -70,12 +71,16 @@ def cutout(path, out_path, thresh=34, tol=16, min_area=60):
 
 
 if __name__ == "__main__":
+    # usage: cutout.py SRC DST [ID,ID,...]  -- IDs listed last skip pass 2,
+    # for characters whose clothing is the same cream as the background.
     src, dst = sys.argv[1], sys.argv[2]
+    no_pockets = set(sys.argv[3].split(",")) if len(sys.argv) > 3 else set()
     os.makedirs(dst, exist_ok=True)
     for f in sorted(os.listdir(src)):
         m = re.match(r"(A\d\d)\s*\W+\s*(.+)\.png$", f)
         if not m:
             continue
         slug = re.sub(r"[^a-z0-9]+", "-", m.group(2).lower()).strip("-")
-        size = cutout(os.path.join(src, f), os.path.join(dst, f"{m.group(1)}_{slug}.png"))
+        size = cutout(os.path.join(src, f), os.path.join(dst, f"{m.group(1)}_{slug}.png"),
+                      pockets=m.group(1) not in no_pockets)
         print(f"{m.group(1)}_{slug}.png", size)
