@@ -1,10 +1,16 @@
-# Red Rising — ChatGPT image prompts (copy and paste)
+# Red Rising — ChatGPT image prompts, TED-Ed-style flat animation
+
+The video uses a **TED-Ed-like look**: flat 2D illustration, simple geometric shapes, minimal faces, soft paper texture and a small palette. Scenes are animated as **cut-out animation**: backgrounds and characters are separate images, so characters can move, turn and gesture over the scene.
+
+So there are two kinds of image:
+- **Backgrounds (🏞):** the place only, **no people**, wide 16:9.
+- **Characters (🧍):** one character, **full body**, on a **plain cream background**, so I can cut them out and animate them.
 
 How to use:
 1. Open a **new ChatGPT chat** and paste the **Session starter** first.
-2. Then paste **one prompt per message**, in order. Each prompt is complete on its own.
+2. Paste **one prompt per message**, in order. Each prompt is complete on its own.
 3. Download each image and name it by its ID (e.g. `A09_sevro.png`).
-4. If a face drifts, reply: *"Keep the same character face and style as the earlier image of him/her."*
+4. If a character drifts, reply: *"Same character design and style as the earlier image of him/her."*
 
 A07 and A33 are the real book covers. Don't generate them.
 
@@ -13,205 +19,186 @@ A07 and A33 are the real book covers. Don't generate them.
 ## Session starter (paste once, first)
 
 ```
-I'm going to ask you for a series of images for one YouTube video about the Red Rising book trilogy. Use one consistent art style for every image: painterly cinematic concept art with visible oil-paint brushwork, dramatic chiaroscuro lighting, muted desaturated colours with crimson and gold as the only strong accents, dark sci-fi with Roman imperial influence, atmospheric haze and subtle film grain. Every image must be a wide landscape 16:9 image. Never include text, letters, captions, logos, watermarks, book covers or gore. Keep recurring characters looking the same every time. Reply "ready" and wait for my first image request.
+I'm going to ask you for a series of images for one animated YouTube video about the Red Rising book trilogy. Use one consistent style for every image: flat 2D illustration like a modern animated educational explainer — simple geometric shapes, clean silhouettes, minimal facial features (small dot or line eyes, simple brows, tiny or no mouth), soft flat shading with only one shadow tone, subtle paper-grain and brush texture, and a limited palette of rust red, deep indigo, ochre gold and warm cream. Storybook feel, never photorealistic, never 3D, no heavy gradients. Background images must contain no people and be wide 16:9. Character images must show one full-body character on a plain flat warm-cream background with nothing else and no ground shadow. Never include text, letters, logos, watermarks, book covers or gore. Keep each recurring character's design identical every time. Reply "ready" and wait for my first request.
 ```
 
 ---
 
-## A01 — Mine tunnel
+## Backgrounds 🏞
 
+### A01 — Mine tunnel
 ```
-Create a wide landscape 16:9 image: a vast underground mine tunnel deep beneath Mars. A lone miner in a red jumpsuit operates a colossal drilling machine; his headlamp beam cuts through thick dust. Jagged rust-coloured rock walls, oppressive darkness, a tiny human against enormous machinery. Painterly cinematic concept art, visible oil-paint brushwork, dramatic chiaroscuro lighting, muted desaturated colours with crimson and gold accents, dark sci-fi with Roman imperial influence, subtle film grain. No text, no watermark.
+Create a wide 16:9 background illustration with no people: a vast underground mine tunnel deep beneath Mars, a giant drilling machine made of simple geometric shapes, rust-red rock walls built from layered flat shapes, a cone of warm lamp light cutting through dark indigo shadow, floating dust specks. Leave open space in the centre for a character. Flat 2D illustration like a modern animated educational explainer, simple shapes, soft flat shading with one shadow tone, subtle paper-grain texture, palette of rust red, deep indigo, ochre gold and warm cream. No text, no watermark.
 ```
 
-## A02 — Darrow (Red)
-
+### A03 — The city on the surface
 ```
-Create a wide landscape 16:9 image: close portrait of Darrow, a 16-year-old young man, lean and wiry, rust-red hair, pale skin streaked with grime and sweat, intense dark eyes, wearing a worn red mining jumpsuit and a helmet with a headlamp. Harsh light from the helmet lamp above, deep shadows, determined stare off to the left. Place him on the right third of the frame, leaving the left side empty and dark. Painterly cinematic concept art, visible oil-paint brushwork, dramatic chiaroscuro lighting, muted colours with crimson and gold accents, subtle film grain. No text, no watermark.
+Create a wide 16:9 background illustration with no people: a terraformed Mars city at night, Roman-style towers, domes and hanging gardens drawn as simple flat geometric shapes, small warm gold windows, a sky fading from rust red to deep indigo. Beautiful and orderly. Flat 2D illustration like a modern animated educational explainer, soft flat shading with one shadow tone, subtle paper-grain texture, palette of rust red, deep indigo, ochre gold and warm cream. No text, no watermark.
 ```
-
-## A03 — The city on the surface
 
+### A05 — Mars from orbit
 ```
-Create a wide landscape 16:9 image: a terraformed Mars at night seen from a high vantage point — a glittering futuristic city of Roman-style marble towers, domes and hanging gardens, lights reflecting on canals, red sky fading to deep blue. Opulent and beautiful. Painterly cinematic concept art, visible oil-paint brushwork, dramatic lighting, muted colours with crimson and gold accents, atmospheric haze, subtle film grain. No people in focus, no text, no watermark.
+Create a wide 16:9 background illustration: the planet Mars from space as a simple flat circle with layered rust-red and ochre bands, a crescent of shadow on one side, a few tiny gold city lights, small cream star dots on a deep indigo sky. Planet slightly right of centre. Flat 2D illustration like a modern animated educational explainer, subtle paper-grain texture, palette of rust red, deep indigo, ochre gold and warm cream. No text, no watermark.
 ```
 
-## A04 — Gold aristocrat
-
+### A06 — Red miners (crowd)
 ```
-Create a wide landscape 16:9 image: low-angle portrait of a Gold aristocrat — a tall, beautiful, golden-haired noble with glowing gold eyes, a thin scar on one cheek, Roman-inspired robes and a gold laurel — standing in a marble hall and looking down at the viewer with calm superiority. Warm golden light. Place the person on the right third of the frame. Painterly cinematic concept art, visible oil-paint brushwork, dramatic chiaroscuro lighting, muted colours with crimson and gold accents, subtle film grain. No text, no watermark.
+Create a wide 16:9 illustration: a crowd of tired miners in a dim underground colony, drawn as simple repeated flat figures with rust-red hair and red jumpsuits, minimal faces, lamp light from above, seen from a high angle. Flat 2D illustration like a modern animated educational explainer, simple geometric shapes, soft flat shading with one shadow tone, subtle paper-grain texture, palette of rust red, deep indigo, ochre gold and warm cream. No text, no watermark.
 ```
-
-## A05 — Mars from orbit
 
+### A08 — The Institute valley
 ```
-Create a wide landscape 16:9 image: Mars seen from orbit, half in shadow, dramatic rim light along the day-night line, faint city lights on the night side, thin glowing atmosphere, stars. Majestic and quiet, planet slightly right of centre. Painterly cinematic concept art, visible oil-paint brushwork, muted colours with crimson and gold accents, subtle film grain. No text, no watermark.
+Create a wide 16:9 background illustration with no people: a wide highland valley with layered flat mountains, rounded forests, a winding river and a simple stone castle on a hill in the foreground, soft morning light. Flat 2D illustration like a modern animated educational explainer, simple geometric shapes, soft flat shading with one shadow tone, subtle paper-grain texture, palette of rust red, deep indigo, ochre gold and warm cream. No text, no watermark.
 ```
 
-## A06 — Red miners
-
+### A12 — The colony square
 ```
-Create a wide landscape 16:9 image: a crowd of exhausted miners in a dim underground colony on Mars, rust-red hair, dirty red jumpsuits, lamp light, faces turned upward, seen from a high angle looking down. Sombre mood. Painterly cinematic concept art, visible oil-paint brushwork, dramatic chiaroscuro lighting, muted colours with crimson accents, subtle film grain. No text, no watermark.
+Create a wide 16:9 illustration: an underground colony square, a crowd of red-haired miners seen from behind as simple flat silhouettes, all facing an empty dark gallows platform under a single harsh spotlight. No person on the gallows, nothing violent, sombre mood. Flat 2D illustration like a modern animated educational explainer, simple geometric shapes, subtle paper-grain texture, palette of rust red, deep indigo, ochre gold and warm cream. No text, no watermark.
 ```
-
-## A08 — The Institute valley
 
+### A14 — The Carving lab
 ```
-Create a wide landscape 16:9 image: a vast wild highland valley with mountains, forests and a river, an ancient stone castle on a hill in the foreground, cold morning light, mist in the valley. Epic scale, no people. Painterly cinematic concept art, visible oil-paint brushwork, dramatic lighting, muted desaturated colours with subtle gold accents, atmospheric haze, subtle film grain. No text, no watermark.
+Create a wide 16:9 background illustration with no people: a futuristic surgical lab drawn with simple flat shapes, an empty operating table under a round cold-white lamp, simple robotic arms around it, clean and clinical with a touch of gold. Flat 2D illustration like a modern animated educational explainer, soft flat shading with one shadow tone, subtle paper-grain texture, palette of deep indigo, ochre gold and warm cream with a little rust red. No text, no watermark.
 ```
 
-## A09 — Sevro
-
+### A16 — The Passage
 ```
-Create a wide landscape 16:9 image: portrait of Sevro — a small, wiry young man with a sharp feral grin, short unruly dark-gold hair and a scarred face — wearing a grey wolf-pelt hood and cloak over armour, crouched slightly, lit by firelight from below. Place him on the right third of the frame. Painterly cinematic concept art, visible oil-paint brushwork, dramatic chiaroscuro lighting, muted colours with crimson and gold accents, subtle film grain. No text, no watermark.
+Create a wide 16:9 illustration: two young warriors fighting in a bare stone chamber, shown as simple flat dark silhouettes against a single orange torch glow, long shadows on the walls, tense. No blood, no gore. Flat 2D illustration like a modern animated educational explainer, simple geometric shapes, subtle paper-grain texture, palette of rust red, deep indigo, ochre gold and warm cream. No text, no watermark.
 ```
-
-## A10 — Mustang
 
+### A17 — Olympus
 ```
-Create a wide landscape 16:9 image: three-quarter portrait of Mustang — a young woman with a sharp intelligent face, golden hair tied back, glowing gold eyes and a knowing half-smile — wearing elegant dark armour with gold detail. Warm side light, a blurred horse-emblem banner in the background. Place her on the right third of the frame. Painterly cinematic concept art, visible oil-paint brushwork, dramatic chiaroscuro lighting, muted colours with crimson and gold accents, subtle film grain. No text, no watermark.
+Create a wide 16:9 background illustration with no people: a floating mountain with gleaming palaces on top, hovering above a valley, simple flat cloud shapes swirling beneath it, seen from below. Flat 2D illustration like a modern animated educational explainer, simple geometric shapes, soft flat shading with one shadow tone, subtle paper-grain texture, palette of rust red, deep indigo, ochre gold and warm cream. No text, no watermark.
 ```
 
-## A11 — Eo
-
+### A20 — Fleet battle
 ```
-Create a wide landscape 16:9 image: portrait of Eo — a young woman with wild rust-red hair, freckles and bright defiant eyes, in simple worn red work clothes — in a dim underground mining colony, warm lamp light on her face, hopeful and defiant expression. Place her on the right third of the frame. Painterly cinematic concept art, visible oil-paint brushwork, dramatic chiaroscuro lighting, muted colours with crimson accents, subtle film grain. No text, no watermark.
+Create a wide 16:9 background illustration: a space battle above a planet, sleek warships drawn as simple flat geometric shapes with Roman-style prows, straight beam lines, round flat explosion bursts, ships at three sizes for depth, deep indigo space. Flat 2D illustration like a modern animated educational explainer, subtle paper-grain texture, palette of rust red, deep indigo, ochre gold and warm cream. No text, no watermark.
 ```
-
-## A12 — The colony square
 
+### A21 — Gold war council (room)
 ```
-Create a wide landscape 16:9 image: an underground mining colony square on Mars, a crowd of red-haired miners seen from behind, all looking toward a dark empty gallows platform silhouetted against a harsh spotlight. Grim and silent. No body or person on the gallows, nothing violent. Painterly cinematic concept art, visible oil-paint brushwork, dramatic chiaroscuro lighting, muted colours with crimson accents, subtle film grain. No text, no watermark.
+Create a wide 16:9 background illustration with no people: a grand hall with a long marble table, tall columns, hanging banners and candle glow, drawn with simple flat shapes. Leave the area around the table clear for characters. Flat 2D illustration like a modern animated educational explainer, soft flat shading with one shadow tone, subtle paper-grain texture, palette of rust red, deep indigo, ochre gold and warm cream. No text, no watermark.
 ```
 
-## A13 — Sons of Ares
-
+### A23 — The Triumph hall
 ```
-Create a wide landscape 16:9 image: a mysterious hooded figure wearing a spiked sun-ray helm, emerging from deep shadow with red light behind, a symbol of rebellion, ominous and powerful. Painterly cinematic concept art, visible oil-paint brushwork, dramatic chiaroscuro lighting, muted colours with crimson and gold accents, subtle film grain. No text, no watermark.
+Create a wide 16:9 background illustration with no people: an enormous celebration hall with long feast tables, hanging banners and warm gold light, strong one-point perspective down the hall, simple flat shapes. Festive but slightly ominous. Flat 2D illustration like a modern animated educational explainer, subtle paper-grain texture, palette of rust red, deep indigo, ochre gold and warm cream. No text, no watermark.
 ```
-
-## A14 — The Carving
 
+### A26 — Prison cell
 ```
-Create a wide landscape 16:9 image: a futuristic surgical lab, a figure lying covered on an operating table under cold white lights, robotic surgical arms and instruments around it, clinical blue-white tones with a hint of gold. Nothing graphic. Painterly cinematic concept art, visible oil-paint brushwork, dramatic lighting, muted colours, subtle film grain. No text, no watermark.
+Create a wide 16:9 background illustration with no people: a dark stone prison cell drawn with simple flat shapes, chains hanging from the wall, a single thin beam of light falling from a small opening above, deep indigo shadow. Flat 2D illustration like a modern animated educational explainer, subtle paper-grain texture, palette of deep indigo, ochre gold and warm cream. No text, no watermark.
 ```
 
-## A15 — Darrow (Gold)
-
+### A30 — The uprising
 ```
-Create a wide landscape 16:9 image: close portrait of Darrow after his transformation — the same face as the red-haired miner from earlier, but refined, tall and powerful, with golden hair, glowing gold eyes and a thin scar on his cheek, wearing dark Roman-inspired armour with gold trim. Use the same pose and framing as the earlier Darrow portrait, on the right third of the frame. Regal and composed. Painterly cinematic concept art, visible oil-paint brushwork, dramatic chiaroscuro lighting, muted colours with crimson and gold accents, subtle film grain. No text, no watermark.
+Create a wide 16:9 illustration: a large crowd of simple flat figures from many castes — some in red work clothes, some in grey and blue uniforms, some in black armour — rising together with raised fists and waving banners, a rising sun behind them. Hopeful. Minimal faces. Flat 2D illustration like a modern animated educational explainer, simple geometric shapes, subtle paper-grain texture, palette of rust red, deep indigo, ochre gold and warm cream. No text, no watermark.
 ```
-
-## A16 — The Passage
 
+### A31 — Assault on Luna
 ```
-Create a wide landscape 16:9 image: two young warriors fighting in a bare stone chamber, shown only as dark silhouettes against a single torch, tense and desperate, dramatic shadows on the walls. No blood, no gore. Painterly cinematic concept art, visible oil-paint brushwork, dramatic chiaroscuro lighting, muted colours with crimson accents, subtle film grain. No text, no watermark.
+Create a wide 16:9 background illustration: simple flat warships descending on a grey moon city of white towers and domes, a small blue-and-cream Earth in the deep indigo sky, straight beam lines and round flat explosion bursts. Flat 2D illustration like a modern animated educational explainer, subtle paper-grain texture, palette of rust red, deep indigo, ochre gold and warm cream. No text, no watermark.
 ```
 
-## A17 — Olympus
-
+### A32 — Dawn over a free Mars
 ```
-Create a wide landscape 16:9 image: a floating mountain fortress with gleaming palaces hovering above a wild valley, clouds swirling below it, seen from far below looking up. Majestic and unreachable. Painterly cinematic concept art, visible oil-paint brushwork, dramatic lighting, muted colours with gold accents, atmospheric haze, subtle film grain. No text, no watermark.
+Create a wide 16:9 background illustration with no people: sunrise over a Martian valley with layered flat hills, distant simple city spires and a big round sun, warm gold light, calm and hopeful. Flat 2D illustration like a modern animated educational explainer, soft flat shading with one shadow tone, subtle paper-grain texture, palette of rust red, deep indigo, ochre gold and warm cream. No text, no watermark.
 ```
 
-## A18 — The Jackal
-
+### A34 — End-screen background (optional)
 ```
-Create a wide landscape 16:9 image: portrait of the Jackal — a thin, pale young man with slicked-back pale-gold hair, cold gold eyes and an unsettling smile, in immaculate dark clothing — sitting very still in cold blue-tinted light. Place him on the right third of the frame. Painterly cinematic concept art, visible oil-paint brushwork, dramatic chiaroscuro lighting, muted colours with gold accents, subtle film grain. No text, no watermark.
+Create a wide 16:9 background illustration: a very simple dark Martian horizon at dusk, layered flat rust-red hills along the bottom, a deep indigo sky, mostly empty space on the right half. Flat 2D illustration, subtle paper-grain texture. No text, no watermark.
 ```
+
+---
 
-## A19 — Nero au Augustus
+## Characters 🧍
+(each on a plain warm-cream background so it can be cut out)
 
+### A02 — Darrow (Red)
 ```
-Create a wide landscape 16:9 image: portrait of an older ruler — regal and cold, short grey-gold hair, a scarred face, imperial robes with a gold eagle insignia — seated on a carved throne with a golden eagle banner behind him. Place him on the right third of the frame. Painterly cinematic concept art, visible oil-paint brushwork, dramatic chiaroscuro lighting, muted colours with crimson and gold accents, subtle film grain. No text, no watermark.
+Create a character illustration: Darrow, a lean 16-year-old miner with spiky rust-red hair, simple dot eyes and determined brows, wearing a red mining jumpsuit, heavy boots and a helmet with a small headlamp, holding a drill tool. Full body, standing in a neutral pose, three-quarter view, centred, isolated on a plain flat warm-cream background with nothing else and no ground shadow. Flat 2D illustration like a modern animated educational explainer, simple geometric shapes, soft flat shading with one shadow tone, subtle paper-grain texture, palette of rust red, deep indigo, ochre gold and warm cream. No text, no watermark.
 ```
 
-## A20 — Fleet battle
-
+### A04 — Gold aristocrat
 ```
-Create a wide landscape 16:9 image: a massive space battle above a planet, sleek Roman-inspired warships firing beams, explosions blooming silently, debris, ships at several depths. Epic scale. Painterly cinematic concept art, visible oil-paint brushwork, dramatic lighting, muted colours with crimson and gold accents, subtle film grain. No text, no watermark.
+Create a character illustration: a tall, elegant Gold noble with smooth golden hair, small gold eyes, a thin scar line on one cheek and a calm superior expression, wearing a long Roman-style robe with a gold laurel. Full body, standing upright, three-quarter view, centred, isolated on a plain flat warm-cream background with nothing else and no ground shadow. Flat 2D illustration like a modern animated educational explainer, simple geometric shapes, soft flat shading with one shadow tone, subtle paper-grain texture, palette of rust red, deep indigo, ochre gold and warm cream. No text, no watermark.
 ```
-
-## A21 — Gold war council
 
+### A09 — Sevro
 ```
-Create a wide landscape 16:9 image: a grand hall with a long marble table, robed golden-haired nobles in tense conversation, candlelight and gold light, intrigue and shadows between the faces. Painterly cinematic concept art, visible oil-paint brushwork, dramatic chiaroscuro lighting, muted colours with crimson and gold accents, subtle film grain. No text, no watermark.
+Create a character illustration: Sevro, a small wiry young man with a wide feral grin, short messy dark-gold hair and a scar across his nose, wearing a grey wolf-pelt hood and cloak over simple armour, slightly crouched. Full body, three-quarter view, centred, isolated on a plain flat warm-cream background with nothing else and no ground shadow. Flat 2D illustration like a modern animated educational explainer, simple geometric shapes, soft flat shading with one shadow tone, subtle paper-grain texture, palette of rust red, deep indigo, ochre gold and warm cream. No text, no watermark.
 ```
 
-## A22 — Victra
-
+### A10 — Mustang
 ```
-Create a wide landscape 16:9 image: portrait of Victra — a very tall, muscular young woman with golden hair and a fierce confident stare, in heavy ornate armour — arms crossed, fierce half-smile, dramatic rim light. Place her on the right third of the frame. Painterly cinematic concept art, visible oil-paint brushwork, dramatic chiaroscuro lighting, muted colours with crimson and gold accents, subtle film grain. No text, no watermark.
+Create a character illustration: Mustang, a confident young woman with golden hair in a ponytail, small gold eyes and a knowing half-smile, wearing sleek dark armour with gold trim and a short cape. Full body, standing with one hand on her hip, three-quarter view, centred, isolated on a plain flat warm-cream background with nothing else and no ground shadow. Flat 2D illustration like a modern animated educational explainer, simple geometric shapes, soft flat shading with one shadow tone, subtle paper-grain texture, palette of rust red, deep indigo, ochre gold and warm cream. No text, no watermark.
 ```
-
-## A23 — The Triumph
 
+### A11 — Eo
 ```
-Create a wide landscape 16:9 image: an enormous celebration hall with banners, long feast tables, golden light and crowds of nobles in finery, deep perspective down the length of the hall. Festive but ominous. Painterly cinematic concept art, visible oil-paint brushwork, dramatic lighting, muted colours with crimson and gold accents, subtle film grain. No text, no watermark.
+Create a character illustration: Eo, a young woman with wild curly rust-red hair, freckles shown as small dots, bright hopeful eyes, wearing simple worn red work clothes, standing tall and defiant with her chin up. Full body, three-quarter view, centred, isolated on a plain flat warm-cream background with nothing else and no ground shadow. Flat 2D illustration like a modern animated educational explainer, simple geometric shapes, soft flat shading with one shadow tone, subtle paper-grain texture, palette of rust red, deep indigo, ochre gold and warm cream. No text, no watermark.
 ```
 
-## A24 — Roque
-
+### A13 — Ares (Sons of Ares)
 ```
-Create a wide landscape 16:9 image: portrait of Roque — a slender young man with a gentle poet's face, soft golden hair and sorrowful thoughtful eyes, in refined dark robes — looking down with quiet sorrow and resolve, soft window light. Place him on the right third of the frame. Painterly cinematic concept art, visible oil-paint brushwork, dramatic chiaroscuro lighting, muted colours with gold accents, subtle film grain. No text, no watermark.
+Create a character illustration: a mysterious hooded figure in a long dark cloak wearing a spiked sun-ray helm that hides the face, standing still and imposing. Full body, front view, centred, isolated on a plain flat warm-cream background with nothing else and no ground shadow. Flat 2D illustration like a modern animated educational explainer, simple geometric shapes, soft flat shading with one shadow tone, subtle paper-grain texture, palette of rust red, deep indigo, ochre gold and warm cream. No text, no watermark.
 ```
-
-## A25 — Fitchner
 
+### A15 — Darrow (Gold)
 ```
-Create a wide landscape 16:9 image: portrait of Fitchner — a rumpled middle-aged man with messy hair and a wry knowing smile, in casual dishevelled clothes over armour — leaning casually in warm low light. Place him on the right third of the frame. Painterly cinematic concept art, visible oil-paint brushwork, dramatic chiaroscuro lighting, muted colours with crimson and gold accents, subtle film grain. No text, no watermark.
+Create a character illustration: Darrow after his transformation — the same character design as the red-haired miner Darrow, but now taller and broader, with golden hair, small gold eyes and a thin scar line on his cheek, wearing dark Roman-style armour with gold trim and a short red cape, standing proud. Full body, three-quarter view, centred, isolated on a plain flat warm-cream background with nothing else and no ground shadow. Flat 2D illustration like a modern animated educational explainer, simple geometric shapes, soft flat shading with one shadow tone, subtle paper-grain texture, palette of rust red, deep indigo, ochre gold and warm cream. No text, no watermark.
 ```
 
-## A26 — Darrow captive
-
+### A18 — The Jackal
 ```
-Create a wide landscape 16:9 image: Darrow (the golden-haired, gold-eyed young man with a cheek scar from the earlier image) alone in a dark stone cell, chained and exhausted, a single thin shaft of light falling from above, deep darkness around him. Compose it so it still works when cropped tightly on his face. Painterly cinematic concept art, visible oil-paint brushwork, dramatic chiaroscuro lighting, muted colours, subtle film grain. No text, no watermark.
+Create a character illustration: the Jackal, a thin pale young man with slicked-back pale-gold hair, narrow gold eyes and a thin unsettling smile, wearing a sharp dark high-collared coat, hands clasped behind his back. Full body, three-quarter view, centred, isolated on a plain flat warm-cream background with nothing else and no ground shadow. Flat 2D illustration like a modern animated educational explainer, simple geometric shapes, soft flat shading with one shadow tone, subtle paper-grain texture, palette of rust red, deep indigo, ochre gold and warm cream. No text, no watermark.
 ```
-
-## A27 — Sevro as Ares
 
+### A19 — Nero au Augustus
 ```
-Create a wide landscape 16:9 image: Sevro (the small, wiry young man with the wolf-pelt cloak from earlier) now wearing a spiked sun-ray helm, strong light behind him forming a halo, heroic stance, smoke around him. Painterly cinematic concept art, visible oil-paint brushwork, dramatic chiaroscuro lighting, muted colours with crimson and gold accents, subtle film grain. No text, no watermark.
+Create a character illustration: Nero, an older ruler with short grey-gold hair, a stern face with a scar line, and long imperial robes with a gold eagle emblem on the chest, standing with authority. Full body, three-quarter view, centred, isolated on a plain flat warm-cream background with nothing else and no ground shadow. Flat 2D illustration like a modern animated educational explainer, simple geometric shapes, soft flat shading with one shadow tone, subtle paper-grain texture, palette of rust red, deep indigo, ochre gold and warm cream. No text, no watermark.
 ```
 
-## A28 — Ragnar
-
+### A22 — Victra
 ```
-Create a wide landscape 16:9 image: low-angle portrait of Ragnar — a towering giant warrior with very pale skin, long white braided hair and ritual tattoos, wearing furs and dark armour — standing calm and immense in falling snow on an icy plain. Place him on the right third of the frame. Painterly cinematic concept art, visible oil-paint brushwork, dramatic chiaroscuro lighting, muted cold colours, subtle film grain. No text, no watermark.
+Create a character illustration: Victra, a very tall, strong young woman with golden hair, a fierce confident half-smile and heavy ornate gold-trimmed armour, arms crossed. Full body, three-quarter view, centred, isolated on a plain flat warm-cream background with nothing else and no ground shadow. Flat 2D illustration like a modern animated educational explainer, simple geometric shapes, soft flat shading with one shadow tone, subtle paper-grain texture, palette of rust red, deep indigo, ochre gold and warm cream. No text, no watermark.
 ```
-
-## A29 — Cassius
 
+### A24 — Roque
 ```
-Create a wide landscape 16:9 image: portrait of Cassius — a tall, strikingly handsome young man with golden curls and a proud expression — in battle-worn Roman-style armour and a red cape, weary but proud, cold light. Place him on the right third of the frame. Painterly cinematic concept art, visible oil-paint brushwork, dramatic chiaroscuro lighting, muted colours with crimson and gold accents, subtle film grain. No text, no watermark.
+Create a character illustration: Roque, a slender young man with soft wavy golden hair, gentle sad eyes and a thoughtful expression, wearing long refined dark robes, holding a small book. Full body, three-quarter view, centred, isolated on a plain flat warm-cream background with nothing else and no ground shadow. Flat 2D illustration like a modern animated educational explainer, simple geometric shapes, soft flat shading with one shadow tone, subtle paper-grain texture, palette of rust red, deep indigo, ochre gold and warm cream. No text, no watermark.
 ```
 
-## A30 — The uprising
-
+### A25 — Fitchner
 ```
-Create a wide landscape 16:9 image: a huge crowd of people from many different castes — some in red work clothes, some in grey and blue uniforms, some in black armour — rising up together, banners waving, smoke, dawn light breaking through. Hopeful and powerful, wide shot. Painterly cinematic concept art, visible oil-paint brushwork, dramatic lighting, muted colours with crimson and gold accents, subtle film grain. No text, no watermark.
+Create a character illustration: Fitchner, a rumpled middle-aged man with messy hair, a wry crooked smile and a relaxed slouch, wearing a scruffy coat over simple armour, hands in his pockets. Full body, three-quarter view, centred, isolated on a plain flat warm-cream background with nothing else and no ground shadow. Flat 2D illustration like a modern animated educational explainer, simple geometric shapes, soft flat shading with one shadow tone, subtle paper-grain texture, palette of rust red, deep indigo, ochre gold and warm cream. No text, no watermark.
 ```
-
-## A31 — Assault on Luna
 
+### A27 — Sevro as Ares
 ```
-Create a wide landscape 16:9 image: warships descending on a grey moon city of white towers and domes, Earth visible in the black sky, beams and explosions. Climactic scale. Painterly cinematic concept art, visible oil-paint brushwork, dramatic lighting, muted colours with crimson and gold accents, subtle film grain. No text, no watermark.
+Create a character illustration: Sevro — the same character design as before, small and wiry with a wolf-pelt cloak — now wearing a spiked sun-ray helm, standing in a heroic pose. Full body, front view, centred, isolated on a plain flat warm-cream background with nothing else and no ground shadow. Flat 2D illustration like a modern animated educational explainer, simple geometric shapes, soft flat shading with one shadow tone, subtle paper-grain texture, palette of rust red, deep indigo, ochre gold and warm cream. No text, no watermark.
 ```
 
-## A32 — Dawn over a free Mars
-
+### A28 — Ragnar
 ```
-Create a wide landscape 16:9 image: sunrise over a terraformed Martian valley with distant city spires, warm golden light breaking through clouds, wide open sky. Peaceful and hopeful. Painterly cinematic concept art, visible oil-paint brushwork, dramatic lighting, muted colours with crimson and gold accents, atmospheric haze, subtle film grain. No text, no watermark.
+Create a character illustration: Ragnar, a towering giant warrior with very pale skin, long white braided hair, simple geometric tattoo lines on his face and arms, and furs over dark armour, standing calm and immense. Full body, three-quarter view, centred, isolated on a plain flat warm-cream background with nothing else and no ground shadow. Flat 2D illustration like a modern animated educational explainer, simple geometric shapes, soft flat shading with one shadow tone, subtle paper-grain texture, palette of deep indigo, warm cream and a little ochre gold. No text, no watermark.
 ```
-
-## A34 — End-screen background (optional)
 
+### A29 — Cassius
 ```
-Create a wide landscape 16:9 image: a very dark, soft-focus close view of the Martian surface at dusk, low detail, mostly empty dark space on the right half. Painterly, muted colours with a faint crimson glow, subtle film grain. No text, no watermark.
+Create a character illustration: Cassius, a tall handsome young man with golden curls and a proud expression, wearing polished Roman-style armour and a red cape, standing with one hand on his sword hilt. Full body, three-quarter view, centred, isolated on a plain flat warm-cream background with nothing else and no ground shadow. Flat 2D illustration like a modern animated educational explainer, simple geometric shapes, soft flat shading with one shadow tone, subtle paper-grain texture, palette of rust red, deep indigo, ochre gold and warm cream. No text, no watermark.
 ```
 
-## A35 — Octavia au Lune
-
+### A35 — Octavia au Lune
 ```
-Create a wide landscape 16:9 image: portrait of Octavia — an ageless, elegant empress with golden hair in an imperial style and cold eyes, wearing a white-and-gold gown — seated utterly composed on a white-and-gold throne in a vast marble hall. Place her on the right third of the frame. Painterly cinematic concept art, visible oil-paint brushwork, dramatic chiaroscuro lighting, muted colours with gold accents, subtle film grain. No text, no watermark.
+Create a character illustration: Octavia, an ageless elegant empress with golden hair in a tall imperial style and cool composed eyes, wearing a long white-and-gold gown and a thin crown, standing perfectly still. Full body, front view, centred, isolated on a plain flat warm-cream background with nothing else and no ground shadow. Flat 2D illustration like a modern animated educational explainer, simple geometric shapes, soft flat shading with one shadow tone, subtle paper-grain texture, palette of deep indigo, ochre gold and warm cream. No text, no watermark.
 ```
+
+---
+
+## Tips
+- Make **A02 (Darrow)** first. Every later Darrow image (A15) should say "same character design".
+- Do the same for Sevro: **A09 → A27**.
+- Characters should all come out at a similar scale and in a similar three-quarter pose. That makes them easy to place into any background.
