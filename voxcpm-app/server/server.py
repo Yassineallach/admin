@@ -44,7 +44,9 @@ def get_model():
 
         print(f"Loading {MODEL_ID} ...", flush=True)
         _model = VoxCPM.from_pretrained(MODEL_ID, load_denoiser=False)
-        params = inspect.signature(_model.generate).parameters
+        # generate() is often a *args/**kwargs wrapper around _generate(), so inspect the real one.
+        target = getattr(_model, "_generate", _model.generate)
+        params = inspect.signature(target).parameters
         if not any(p.kind == inspect.Parameter.VAR_KEYWORD for p in params.values()):
             _generate_params = set(params)
         print("Model ready.", flush=True)
@@ -54,6 +56,20 @@ def get_model():
 def sample_rate() -> int:
     model = get_model()
     return int(getattr(model.tts_model, "sample_rate", 48000))
+
+
+def seed_everything(seed: int):
+    """voxcpm has no seed argument, so seed the global RNGs it samples from."""
+    random.seed(seed)
+    np.random.seed(seed % 2**32)
+    try:
+        import torch
+
+        torch.manual_seed(seed)
+        if torch.cuda.is_available():
+            torch.cuda.manual_seed_all(seed)
+    except ImportError:
+        pass
 
 
 def check_key(authorization: Optional[str] = Header(None), x_api_key: Optional[str] = Header(None)):
@@ -140,15 +156,15 @@ def tts(
                 kwargs["prompt_text"] = prompt_text.strip()
 
         model = get_model()
-        kwargs["seed"] = seed
         if _generate_params is not None:
+            if "seed" in _generate_params:
+                kwargs["seed"] = seed
             kwargs = {k: v for k, v in kwargs.items() if k in _generate_params}
-        if "seed" not in kwargs:
-            seed = -1  # this voxcpm version has no seed argument
 
         started = time.time()
         with _model_lock:
             try:
+                seed_everything(seed)
                 wav = model.generate(**kwargs)
             except Exception as e:
                 raise HTTPException(status_code=500, detail=f"Generation failed: {e}")
