@@ -16,6 +16,7 @@ import app.voxcpm.studio.data.HistoryItem
 import app.voxcpm.studio.data.HistoryStore
 import app.voxcpm.studio.data.PendingBatch
 import app.voxcpm.studio.data.PendingBatchStore
+import app.voxcpm.studio.data.ReferenceStore
 import app.voxcpm.studio.data.Settings
 import app.voxcpm.studio.data.TtsRequest
 import app.voxcpm.studio.data.VoxApi
@@ -37,6 +38,11 @@ enum class VoiceMode(val label: String) {
 /** Short texts still pay fixed overhead (network, model setup), so they count as at least this long. */
 private const val MIN_COST_CHARS = 20
 
+/** Generation time grows with the step count, though not fully linearly. */
+private fun stepFactor(timesteps: Int) = 0.5f + 0.5f * timesteps / 10f
+
+private fun clipCost(text: String, timesteps: Int) = maxOf(text.length, MIN_COST_CHARS) * stepFactor(timesteps)
+
 private fun formatTime(seconds: Float): String {
     val s = seconds.toInt()
     return "%d:%02d".format(s / 60, s % 60)
@@ -46,6 +52,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     private val settings = Settings(app)
     private val historyStore = HistoryStore(app)
     private val pendingStore = PendingBatchStore(app)
+    private val referenceStore = ReferenceStore(app)
     val historyDir: File get() = historyStore.dir
 
     // Generate form
@@ -84,6 +91,12 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     val lastBatch = mutableStateListOf<HistoryItem>()
     /** An unfinished run that can be resumed; survives restarts of the app. */
     var pendingBatch by mutableStateOf(pendingStore.load())
+        private set
+    /** The clip being regenerated, if any. */
+    var regeneratingId by mutableStateOf<String?>(null)
+        private set
+    /** Outcome of the last regenerate, shown on that clip's card: (clip id, message, failed). */
+    var regenerateResult by mutableStateOf<Triple<String, String, Boolean>?>(null)
         private set
     private var generateJob: Job? = null
     private var activeApi: VoxApi? = null
@@ -200,7 +213,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 control = control, mode = mode.label,
                 promptText = if (reference != null) promptText.trim() else "",
                 cfgValue = cfgValue, timesteps = timesteps, seed = seedText.trim().toIntOrNull(),
-                referencePath = reference?.let { pendingStore.keepReference(it).absolutePath },
+                referencePath = reference?.let { referenceStore.keep(it).absolutePath },
             )
         } catch (e: Exception) {
             error = "Could not prepare the reference audio: ${e.message}"; return
@@ -222,6 +235,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         if (isGenerating) return
         pendingStore.clear()
         pendingBatch = null
+        cleanUpReferences()
     }
 
     private fun run(start: PendingBatch) {
@@ -241,9 +255,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         status = null
         isGenerating = true
         pendingBatch = start
-        // Generation time grows with the step count, though not fully linearly.
-        val stepFactor = 0.5f + 0.5f * start.timesteps / 10f
-        val costs = texts.map { maxOf(it.length, MIN_COST_CHARS) * stepFactor }
+        val costs = texts.map { clipCost(it, start.timesteps) }
         generateJob = viewModelScope.launch {
             var batch = start
             var audioSec = 0f
@@ -255,18 +267,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 val now = SystemClock.elapsedRealtime()
                 val elapsed = (now - batchStart) / 1000f
                 val prefix = if (texts.size > 1) "Clip ${clipIndex + 1} of ${texts.size} · " else ""
-                val rate = settings.secPerChar
-                if (rate <= 0f) {
-                    progressFraction = null
-                    progressText = "$prefix${formatTime(elapsed)} elapsed · estimating time…"
-                    return
-                }
                 val clipElapsed = (now - clipStart) / 1000f
-                val left = (rate * costs[clipIndex] - clipElapsed).coerceAtLeast(0f) +
-                    rate * costs.drop(clipIndex + 1).sum()
-                progressFraction = (elapsed / (elapsed + left)).coerceIn(0f, 0.99f)
-                progressText = "$prefix${formatTime(elapsed)} elapsed · " +
-                    if (left < 1f) "almost done…" else "about ${formatTime(left)} left"
+                showProgress(prefix, elapsed) { rate ->
+                    (rate * costs[clipIndex] - clipElapsed).coerceAtLeast(0f) + rate * costs.drop(clipIndex + 1).sum()
+                }
             }
 
             withContext(Dispatchers.IO) { pendingStore.save(start) }
@@ -296,14 +300,14 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                         }
                         throw e
                     }
-                    val measured = (SystemClock.elapsedRealtime() - clipStart) / 1000f / costs[i]
-                    val old = settings.secPerChar
-                    settings.secPerChar = if (old <= 0f) measured else old * 0.6f + measured * 0.4f
+                    learnSpeed((SystemClock.elapsedRealtime() - clipStart) / 1000f, costs[i])
 
                     val item = HistoryItem(
                         id = id, text = clipText, control = start.control, mode = start.mode,
                         seed = result.seed, durationSec = result.durationSec,
                         createdAt = System.currentTimeMillis(),
+                        cfgValue = start.cfgValue, timesteps = start.timesteps,
+                        promptText = start.promptText, referencePath = start.referencePath,
                     )
                     history.add(0, item)
                     persistHistory()
@@ -344,6 +348,110 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 activeApi = null
             }
         }
+    }
+
+    /** Sets the live progress line; [timeLeft] maps the learned seconds-per-char rate to seconds left. */
+    private fun showProgress(prefix: String, elapsed: Float, timeLeft: (Float) -> Float) {
+        val rate = settings.secPerChar
+        if (rate <= 0f) {
+            progressFraction = null
+            progressText = "$prefix${formatTime(elapsed)} elapsed · estimating time…"
+            return
+        }
+        val left = timeLeft(rate)
+        progressFraction = (elapsed / (elapsed + left)).coerceIn(0f, 0.99f)
+        progressText = "$prefix${formatTime(elapsed)} elapsed · " +
+            if (left < 1f) "almost done…" else "about ${formatTime(left)} left"
+    }
+
+    private fun learnSpeed(seconds: Float, cost: Float) {
+        val measured = seconds / cost
+        val old = settings.secPerChar
+        settings.secPerChar = if (old <= 0f) measured else old * 0.6f + measured * 0.4f
+    }
+
+    /**
+     * Makes [item] again with its original voice settings and [newText], replacing the old audio
+     * in place. A fresh random seed gives a different take; keeping the seed only makes sense
+     * when the text was edited.
+     */
+    fun regenerate(item: HistoryItem, newText: String, newSeed: Boolean) {
+        if (isGenerating) return
+        val clipText = newText.trim()
+        if (clipText.isEmpty()) {
+            regenerateResult = Triple(item.id, "The text is empty", true); return
+        }
+        var reference = item.referencePath?.let(::File)?.takeIf { it.exists() }
+        if (item.mode == VoiceMode.Clone.label && reference == null) {
+            // Clips made before version 1.4 didn't keep their reference voice.
+            reference = referenceFile ?: run {
+                regenerateResult = Triple(
+                    item.id, "This clip's reference voice wasn't saved. Pick or record one on the Generate page first.", true,
+                )
+                return
+            }
+        }
+        val request = TtsRequest(
+            text = clipText, control = item.control, referenceAudio = reference,
+            promptText = item.promptText, cfgValue = item.cfgValue, inferenceTimesteps = item.timesteps,
+            seed = if (newSeed) null else item.seed,
+        )
+        val cost = clipCost(clipText, item.timesteps)
+        val api = api().also { activeApi = it }
+        stopPlayback()
+        error = null
+        status = null
+        regenerateResult = null
+        isGenerating = true
+        regeneratingId = item.id
+        generateJob = viewModelScope.launch {
+            val started = SystemClock.elapsedRealtime()
+            val ticker = launch {
+                while (true) {
+                    val elapsed = (SystemClock.elapsedRealtime() - started) / 1000f
+                    showProgress("Regenerating · ", elapsed) { rate -> (rate * cost - elapsed).coerceAtLeast(0f) }
+                    delay(1000)
+                }
+            }
+            val tmp = File(historyStore.dir, "${item.id}.part")
+            try {
+                val result = withContext(Dispatchers.IO) {
+                    api.synthesize(request, tmp).also { tmp.renameTo(item.file(historyStore.dir)) }
+                }
+                val took = (SystemClock.elapsedRealtime() - started) / 1000f
+                learnSpeed(took, cost)
+                val keptReference = reference?.let { ref ->
+                    if (ref.absolutePath == item.referencePath) ref.absolutePath
+                    else withContext(Dispatchers.IO) { referenceStore.keep(ref).absolutePath }
+                }
+                val updated = item.copy(
+                    text = clipText, seed = result.seed, durationSec = result.durationSec,
+                    createdAt = System.currentTimeMillis(), referencePath = keptReference,
+                )
+                history.indexOfFirst { it.id == item.id }.takeIf { it >= 0 }?.let { history[it] = updated }
+                lastBatch.indexOfFirst { it.id == item.id }.takeIf { it >= 0 }?.let { lastBatch[it] = updated }
+                persistHistory()
+                regenerateResult = Triple(item.id, "Regenerated · took ${formatTime(took)}", false)
+                play(updated)
+            } catch (e: Exception) {
+                tmp.delete()
+                regenerateResult = if (e is CancellationException || generateJob?.isCancelled == true) {
+                    Triple(item.id, "Stopped · the old version was kept", false)
+                } else {
+                    Triple(item.id, "Regenerate failed: ${e.message ?: e.javaClass.simpleName}", true)
+                }
+            } finally {
+                ticker.cancel()
+                isGenerating = false
+                regeneratingId = null
+                activeApi = null
+            }
+        }
+    }
+
+    private fun cleanUpReferences() {
+        val used = history.mapNotNull { it.referencePath }.toSet() + listOfNotNull(pendingBatch?.referencePath)
+        viewModelScope.launch(Dispatchers.IO) { referenceStore.deleteUnused(used) }
     }
 
     fun cancelGeneration() {
@@ -403,6 +511,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         history.remove(item)
         lastBatch.remove(item)
         persistHistory()
+        cleanUpReferences()
     }
 
     fun exportTo(item: HistoryItem, uri: Uri) {

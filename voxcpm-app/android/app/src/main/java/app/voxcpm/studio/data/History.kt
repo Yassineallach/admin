@@ -13,6 +13,11 @@ data class HistoryItem(
     val seed: Int?,
     val durationSec: Float?,
     val createdAt: Long,
+    // Settings needed to regenerate the clip with the same voice.
+    val cfgValue: Float = 2.0f,
+    val timesteps: Int = 10,
+    val promptText: String = "",
+    val referencePath: String? = null,
 ) {
     fun file(dir: File) = File(dir, "$id.wav")
 
@@ -20,6 +25,8 @@ data class HistoryItem(
         .put("id", id).put("text", text).put("control", control).put("mode", mode)
         .put("seed", seed ?: JSONObject.NULL).put("duration", durationSec?.toDouble() ?: JSONObject.NULL)
         .put("createdAt", createdAt)
+        .put("cfgValue", cfgValue.toDouble()).put("timesteps", timesteps).put("promptText", promptText)
+        .put("referencePath", referencePath ?: JSONObject.NULL)
 
     companion object {
         fun fromJson(o: JSONObject) = HistoryItem(
@@ -30,6 +37,10 @@ data class HistoryItem(
             seed = if (o.isNull("seed")) null else o.getInt("seed"),
             durationSec = if (o.isNull("duration")) null else o.getDouble("duration").toFloat(),
             createdAt = o.optLong("createdAt"),
+            cfgValue = o.optDouble("cfgValue", 2.0).toFloat(),
+            timesteps = o.optInt("timesteps", 10),
+            promptText = o.optString("promptText"),
+            referencePath = if (o.isNull("referencePath")) null else o.getString("referencePath"),
         )
     }
 }

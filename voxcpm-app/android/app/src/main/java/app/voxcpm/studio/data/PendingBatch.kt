@@ -16,7 +16,7 @@ data class PendingBatch(
     val cfgValue: Float,
     val timesteps: Int,
     val seed: Int?,
-    /** Private copy of the clone reference, so clearing the cache can't break a resume. */
+    /** Private copy of the clone reference (see [ReferenceStore]), so clearing the cache can't break a resume. */
     val referencePath: String?,
 ) {
     val remaining get() = texts.size - nextIndex
@@ -48,7 +48,6 @@ data class PendingBatch(
 
 class PendingBatchStore(context: Context) {
     private val file = File(context.filesDir, "pending_batch.json")
-    private val referenceDir = File(context.filesDir, "pending_reference")
 
     fun load(): PendingBatch? = runCatching { PendingBatch.fromJson(JSONObject(file.readText())) }
         .getOrNull()
@@ -56,15 +55,7 @@ class PendingBatchStore(context: Context) {
 
     fun save(batch: PendingBatch) = file.writeText(batch.toJson().toString())
 
-    /** Copies the clone reference next to the saved batch and returns the copy. */
-    fun keepReference(source: File): File {
-        referenceDir.deleteRecursively()
-        referenceDir.mkdirs()
-        return File(referenceDir, source.name).also { source.copyTo(it, overwrite = true) }
-    }
-
     fun clear() {
         file.delete()
-        referenceDir.deleteRecursively()
     }
 }

@@ -16,7 +16,18 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
-import androidx.compose.material.icons.filled.Edit
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.TextButton
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Stop
@@ -68,6 +79,19 @@ fun HistoryCard(item: HistoryItem, vm: MainViewModel, onReuse: ((HistoryItem) ->
         pendingExport = null
     }
 
+    var editing by remember { mutableStateOf(false) }
+    if (editing) {
+        RegenerateDialog(
+            item = item,
+            onDismiss = { editing = false },
+            onConfirm = { text, newSeed ->
+                editing = false
+                vm.regenerate(item, text, newSeed)
+            },
+        )
+    }
+    val regenerating = vm.regeneratingId == item.id
+
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(12.dp)) {
             Text(item.text, maxLines = 3, overflow = TextOverflow.Ellipsis)
@@ -79,6 +103,26 @@ fun HistoryCard(item: HistoryItem, vm: MainViewModel, onReuse: ((HistoryItem) ->
                 add(DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(item.createdAt)))
             }.joinToString(" · ")
             Text(meta, style = MaterialTheme.typography.bodySmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            if (regenerating) {
+                Spacer(Modifier.height(8.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(vm.progressText.ifEmpty { "Regenerating…" }, Modifier.weight(1f), style = MaterialTheme.typography.bodySmall)
+                    TextButton(onClick = vm::cancelGeneration) { Text("Stop") }
+                }
+                val fraction = vm.progressFraction
+                if (fraction != null) {
+                    LinearProgressIndicator(progress = { fraction }, modifier = Modifier.fillMaxWidth())
+                } else {
+                    LinearProgressIndicator(Modifier.fillMaxWidth())
+                }
+            }
+            vm.regenerateResult?.takeIf { it.first == item.id && !regenerating }?.let { (_, message, failed) ->
+                Text(
+                    message,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (failed) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+                )
+            }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 val playing = vm.playingId == item.id
                 IconButton(onClick = { vm.togglePlay(item) }) {
@@ -98,11 +142,47 @@ fun HistoryCard(item: HistoryItem, vm: MainViewModel, onReuse: ((HistoryItem) ->
                         .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                     context.startActivity(Intent.createChooser(send, "Share audio"))
                 }) { Icon(Icons.Default.Share, "Share") }
-                if (onReuse != null) {
-                    IconButton(onClick = { onReuse(item) }) { Icon(Icons.Default.Edit, "Reuse settings") }
+                IconButton(onClick = { editing = true }, enabled = !vm.isGenerating) {
+                    Icon(Icons.Default.Refresh, "Edit text and regenerate")
                 }
-                IconButton(onClick = { vm.delete(item) }) { Icon(Icons.Default.Delete, "Delete") }
+                if (onReuse != null) {
+                    IconButton(onClick = { onReuse(item) }) { Icon(Icons.Default.ContentCopy, "Reuse settings") }
+                }
+                IconButton(onClick = { vm.delete(item) }, enabled = !regenerating) { Icon(Icons.Default.Delete, "Delete") }
             }
         }
     }
+}
+
+@Composable
+private fun RegenerateDialog(item: HistoryItem, onDismiss: () -> Unit, onConfirm: (String, Boolean) -> Unit) {
+    var text by remember { mutableStateOf(item.text) }
+    var newSeed by remember { mutableStateOf(true) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Regenerate clip") },
+        text = {
+            Column(Modifier.verticalScroll(rememberScrollState())) {
+                OutlinedTextField(
+                    value = text,
+                    onValueChange = { text = it },
+                    label = { Text("Text") },
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 120.dp),
+                )
+                Spacer(Modifier.height(8.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(checked = newSeed, onCheckedChange = { newSeed = it })
+                    Text("New random take (different seed)", style = MaterialTheme.typography.bodyMedium)
+                }
+                Text(
+                    "Uses the same voice settings as before. The new audio replaces this clip.",
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onConfirm(text, newSeed) }, enabled = text.isNotBlank()) { Text("Regenerate") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+    )
 }
