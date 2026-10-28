@@ -21,6 +21,15 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AudioFile
+import androidx.compose.material.icons.filled.BookmarkAdd
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.runtime.remember
+import app.voxcpm.studio.data.SavedVoice
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.PlayArrow
@@ -160,17 +169,33 @@ fun GenerateScreen(vm: MainViewModel, modifier: Modifier = Modifier) {
             VoiceMode.Clone -> {
                 Card(Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("Reference voice", style = MaterialTheme.typography.titleSmall)
-                        if (vm.referenceName != null) {
+                        MyVoices(vm)
+                        HorizontalDivider()
+                        Text("New voice", style = MaterialTheme.typography.titleSmall)
+                        if (vm.referenceName != null && vm.selectedVoiceId == null) {
+                            var naming by rememberSaveable { mutableStateOf(false) }
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(Icons.Default.AudioFile, null)
                                 Spacer(Modifier.width(8.dp))
                                 Text(vm.referenceName!!, Modifier.weight(1f), maxLines = 1)
                                 IconButton(onClick = vm::clearReference) { Icon(Icons.Default.Close, "Remove") }
                             }
+                            FilledTonalButton(onClick = { naming = true }) {
+                                Icon(Icons.Default.BookmarkAdd, null); Spacer(Modifier.width(6.dp)); Text("Save to My voices")
+                            }
+                            if (naming) {
+                                NameDialog(
+                                    title = "Save voice",
+                                    initial = "",
+                                    confirmLabel = "Save",
+                                    note = "The transcript below is saved with the voice.",
+                                    onDismiss = { naming = false },
+                                    onConfirm = { naming = false; vm.saveCurrentVoice(it) },
+                                )
+                            }
                         } else {
                             Text(
-                                "Use a clean 5–20 second clip of the voice you want to clone.",
+                                "Pick or record a clean 5–20 second clip, then save it to reuse it any time.",
                                 style = MaterialTheme.typography.bodySmall,
                             )
                         }
@@ -198,7 +223,7 @@ fun GenerateScreen(vm: MainViewModel, modifier: Modifier = Modifier) {
                 }
                 OutlinedTextField(
                     value = vm.promptText,
-                    onValueChange = { vm.promptText = it },
+                    onValueChange = { vm.promptText = it; vm.updateSelectedVoiceTranscript() },
                     label = { Text("Transcript of the reference (optional)") },
                     supportingText = { Text("Adding the exact words spoken in the clip gives the closest match.") },
                     modifier = Modifier.fillMaxWidth(),
@@ -337,4 +362,94 @@ private fun ResumeCard(
             }
         }
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun MyVoices(vm: MainViewModel) {
+    var renaming by remember { mutableStateOf<SavedVoice?>(null) }
+    var deleting by remember { mutableStateOf<SavedVoice?>(null) }
+
+    Text("My voices", style = MaterialTheme.typography.titleSmall)
+    if (vm.voices.isEmpty()) {
+        Text("No saved voices yet.", style = MaterialTheme.typography.bodySmall)
+        return
+    }
+    Row(
+        Modifier.horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        vm.voices.forEach { voice ->
+            val selected = vm.selectedVoiceId == voice.id
+            FilterChip(
+                selected = selected,
+                onClick = { if (selected) vm.clearReference() else vm.selectVoice(voice) },
+                label = { Text(voice.name) },
+                leadingIcon = if (selected) {
+                    { Icon(Icons.Default.Check, null, Modifier.size(18.dp)) }
+                } else null,
+            )
+        }
+    }
+    vm.voices.firstOrNull { it.id == vm.selectedVoiceId }?.let { voice ->
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("Using “${voice.name}”", Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium, maxLines = 1)
+            val previewing = vm.playingId == vm.voicePlayId(voice)
+            IconButton(onClick = { vm.toggleVoicePreview(voice) }) {
+                Icon(if (previewing) Icons.Default.Stop else Icons.Default.PlayArrow, "Listen")
+            }
+            IconButton(onClick = { renaming = voice }) { Icon(Icons.Default.Edit, "Rename") }
+            IconButton(onClick = { deleting = voice }) { Icon(Icons.Default.Delete, "Delete voice") }
+        }
+    }
+
+    renaming?.let { voice ->
+        NameDialog(
+            title = "Rename voice",
+            initial = voice.name,
+            confirmLabel = "Rename",
+            onDismiss = { renaming = null },
+            onConfirm = { renaming = null; vm.renameVoice(voice, it) },
+        )
+    }
+    deleting?.let { voice ->
+        AlertDialog(
+            onDismissRequest = { deleting = null },
+            title = { Text("Delete “${voice.name}”?") },
+            text = { Text("Clips already made with this voice are kept.") },
+            confirmButton = { TextButton(onClick = { deleting = null; vm.deleteVoice(voice) }) { Text("Delete") } },
+            dismissButton = { TextButton(onClick = { deleting = null }) { Text("Cancel") } },
+        )
+    }
+}
+
+@Composable
+private fun NameDialog(
+    title: String,
+    initial: String,
+    confirmLabel: String,
+    note: String? = null,
+    onDismiss: () -> Unit,
+    onConfirm: (String) -> Unit,
+) {
+    var name by remember { mutableStateOf(initial) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it.take(40) },
+                    label = { Text("Name") },
+                    placeholder = { Text("e.g. My voice, Grandpa, Narrator") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                note?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
+            }
+        },
+        confirmButton = { TextButton(onClick = { onConfirm(name) }) { Text(confirmLabel) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+    )
 }

@@ -27,6 +27,8 @@ Android app  ──HTTP (multipart)──▶  server.py (FastAPI + voxcpm)  ─�
   closed), the unfinished run is saved and a Resume card continues from the first missing clip.
 - **Regenerate** any clip — edit its text first if you like, keep or change the seed, and the new
   audio replaces the old one with the same voice settings (including the clone reference).
+- **My voices** — save a cloned voice (clip + transcript) under a name and pick it with one tap
+  next time; listen, rename or delete saved voices. The last used voice is remembered.
 - Advanced: CFG guidance, inference steps, seed (shown after each run so you can reproduce it).
 - History with play, save to device, share, reuse settings, delete.
 - Share text from any app into VoxCPM Studio to speak it.

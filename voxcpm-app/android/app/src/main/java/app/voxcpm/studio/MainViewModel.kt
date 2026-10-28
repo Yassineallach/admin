@@ -17,6 +17,8 @@ import app.voxcpm.studio.data.HistoryStore
 import app.voxcpm.studio.data.PendingBatch
 import app.voxcpm.studio.data.PendingBatchStore
 import app.voxcpm.studio.data.ReferenceStore
+import app.voxcpm.studio.data.SavedVoice
+import app.voxcpm.studio.data.VoiceStore
 import app.voxcpm.studio.data.Settings
 import app.voxcpm.studio.data.TtsRequest
 import app.voxcpm.studio.data.VoxApi
@@ -53,6 +55,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     private val historyStore = HistoryStore(app)
     private val pendingStore = PendingBatchStore(app)
     private val referenceStore = ReferenceStore(app)
+    private val voiceStore = VoiceStore(app)
     val historyDir: File get() = historyStore.dir
 
     // Generate form
@@ -72,6 +75,22 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         private set
     var isRecording by mutableStateOf(false)
         private set
+
+    // Saved voices ("My voices")
+    val voices = mutableStateListOf<SavedVoice>().apply { addAll(voiceStore.load()) }
+    /** The saved voice currently used as the reference, null for an unsaved file or recording. */
+    var selectedVoiceId by mutableStateOf<String?>(null)
+        private set
+
+    init {
+        // Come back with the voice that was picked last time.
+        voices.firstOrNull { it.id == settings.selectedVoiceId }?.let { voice ->
+            selectedVoiceId = voice.id
+            referenceFile = File(voice.referencePath)
+            referenceName = voice.name
+            promptText = voice.promptText
+        }
+    }
     private var recorder: WavRecorder? = null
 
     // Generation
@@ -154,6 +173,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 }
                 referenceFile = file
                 referenceName = name
+                leaveSavedVoice()
             } catch (e: Exception) {
                 error = "Could not read audio: ${e.message}"
             }
@@ -179,10 +199,12 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             withContext(Dispatchers.IO) { r.stop() }
             referenceFile = File(getApplication<Application>().cacheDir, "reference_recording.wav")
             referenceName = "Microphone recording"
+            leaveSavedVoice()
         }
     }
 
     fun clearReference() {
+        selectVoice(null)
         referenceFile = null
         referenceName = null
         promptText = ""
@@ -450,8 +472,97 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     private fun cleanUpReferences() {
-        val used = history.mapNotNull { it.referencePath }.toSet() + listOfNotNull(pendingBatch?.referencePath)
+        val used = history.mapNotNull { it.referencePath }.toSet() +
+            listOfNotNull(pendingBatch?.referencePath) + voices.map { it.referencePath }
         viewModelScope.launch(Dispatchers.IO) { referenceStore.deleteUnused(used) }
+    }
+
+    /** Uses a saved voice as the clone reference, or with null just forgets the selection. */
+    fun selectVoice(voice: SavedVoice?) {
+        selectedVoiceId = voice?.id
+        settings.selectedVoiceId = voice?.id
+        if (voice != null) {
+            referenceFile = File(voice.referencePath)
+            referenceName = voice.name
+            promptText = voice.promptText
+        }
+    }
+
+    /** Switching from a saved voice to a new clip: the saved voice's transcript doesn't belong to it. */
+    private fun leaveSavedVoice() {
+        if (selectedVoiceId != null) promptText = ""
+        selectVoice(null)
+    }
+
+    /** Saves the current reference clip and transcript as a named voice and selects it. */
+    fun saveCurrentVoice(name: String) {
+        val source = referenceFile ?: return
+        val voiceName = name.trim().ifEmpty { "Voice ${voices.size + 1}" }
+        val transcript = promptText.trim()
+        viewModelScope.launch {
+            try {
+                val kept = withContext(Dispatchers.IO) { referenceStore.keep(source) }
+                val voice = SavedVoice(
+                    id = UUID.randomUUID().toString(), name = voiceName,
+                    referencePath = kept.absolutePath, promptText = transcript,
+                    createdAt = System.currentTimeMillis(),
+                )
+                voices.add(voice)
+                persistVoices()
+                selectVoice(voice)
+            } catch (e: Exception) {
+                error = "Could not save the voice: ${e.message}"
+            }
+        }
+    }
+
+    fun renameVoice(voice: SavedVoice, name: String) {
+        val i = voices.indexOfFirst { it.id == voice.id }.takeIf { it >= 0 } ?: return
+        val updated = voice.copy(name = name.trim().ifEmpty { voice.name })
+        voices[i] = updated
+        if (selectedVoiceId == voice.id) referenceName = updated.name
+        persistVoices()
+    }
+
+    /** Keeps the selected voice's transcript in sync when it's edited on the Generate page. */
+    fun updateSelectedVoiceTranscript() {
+        val id = selectedVoiceId ?: return
+        val i = voices.indexOfFirst { it.id == id }.takeIf { it >= 0 } ?: return
+        voices[i] = voices[i].copy(promptText = promptText.trim())
+        persistVoices()
+    }
+
+    fun deleteVoice(voice: SavedVoice) {
+        if (playingId == voicePlayId(voice)) stopPlayback()
+        voices.removeAll { it.id == voice.id }
+        if (selectedVoiceId == voice.id) clearReference()
+        persistVoices()
+        cleanUpReferences()
+    }
+
+    fun voicePlayId(voice: SavedVoice) = "voice:${voice.id}"
+
+    /** Plays a saved voice's reference clip. */
+    fun toggleVoicePreview(voice: SavedVoice) {
+        val id = voicePlayId(voice)
+        if (playingId == id) { stopPlayback(); return }
+        stopPlayback()
+        try {
+            player = MediaPlayer().apply {
+                setDataSource(voice.referencePath)
+                setOnCompletionListener { stopPlayback() }
+                prepare()
+                start()
+            }
+            playingId = id
+        } catch (e: Exception) {
+            error = "Playback failed: ${e.message}"
+        }
+    }
+
+    private fun persistVoices() {
+        val snapshot = voices.toList()
+        viewModelScope.launch(Dispatchers.IO) { voiceStore.save(snapshot) }
     }
 
     fun cancelGeneration() {

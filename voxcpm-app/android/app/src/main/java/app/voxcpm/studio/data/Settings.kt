@@ -13,6 +13,11 @@ class Settings(context: Context) {
         get() = prefs.getString("api_key", "") ?: ""
         set(value) = prefs.edit().putString("api_key", value.trim()).apply()
 
+    /** The saved voice picked last time in Voice clone mode. */
+    var selectedVoiceId: String?
+        get() = prefs.getString("selected_voice", null)
+        set(value) = prefs.edit().putString("selected_voice", value).apply()
+
     /** Learned generation speed of the server, used for time estimates. 0 = not measured yet. */
     var secPerChar: Float
         get() = prefs.getFloat("sec_per_char", 0f)
