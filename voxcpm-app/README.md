@@ -19,6 +19,8 @@ Android app  ──HTTP (multipart)──▶  server.py (FastAPI + voxcpm)  ─�
 - **Voice clone** — pick an audio file or record from the mic. Add the clip's transcript for
   the closest match (VoxCPM2 "ultimate cloning"), plus optional style control
   ("slightly faster, cheerful tone").
+- **Multiple texts** — turn it on and every line of the text box becomes its own clip, made
+  one after another with the same voice settings. Stop any time; play all clips in a row.
 - Advanced: CFG guidance, inference steps, seed (shown after each run so you can reproduce it).
 - History with play, save to device, share, reuse settings, delete.
 - Share text from any app into VoxCPM Studio to speak it.

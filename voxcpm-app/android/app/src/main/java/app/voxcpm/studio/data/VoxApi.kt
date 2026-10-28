@@ -1,5 +1,6 @@
 package app.voxcpm.studio.data
 
+import okhttp3.Call
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MultipartBody
 import okhttp3.OkHttpClient
@@ -33,6 +34,13 @@ class VoxApi(private val baseUrl: String, private val apiKey: String) {
         .readTimeout(10, TimeUnit.MINUTES)
         .writeTimeout(2, TimeUnit.MINUTES)
         .build()
+
+    @Volatile private var currentCall: Call? = null
+
+    /** Aborts the request in flight, if any. */
+    fun cancel() {
+        currentCall?.cancel()
+    }
 
     private fun Request.Builder.auth(): Request.Builder =
         if (apiKey.isNotEmpty()) header("Authorization", "Bearer $apiKey") else this
@@ -68,7 +76,8 @@ class VoxApi(private val baseUrl: String, private val apiKey: String) {
             )
         }
         val request = Request.Builder().url(url("/tts")).auth().post(body.build()).build()
-        client.newCall(request).execute().use { response ->
+        val call = client.newCall(request).also { currentCall = it }
+        call.execute().use { response ->
             ensureOk(response)
             output.parentFile?.mkdirs()
             response.body!!.byteStream().use { input ->

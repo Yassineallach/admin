@@ -16,7 +16,9 @@ import app.voxcpm.studio.data.HistoryStore
 import app.voxcpm.studio.data.Settings
 import app.voxcpm.studio.data.TtsRequest
 import app.voxcpm.studio.data.VoxApi
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -57,8 +59,12 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         private set
     var error by mutableStateOf<String?>(null)
     var status by mutableStateOf<String?>(null)
-    var lastItem by mutableStateOf<HistoryItem?>(null)
-        private set
+    /** When on, every non-empty line of [text] becomes its own clip. */
+    var batchMode by mutableStateOf(false)
+    /** Clips made by the most recent Generate press. */
+    val lastBatch = mutableStateListOf<HistoryItem>()
+    private var generateJob: Job? = null
+    private var activeApi: VoxApi? = null
 
     // Settings
     var serverUrl by mutableStateOf(settings.serverUrl)
@@ -71,6 +77,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     var playingId by mutableStateOf<String?>(null)
         private set
     private var player: MediaPlayer? = null
+    private var playQueue: List<HistoryItem> = emptyList()
 
     private fun api() = VoxApi(settings.serverUrl, settings.apiKey)
 
@@ -144,10 +151,15 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         promptText = ""
     }
 
+    /** The texts one Generate press will turn into clips. */
+    fun pendingTexts(): List<String> =
+        if (batchMode) text.lines().map { it.trim() }.filter { it.isNotEmpty() }
+        else listOf(text.trim()).filter { it.isNotEmpty() }
+
     fun generate() {
         if (isGenerating) return
-        val trimmed = text.trim()
-        if (trimmed.isEmpty()) { error = "Enter some text first"; return }
+        val texts = pendingTexts()
+        if (texts.isEmpty()) { error = "Enter some text first"; return }
         if (mode == VoiceMode.Clone && referenceFile == null) {
             error = "Pick or record a reference voice first"; return
         }
@@ -156,8 +168,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             VoiceMode.Design -> voiceDescription.trim()
             VoiceMode.Clone -> styleControl.trim()
         }
-        val request = TtsRequest(
-            text = trimmed,
+        val base = TtsRequest(
+            text = "",
             control = control,
             referenceAudio = if (mode == VoiceMode.Clone) referenceFile else null,
             promptText = if (mode == VoiceMode.Clone) promptText.trim() else "",
@@ -165,39 +177,70 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             inferenceTimesteps = timesteps,
             seed = seedText.trim().toIntOrNull(),
         )
+        val modeLabel = mode.label
+        val api = api().also { activeApi = it }
         stopPlayback()
         error = null
-        status = "Generating…"
+        lastBatch.clear()
         isGenerating = true
-        viewModelScope.launch {
+        generateJob = viewModelScope.launch {
+            var done = 0
+            var audioSec = 0f
             try {
-                val id = UUID.randomUUID().toString()
-                val tmp = File(historyStore.dir, "$id.part")
-                val result = withContext(Dispatchers.IO) {
-                    api().synthesize(request, tmp).also { tmp.renameTo(File(historyStore.dir, "$id.wav")) }
+                for ((i, clipText) in texts.withIndex()) {
+                    status = if (texts.size == 1) "Generating…" else "Generating clip ${i + 1} of ${texts.size}…"
+                    val id = UUID.randomUUID().toString()
+                    val tmp = File(historyStore.dir, "$id.part")
+                    val result = try {
+                        withContext(Dispatchers.IO) {
+                            api.synthesize(base.copy(text = clipText), tmp)
+                                .also { tmp.renameTo(File(historyStore.dir, "$id.wav")) }
+                        }
+                    } catch (e: Exception) {
+                        tmp.delete()
+                        if (texts.size > 1 && e !is CancellationException) {
+                            throw Exception("Clip ${i + 1} failed: ${e.message ?: e.javaClass.simpleName}", e)
+                        }
+                        throw e
+                    }
+                    val item = HistoryItem(
+                        id = id, text = clipText, control = control, mode = modeLabel,
+                        seed = result.seed, durationSec = result.durationSec,
+                        createdAt = System.currentTimeMillis(),
+                    )
+                    history.add(0, item)
+                    persistHistory()
+                    lastBatch.add(item)
+                    done++
+                    audioSec += result.durationSec ?: 0f
+                    if (texts.size == 1) {
+                        status = buildString {
+                            append("Done")
+                            result.durationSec?.let { append(" · %.1fs audio".format(it)) }
+                            result.generationSec?.let { append(" in %.1fs".format(it)) }
+                            result.seed?.let { append(" · seed $it") }
+                        }
+                        play(item)
+                    }
                 }
-                val item = HistoryItem(
-                    id = id, text = trimmed, control = control, mode = mode.label,
-                    seed = result.seed, durationSec = result.durationSec,
-                    createdAt = System.currentTimeMillis(),
-                )
-                history.add(0, item)
-                persistHistory()
-                lastItem = item
-                status = buildString {
-                    append("Done")
-                    result.durationSec?.let { append(" · %.1fs audio".format(it)) }
-                    result.generationSec?.let { append(" in %.1fs".format(it)) }
-                    result.seed?.let { append(" · seed $it") }
-                }
-                play(item)
+                if (texts.size > 1) status = "Done · ${texts.size} clips · %.1fs audio".format(audioSec)
             } catch (e: Exception) {
-                status = null
-                error = e.message ?: e.javaClass.simpleName
+                if (e is CancellationException || generateJob?.isCancelled == true) {
+                    status = "Stopped · $done of ${texts.size} clips made"
+                } else {
+                    status = if (done > 0) "$done of ${texts.size} clips made" else null
+                    error = e.message ?: e.javaClass.simpleName
+                }
             } finally {
                 isGenerating = false
+                activeApi = null
             }
         }
+    }
+
+    fun cancelGeneration() {
+        generateJob?.cancel()
+        activeApi?.cancel()
     }
 
     fun reuse(item: HistoryItem) {
@@ -214,12 +257,22 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         if (playingId == item.id) stopPlayback() else play(item)
     }
 
-    private fun play(item: HistoryItem) {
+    /** Plays the clips one after another. */
+    fun playAll(items: List<HistoryItem>) {
+        if (items.isEmpty()) return
+        play(items.first(), queue = items.drop(1))
+    }
+
+    private fun play(item: HistoryItem, queue: List<HistoryItem> = emptyList()) {
         stopPlayback()
+        playQueue = queue
         try {
             player = MediaPlayer().apply {
                 setDataSource(item.file(historyStore.dir).absolutePath)
-                setOnCompletionListener { stopPlayback() }
+                setOnCompletionListener {
+                    val rest = playQueue
+                    if (rest.isNotEmpty()) play(rest.first(), rest.drop(1)) else stopPlayback()
+                }
                 prepare()
                 start()
             }
@@ -233,13 +286,14 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         player?.release()
         player = null
         playingId = null
+        playQueue = emptyList()
     }
 
     fun delete(item: HistoryItem) {
         if (playingId == item.id) stopPlayback()
         item.file(historyStore.dir).delete()
         history.remove(item)
-        if (lastItem?.id == item.id) lastItem = null
+        lastBatch.remove(item)
         persistHistory()
     }
 
@@ -265,6 +319,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     override fun onCleared() {
+        cancelGeneration()
         recorder?.stop()
         stopPlayback()
     }

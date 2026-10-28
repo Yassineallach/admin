@@ -23,6 +23,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AudioFile
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
@@ -39,10 +40,12 @@ import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Slider
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -95,14 +98,32 @@ fun GenerateScreen(vm: MainViewModel, modifier: Modifier = Modifier) {
     ) {
         Text("VoxCPM Studio", style = MaterialTheme.typography.headlineSmall)
 
+        val clipCount = vm.pendingTexts().size
         OutlinedTextField(
             value = vm.text,
             onValueChange = { vm.text = it },
-            label = { Text("Text to speak") },
-            placeholder = { Text("Type in any of 30 languages — no language tag needed") },
-            supportingText = { Text("${vm.text.length} characters") },
+            label = { Text(if (vm.batchMode) "Texts to speak — one per line" else "Text to speak") },
+            placeholder = {
+                Text(
+                    if (vm.batchMode) "Hello and welcome.\nToday we talk about the weather.\nThanks for listening!"
+                    else "Type in any of 30 languages — no language tag needed",
+                )
+            },
+            supportingText = {
+                Text(if (vm.batchMode) "$clipCount clips" else "${vm.text.length} characters")
+            },
             modifier = Modifier.fillMaxWidth().heightIn(min = 140.dp),
         )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("Multiple texts", style = MaterialTheme.typography.titleSmall)
+                Text(
+                    "Each line becomes its own clip, all with the same voice settings.",
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+            Switch(checked = vm.batchMode, onCheckedChange = { vm.batchMode = it }, enabled = !vm.isGenerating)
+        }
 
         SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
             VoiceMode.entries.forEachIndexed { i, m ->
@@ -216,25 +237,40 @@ fun GenerateScreen(vm: MainViewModel, modifier: Modifier = Modifier) {
             )
         }
 
-        Button(
-            onClick = vm::generate,
-            enabled = !vm.isGenerating && !vm.isRecording,
-            modifier = Modifier.fillMaxWidth().height(52.dp),
-        ) {
-            if (vm.isGenerating) {
-                CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
-                Spacer(Modifier.width(10.dp))
-                Text("Generating…")
-            } else {
-                Text("Generate speech")
+        if (vm.batchMode && clipCount > 1 && vm.mode != VoiceMode.Clone) {
+            Text(
+                "Tip: for the exact same voice in every clip, use Voice clone with a reference recording.",
+                style = MaterialTheme.typography.bodySmall,
+            )
+        }
+
+        if (vm.isGenerating) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.dp)
+                Spacer(Modifier.width(12.dp))
+                Text(vm.status ?: "Generating…", Modifier.weight(1f))
+                OutlinedButton(onClick = vm::cancelGeneration) { Text("Stop") }
+            }
+        } else {
+            Button(
+                onClick = vm::generate,
+                enabled = !vm.isRecording,
+                modifier = Modifier.fillMaxWidth().height(52.dp),
+            ) {
+                Text(if (vm.batchMode && clipCount > 1) "Generate $clipCount clips" else "Generate speech")
             }
         }
 
         vm.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-        vm.status?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
+        if (!vm.isGenerating) vm.status?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
 
-        vm.lastItem?.let { item ->
-            HistoryCard(item, vm, onReuse = null)
+        if (vm.lastBatch.size > 1) {
+            FilledTonalButton(onClick = { vm.playAll(vm.lastBatch.toList()) }) {
+                Icon(Icons.Default.PlayArrow, null); Spacer(Modifier.width(6.dp)); Text("Play all ${vm.lastBatch.size} clips")
+            }
+        }
+        vm.lastBatch.forEach { item ->
+            key(item.id) { HistoryCard(item, vm, onReuse = null) }
         }
     }
 }
