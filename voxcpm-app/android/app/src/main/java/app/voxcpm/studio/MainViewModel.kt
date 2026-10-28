@@ -14,6 +14,8 @@ import androidx.lifecycle.viewModelScope
 import app.voxcpm.studio.audio.WavRecorder
 import app.voxcpm.studio.data.HistoryItem
 import app.voxcpm.studio.data.HistoryStore
+import app.voxcpm.studio.data.PendingBatch
+import app.voxcpm.studio.data.PendingBatchStore
 import app.voxcpm.studio.data.Settings
 import app.voxcpm.studio.data.TtsRequest
 import app.voxcpm.studio.data.VoxApi
@@ -43,6 +45,7 @@ private fun formatTime(seconds: Float): String {
 class MainViewModel(app: Application) : AndroidViewModel(app) {
     private val settings = Settings(app)
     private val historyStore = HistoryStore(app)
+    private val pendingStore = PendingBatchStore(app)
     val historyDir: File get() = historyStore.dir
 
     // Generate form
@@ -79,6 +82,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     var batchMode by mutableStateOf(false)
     /** Clips made by the most recent Generate press. */
     val lastBatch = mutableStateListOf<HistoryItem>()
+    /** An unfinished run that can be resumed; survives restarts of the app. */
+    var pendingBatch by mutableStateOf(pendingStore.load())
+        private set
     private var generateJob: Job? = null
     private var activeApi: VoxApi? = null
 
@@ -178,7 +184,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         if (isGenerating) return
         val texts = pendingTexts()
         if (texts.isEmpty()) { error = "Enter some text first"; return }
-        if (mode == VoiceMode.Clone && referenceFile == null) {
+        val reference = if (mode == VoiceMode.Clone) referenceFile else null
+        if (mode == VoiceMode.Clone && reference == null) {
             error = "Pick or record a reference voice first"; return
         }
         val control = when (mode) {
@@ -186,30 +193,63 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             VoiceMode.Design -> voiceDescription.trim()
             VoiceMode.Clone -> styleControl.trim()
         }
+        val batch = try {
+            pendingStore.clear()
+            PendingBatch(
+                texts = texts, nextIndex = 0, doneIds = emptyList(),
+                control = control, mode = mode.label,
+                promptText = if (reference != null) promptText.trim() else "",
+                cfgValue = cfgValue, timesteps = timesteps, seed = seedText.trim().toIntOrNull(),
+                referencePath = reference?.let { pendingStore.keepReference(it).absolutePath },
+            )
+        } catch (e: Exception) {
+            error = "Could not prepare the reference audio: ${e.message}"; return
+        }
+        lastBatch.clear()
+        run(batch)
+    }
+
+    /** Continues the saved run from the first clip that isn't finished yet. */
+    fun resume() {
+        val batch = pendingBatch ?: return
+        if (isGenerating) return
+        lastBatch.clear()
+        lastBatch.addAll(batch.doneIds.mapNotNull { id -> history.firstOrNull { it.id == id } })
+        run(batch)
+    }
+
+    fun discardPending() {
+        if (isGenerating) return
+        pendingStore.clear()
+        pendingBatch = null
+    }
+
+    private fun run(start: PendingBatch) {
+        val texts = start.texts
         val base = TtsRequest(
             text = "",
-            control = control,
-            referenceAudio = if (mode == VoiceMode.Clone) referenceFile else null,
-            promptText = if (mode == VoiceMode.Clone) promptText.trim() else "",
-            cfgValue = cfgValue,
-            inferenceTimesteps = timesteps,
-            seed = seedText.trim().toIntOrNull(),
+            control = start.control,
+            referenceAudio = start.referencePath?.let(::File),
+            promptText = start.promptText,
+            cfgValue = start.cfgValue,
+            inferenceTimesteps = start.timesteps,
+            seed = start.seed,
         )
-        val modeLabel = mode.label
         val api = api().also { activeApi = it }
         stopPlayback()
         error = null
-        lastBatch.clear()
+        status = null
         isGenerating = true
+        pendingBatch = start
         // Generation time grows with the step count, though not fully linearly.
-        val stepFactor = 0.5f + 0.5f * timesteps / 10f
+        val stepFactor = 0.5f + 0.5f * start.timesteps / 10f
         val costs = texts.map { maxOf(it.length, MIN_COST_CHARS) * stepFactor }
         generateJob = viewModelScope.launch {
-            var done = 0
+            var batch = start
             var audioSec = 0f
             val batchStart = SystemClock.elapsedRealtime()
             var clipStart = batchStart
-            var clipIndex = 0
+            var clipIndex = start.nextIndex
 
             fun refreshProgress() {
                 val now = SystemClock.elapsedRealtime()
@@ -229,6 +269,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                     if (left < 1f) "almost done…" else "about ${formatTime(left)} left"
             }
 
+            withContext(Dispatchers.IO) { pendingStore.save(start) }
             val ticker = launch {
                 while (true) {
                     refreshProgress()
@@ -236,7 +277,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 }
             }
             try {
-                for ((i, clipText) in texts.withIndex()) {
+                for (i in start.nextIndex until texts.size) {
+                    val clipText = texts[i]
                     clipIndex = i
                     clipStart = SystemClock.elapsedRealtime()
                     refreshProgress()
@@ -259,15 +301,18 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                     settings.secPerChar = if (old <= 0f) measured else old * 0.6f + measured * 0.4f
 
                     val item = HistoryItem(
-                        id = id, text = clipText, control = control, mode = modeLabel,
+                        id = id, text = clipText, control = start.control, mode = start.mode,
                         seed = result.seed, durationSec = result.durationSec,
                         createdAt = System.currentTimeMillis(),
                     )
                     history.add(0, item)
                     persistHistory()
                     lastBatch.add(item)
-                    done++
                     audioSec += result.durationSec ?: 0f
+                    batch = batch.copy(nextIndex = i + 1, doneIds = batch.doneIds + id)
+                    val saved = batch
+                    withContext(Dispatchers.IO) { pendingStore.save(saved) }
+                    pendingBatch = batch
                     if (texts.size == 1) {
                         status = buildString {
                             append("Done")
@@ -278,15 +323,19 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                         play(item)
                     }
                 }
+                withContext(Dispatchers.IO) { pendingStore.clear() }
+                pendingBatch = null
                 val took = formatTime((SystemClock.elapsedRealtime() - batchStart) / 1000f)
                 if (texts.size > 1) {
-                    status = "Done · ${texts.size} clips · %.1fs audio · took $took".format(audioSec)
+                    status = if (start.nextIndex > 0) "Done · all ${texts.size} clips · took $took"
+                    else "Done · ${texts.size} clips · %.1fs audio · took $took".format(audioSec)
                 }
             } catch (e: Exception) {
+                val made = "${batch.nextIndex} of ${texts.size} clips made"
                 if (e is CancellationException || generateJob?.isCancelled == true) {
-                    status = "Stopped · $done of ${texts.size} clips made"
+                    status = if (texts.size > 1) "Stopped · $made" else "Stopped"
                 } else {
-                    status = if (done > 0) "$done of ${texts.size} clips made" else null
+                    status = if (texts.size > 1 && batch.nextIndex > 0) made else null
                     error = e.message ?: e.javaClass.simpleName
                 }
             } finally {

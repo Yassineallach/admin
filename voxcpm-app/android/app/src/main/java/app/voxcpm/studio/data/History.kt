@@ -36,7 +36,11 @@ data class HistoryItem(
 
 /** Generated clips live in files/history/<id>.wav with a JSON index next to them. */
 class HistoryStore(context: Context) {
-    val dir = File(context.filesDir, "history").apply { mkdirs() }
+    val dir = File(context.filesDir, "history").apply {
+        mkdirs()
+        // Half-downloaded clips left behind when the app was closed mid-generation.
+        listFiles { f -> f.name.endsWith(".part") }?.forEach { it.delete() }
+    }
     private val index = File(dir, "index.json")
 
     fun load(): List<HistoryItem> = runCatching {

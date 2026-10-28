@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
@@ -54,6 +55,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import app.voxcpm.studio.MainViewModel
@@ -245,6 +247,18 @@ fun GenerateScreen(vm: MainViewModel, modifier: Modifier = Modifier) {
             )
         }
 
+        val pending = vm.pendingBatch
+        if (pending != null && !vm.isGenerating) {
+            ResumeCard(
+                done = pending.nextIndex,
+                total = pending.texts.size,
+                nextText = pending.texts[pending.nextIndex],
+                voice = listOf(pending.mode, pending.control).filter { it.isNotBlank() }.joinToString(" · "),
+                onResume = vm::resume,
+                onDiscard = vm::discardPending,
+            )
+        }
+
         if (vm.isGenerating) {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -291,5 +305,36 @@ private fun PresetRow(presets: List<String>, onPick: (String) -> Unit) {
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         presets.forEach { AssistChip(onClick = { onPick(it) }, label = { Text(it) }) }
+    }
+}
+
+@Composable
+private fun ResumeCard(
+    done: Int,
+    total: Int,
+    nextText: String,
+    voice: String,
+    onResume: () -> Unit,
+    onDiscard: () -> Unit,
+) {
+    Card(
+        Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
+    ) {
+        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text("Generation was interrupted", style = MaterialTheme.typography.titleSmall)
+            Text(
+                if (total > 1) "$done of $total clips done · ${total - done} left" else "The clip wasn't finished",
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            Text("Next: “$nextText”", style = MaterialTheme.typography.bodySmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            if (voice.isNotBlank()) Text("Voice: $voice", style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(onClick = onResume) {
+                    Icon(Icons.Default.PlayArrow, null); Spacer(Modifier.width(6.dp)); Text("Resume")
+                }
+                TextButton(onClick = onDiscard) { Text("Discard") }
+            }
+        }
     }
 }

@@ -23,6 +23,8 @@ Android app  ──HTTP (multipart)──▶  server.py (FastAPI + voxcpm)  ─�
   one after another with the same voice settings. Stop any time; play all clips in a row.
 - Live timer while generating: time elapsed, estimated time left and a progress bar. The
   estimate learns your server's speed from earlier generations.
+- **Resume** — if generation is interrupted (Stop, a server or network error, or the app being
+  closed), the unfinished run is saved and a Resume card continues from the first missing clip.
 - Advanced: CFG guidance, inference steps, seed (shown after each run so you can reproduce it).
 - History with play, save to device, share, reuse settings, delete.
 - Share text from any app into VoxCPM Studio to speak it.
