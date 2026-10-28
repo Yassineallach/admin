@@ -30,6 +30,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.util.UUID
+import java.util.zip.ZipEntry
+import java.util.zip.ZipOutputStream
 
 enum class VoiceMode(val label: String) {
     Default("Default"),
@@ -638,6 +640,28 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             } catch (e: Exception) {
                 error = "Save failed: ${e.message}"
             }
+        }
+    }
+
+    /**
+     * Writes [items] into one zip at [uri], named 1.wav, 2.wav, … in the given order.
+     * Returns a message for the user.
+     */
+    suspend fun exportZip(items: List<HistoryItem>, uri: Uri): String {
+        val ctx = getApplication<Application>()
+        return try {
+            withContext(Dispatchers.IO) {
+                ZipOutputStream(ctx.contentResolver.openOutputStream(uri)!!.buffered()).use { zip ->
+                    items.forEachIndexed { i, item ->
+                        zip.putNextEntry(ZipEntry("${i + 1}.wav"))
+                        item.file(historyStore.dir).inputStream().use { it.copyTo(zip) }
+                        zip.closeEntry()
+                    }
+                }
+            }
+            "Saved ${items.size} clips to ZIP"
+        } catch (e: Exception) {
+            "ZIP failed: ${e.message ?: e.javaClass.simpleName}"
         }
     }
 

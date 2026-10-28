@@ -1,6 +1,7 @@
 package app.voxcpm.studio.ui
 
 import android.content.Intent
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -8,38 +9,42 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Download
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Checkbox
-import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.TextButton
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.FolderZip
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -49,8 +54,11 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
 import app.voxcpm.studio.MainViewModel
 import app.voxcpm.studio.data.HistoryItem
+import kotlinx.coroutines.launch
 import java.text.DateFormat
+import java.text.SimpleDateFormat
 import java.util.Date
+import java.util.Locale
 
 @Composable
 fun HistoryScreen(vm: MainViewModel, modifier: Modifier = Modifier, onReuse: (HistoryItem) -> Unit) {
@@ -65,7 +73,46 @@ fun HistoryScreen(vm: MainViewModel, modifier: Modifier = Modifier, onReuse: (Hi
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
+        item(key = "header") {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("${vm.history.size} clips", Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
+                // Oldest first, so the numbers follow the order the clips were made in.
+                DownloadAllButton(vm) { vm.history.reversed() }
+            }
+        }
         items(vm.history, key = { it.id }) { HistoryCard(it, vm, onReuse) }
+    }
+}
+
+/** Saves the clips from [items] as one zip with files named 1.wav, 2.wav, … */
+@Composable
+fun DownloadAllButton(vm: MainViewModel, items: () -> List<HistoryItem>) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var zipping by remember { mutableStateOf(false) }
+    var toExport by remember { mutableStateOf<List<HistoryItem>>(emptyList()) }
+    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri ->
+        val clips = toExport
+        if (uri != null && clips.isNotEmpty()) {
+            zipping = true
+            scope.launch {
+                val message = vm.exportZip(clips, uri)
+                zipping = false
+                Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+    OutlinedButton(
+        onClick = {
+            toExport = items()
+            val stamp = SimpleDateFormat("yyyyMMdd_HHmm", Locale.US).format(Date())
+            launcher.launch("voxcpm_clips_$stamp.zip")
+        },
+        enabled = !zipping,
+    ) {
+        Icon(Icons.Default.FolderZip, null)
+        Spacer(Modifier.width(6.dp))
+        Text(if (zipping) "Zipping…" else "Download all (ZIP)")
     }
 }
 

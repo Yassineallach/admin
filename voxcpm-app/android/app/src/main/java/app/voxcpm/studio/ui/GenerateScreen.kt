@@ -313,8 +313,11 @@ fun GenerateScreen(vm: MainViewModel, modifier: Modifier = Modifier) {
         if (!vm.isGenerating) vm.status?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
 
         if (vm.lastBatch.size > 1) {
-            FilledTonalButton(onClick = { vm.playAll(vm.lastBatch.toList()) }) {
-                Icon(Icons.Default.PlayArrow, null); Spacer(Modifier.width(6.dp)); Text("Play all ${vm.lastBatch.size} clips")
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FilledTonalButton(onClick = { vm.playAll(vm.lastBatch.toList()) }) {
+                    Icon(Icons.Default.PlayArrow, null); Spacer(Modifier.width(6.dp)); Text("Play all")
+                }
+                DownloadAllButton(vm) { vm.lastBatch.toList() }
             }
         }
         vm.lastBatch.forEach { item ->

@@ -29,6 +29,8 @@ Android app  ──HTTP (multipart)──▶  server.py (FastAPI + voxcpm)  ─�
   audio replaces the old one with the same voice settings (including the clone reference).
 - **My voices** — save a cloned voice (clip + transcript) under a name and pick it with one tap
   next time; listen, rename or delete saved voices. The last used voice is remembered.
+- **Download all (ZIP)** — save a batch (or the whole history) as one zip with clips named
+  `1.wav`, `2.wav`, … in order.
 - Advanced: CFG guidance, inference steps, seed (shown after each run so you can reproduce it).
 - History with play, save to device, share, reuse settings, delete.
 - Share text from any app into VoxCPM Studio to speak it.
