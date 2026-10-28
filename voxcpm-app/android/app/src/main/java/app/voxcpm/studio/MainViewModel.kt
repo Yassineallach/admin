@@ -644,22 +644,34 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /**
-     * Writes [items] into one zip at [uri], named 1.wav, 2.wav, … in the given order.
-     * Returns a message for the user.
+     * Writes [items] into one zip at [uri] in the given order: audio as 1.wav, 2.wav, … and/or
+     * each clip's text as 1.txt, 2.txt, … Returns a message for the user.
      */
-    suspend fun exportZip(items: List<HistoryItem>, uri: Uri): String {
+    suspend fun exportZip(items: List<HistoryItem>, uri: Uri, audio: Boolean, texts: Boolean): String {
         val ctx = getApplication<Application>()
         return try {
             withContext(Dispatchers.IO) {
                 ZipOutputStream(ctx.contentResolver.openOutputStream(uri)!!.buffered()).use { zip ->
                     items.forEachIndexed { i, item ->
-                        zip.putNextEntry(ZipEntry("${i + 1}.wav"))
-                        item.file(historyStore.dir).inputStream().use { it.copyTo(zip) }
-                        zip.closeEntry()
+                        if (audio) {
+                            zip.putNextEntry(ZipEntry("${i + 1}.wav"))
+                            item.file(historyStore.dir).inputStream().use { it.copyTo(zip) }
+                            zip.closeEntry()
+                        }
+                        if (texts) {
+                            zip.putNextEntry(ZipEntry("${i + 1}.txt"))
+                            zip.write(item.text.toByteArray(Charsets.UTF_8))
+                            zip.closeEntry()
+                        }
                     }
                 }
             }
-            "Saved ${items.size} clips to ZIP"
+            val what = when {
+                audio && texts -> "clips and texts"
+                texts -> "texts"
+                else -> "clips"
+            }
+            "Saved ${items.size} $what to ZIP"
         } catch (e: Exception) {
             "ZIP failed: ${e.message ?: e.javaClass.simpleName}"
         }

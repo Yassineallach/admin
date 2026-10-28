@@ -21,8 +21,10 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AudioFile
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.FolderZip
 import androidx.compose.material.icons.filled.PlayArrow
@@ -32,6 +34,8 @@ import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -91,28 +95,50 @@ fun DownloadAllButton(vm: MainViewModel, items: () -> List<HistoryItem>) {
     val scope = rememberCoroutineScope()
     var zipping by remember { mutableStateOf(false) }
     var toExport by remember { mutableStateOf<List<HistoryItem>>(emptyList()) }
+    // (audio, texts) for the zip being saved
+    var contents by remember { mutableStateOf(true to false) }
+    var menuOpen by remember { mutableStateOf(false) }
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri ->
         val clips = toExport
         if (uri != null && clips.isNotEmpty()) {
             zipping = true
             scope.launch {
-                val message = vm.exportZip(clips, uri)
+                val message = vm.exportZip(clips, uri, audio = contents.first, texts = contents.second)
                 zipping = false
                 Toast.makeText(context, message, Toast.LENGTH_LONG).show()
             }
         }
     }
-    OutlinedButton(
-        onClick = {
-            toExport = items()
-            val stamp = SimpleDateFormat("yyyyMMdd_HHmm", Locale.US).format(Date())
-            launcher.launch("voxcpm_clips_$stamp.zip")
-        },
-        enabled = !zipping,
-    ) {
-        Icon(Icons.Default.FolderZip, null)
-        Spacer(Modifier.width(6.dp))
-        Text(if (zipping) "Zipping…" else "Download all (ZIP)")
+    fun export(audio: Boolean, texts: Boolean, name: String) {
+        menuOpen = false
+        contents = audio to texts
+        toExport = items()
+        val stamp = SimpleDateFormat("yyyyMMdd_HHmm", Locale.US).format(Date())
+        launcher.launch("voxcpm_${name}_$stamp.zip")
+    }
+    Box {
+        OutlinedButton(onClick = { menuOpen = true }, enabled = !zipping) {
+            Icon(Icons.Default.FolderZip, null)
+            Spacer(Modifier.width(6.dp))
+            Text(if (zipping) "Zipping…" else "Download all (ZIP)")
+        }
+        DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+            DropdownMenuItem(
+                text = { Text("Audio only (1.wav, 2.wav…)") },
+                leadingIcon = { Icon(Icons.Default.AudioFile, null) },
+                onClick = { export(audio = true, texts = false, name = "clips") },
+            )
+            DropdownMenuItem(
+                text = { Text("Texts only (1.txt, 2.txt…)") },
+                leadingIcon = { Icon(Icons.Default.Description, null) },
+                onClick = { export(audio = false, texts = true, name = "texts") },
+            )
+            DropdownMenuItem(
+                text = { Text("Audio + texts") },
+                leadingIcon = { Icon(Icons.Default.FolderZip, null) },
+                onClick = { export(audio = true, texts = true, name = "clips_texts") },
+            )
+        }
     }
 }
 
