@@ -45,6 +45,30 @@ Android app  ──HTTP (multipart)──▶  server.py (FastAPI + voxcpm)  ─�
 2. Runtime → Change runtime type → **T4 GPU**.
 3. Run all cells. The last cell prints a URL like `https://xxxx.trycloudflare.com`.
 
+When you're done in Colab, use **Runtime → Disconnect and delete runtime** — an idle
+runtime still uses up your free GPU time.
+
+**Colab limit reached? Kaggle (free, about 30 GPU hours per week)**
+
+1. Sign in at [kaggle.com](https://www.kaggle.com) and verify your phone number once
+   (Settings → Phone verification; needed for GPU and Internet).
+2. Create → New Notebook → File → Import Notebook → upload `server/VoxCPM_Server_Kaggle.ipynb`.
+3. Right-hand panel → Session options: **Accelerator: GPU T4 x2**, **Internet: on**.
+4. **Run All**, then paste the printed `trycloudflare.com` URL into the app.
+   Stop the session when done so your weekly hours aren't wasted.
+
+**Permanent URL: Modal (monthly free credits, pay per second while generating)**
+
+```bash
+pip install modal
+modal setup                       # log in once
+cd voxcpm-app/server
+modal deploy modal_app.py         # prints https://<you>--voxcpm-server-serve.modal.run
+```
+
+The URL never changes and the GPU shuts down by itself after 5 idle minutes. The first request
+after a pause takes 1–3 minutes while the model starts.
+
 **Your own PC (NVIDIA GPU, Python 3.10–3.12, CUDA 12+)**
 
 ```bash

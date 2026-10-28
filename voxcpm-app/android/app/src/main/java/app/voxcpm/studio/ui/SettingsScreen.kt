@@ -65,6 +65,16 @@ fun SettingsScreen(vm: MainViewModel, modifier: Modifier = Modifier) {
                     style = MaterialTheme.typography.bodySmall,
                 )
                 Text(
+                    "• Colab limit reached? Use VoxCPM_Server_Kaggle.ipynb on kaggle.com (free, ~30 GPU hours " +
+                        "per week): GPU T4 x2 + Internet on, Run All, paste the printed URL here.",
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                Text(
+                    "• Permanent address: deploy modal_app.py on modal.com (monthly free credits, " +
+                        "pay only while generating). The URL never changes.",
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                Text(
                     "• Own PC with an NVIDIA GPU: pip install -r requirements.txt, then " +
                         "python server.py --port 8000. Use http://<PC-IP>:8000 on the same Wi-Fi.",
                     style = MaterialTheme.typography.bodySmall,
