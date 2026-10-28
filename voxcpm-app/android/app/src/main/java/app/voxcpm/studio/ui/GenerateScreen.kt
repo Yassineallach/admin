@@ -1,0 +1,250 @@
+package app.voxcpm.studio.ui
+
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AudioFile
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.Slider
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
+import app.voxcpm.studio.MainViewModel
+import app.voxcpm.studio.VoiceMode
+import kotlin.math.roundToInt
+
+private val voicePresets = listOf(
+    "A young woman, gentle and sweet voice",
+    "A deep, calm male narrator voice",
+    "An energetic young man, excited tone",
+    "An elderly man, warm and slow storyteller",
+    "A cheerful little girl",
+    "A professional news anchor, clear and neutral",
+)
+
+private val stylePresets = listOf(
+    "slightly faster, cheerful tone",
+    "slow and calm",
+    "whispering",
+    "angry and loud",
+    "sad, soft voice",
+)
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun GenerateScreen(vm: MainViewModel, modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+    var showAdvanced by rememberSaveable { mutableStateOf(false) }
+
+    val pickAudio = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        uri?.let(vm::setReferenceFromUri)
+    }
+    val micPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (granted) vm.startRecording() else vm.error = "Microphone permission is needed to record"
+    }
+
+    Column(
+        modifier
+            .verticalScroll(rememberScrollState())
+            .imePadding()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Text("VoxCPM Studio", style = MaterialTheme.typography.headlineSmall)
+
+        OutlinedTextField(
+            value = vm.text,
+            onValueChange = { vm.text = it },
+            label = { Text("Text to speak") },
+            placeholder = { Text("Type in any of 30 languages — no language tag needed") },
+            supportingText = { Text("${vm.text.length} characters") },
+            modifier = Modifier.fillMaxWidth().heightIn(min = 140.dp),
+        )
+
+        SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+            VoiceMode.entries.forEachIndexed { i, m ->
+                SegmentedButton(
+                    selected = vm.mode == m,
+                    onClick = { vm.mode = m },
+                    shape = SegmentedButtonDefaults.itemShape(i, VoiceMode.entries.size),
+                ) { Text(m.label, maxLines = 1) }
+            }
+        }
+
+        when (vm.mode) {
+            VoiceMode.Default -> Text(
+                "VoxCPM2 picks a natural voice that fits the text.",
+                style = MaterialTheme.typography.bodySmall,
+            )
+            VoiceMode.Design -> {
+                OutlinedTextField(
+                    value = vm.voiceDescription,
+                    onValueChange = { vm.voiceDescription = it },
+                    label = { Text("Describe the voice") },
+                    placeholder = { Text("e.g. A young woman, gentle and sweet voice") },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                PresetRow(voicePresets) { vm.voiceDescription = it }
+                Text(
+                    "Voice design can vary between runs — try a couple of seeds.",
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+            VoiceMode.Clone -> {
+                Card(Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("Reference voice", style = MaterialTheme.typography.titleSmall)
+                        if (vm.referenceName != null) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.AudioFile, null)
+                                Spacer(Modifier.width(8.dp))
+                                Text(vm.referenceName!!, Modifier.weight(1f), maxLines = 1)
+                                IconButton(onClick = vm::clearReference) { Icon(Icons.Default.Close, "Remove") }
+                            }
+                        } else {
+                            Text(
+                                "Use a clean 5–20 second clip of the voice you want to clone.",
+                                style = MaterialTheme.typography.bodySmall,
+                            )
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            OutlinedButton(onClick = { pickAudio.launch(arrayOf("audio/*")) }, enabled = !vm.isRecording) {
+                                Icon(Icons.Default.AudioFile, null); Spacer(Modifier.width(6.dp)); Text("Pick file")
+                            }
+                            if (vm.isRecording) {
+                                FilledTonalButton(onClick = vm::stopRecording) {
+                                    Icon(Icons.Default.Stop, null); Spacer(Modifier.width(6.dp)); Text("Stop")
+                                }
+                            } else {
+                                OutlinedButton(onClick = {
+                                    val granted = ContextCompat.checkSelfPermission(
+                                        context, Manifest.permission.RECORD_AUDIO,
+                                    ) == PackageManager.PERMISSION_GRANTED
+                                    if (granted) vm.startRecording() else micPermission.launch(Manifest.permission.RECORD_AUDIO)
+                                }) {
+                                    Icon(Icons.Default.Mic, null); Spacer(Modifier.width(6.dp)); Text("Record")
+                                }
+                            }
+                        }
+                        if (vm.isRecording) Text("Recording… speak clearly, then press Stop.", color = MaterialTheme.colorScheme.error)
+                    }
+                }
+                OutlinedTextField(
+                    value = vm.promptText,
+                    onValueChange = { vm.promptText = it },
+                    label = { Text("Transcript of the reference (optional)") },
+                    supportingText = { Text("Adding the exact words spoken in the clip gives the closest match.") },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                OutlinedTextField(
+                    value = vm.styleControl,
+                    onValueChange = { vm.styleControl = it },
+                    label = { Text("Style control (optional)") },
+                    placeholder = { Text("e.g. slightly faster, cheerful tone") },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                PresetRow(stylePresets) { vm.styleControl = it }
+            }
+        }
+
+        TextButton(onClick = { showAdvanced = !showAdvanced }) {
+            Text(if (showAdvanced) "Hide advanced settings" else "Advanced settings")
+        }
+        if (showAdvanced) {
+            Text("Guidance (CFG): %.1f".format(vm.cfgValue))
+            Slider(
+                value = vm.cfgValue,
+                onValueChange = { vm.cfgValue = (it * 10).roundToInt() / 10f },
+                valueRange = 1f..3f, steps = 19,
+            )
+            Text("Inference steps: ${vm.timesteps} (more = higher quality, slower)")
+            Slider(
+                value = vm.timesteps.toFloat(),
+                onValueChange = { vm.timesteps = it.roundToInt() },
+                valueRange = 4f..30f, steps = 25,
+            )
+            OutlinedTextField(
+                value = vm.seedText,
+                onValueChange = { v -> vm.seedText = v.filter { it.isDigit() }.take(9) },
+                label = { Text("Seed (empty = random)") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+
+        Button(
+            onClick = vm::generate,
+            enabled = !vm.isGenerating && !vm.isRecording,
+            modifier = Modifier.fillMaxWidth().height(52.dp),
+        ) {
+            if (vm.isGenerating) {
+                CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
+                Spacer(Modifier.width(10.dp))
+                Text("Generating…")
+            } else {
+                Text("Generate speech")
+            }
+        }
+
+        vm.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+        vm.status?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
+
+        vm.lastItem?.let { item ->
+            HistoryCard(item, vm, onReuse = null)
+        }
+    }
+}
+
+@Composable
+private fun PresetRow(presets: List<String>, onPick: (String) -> Unit) {
+    Row(
+        Modifier.horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        presets.forEach { AssistChip(onClick = { onPick(it) }, label = { Text(it) }) }
+    }
+}
