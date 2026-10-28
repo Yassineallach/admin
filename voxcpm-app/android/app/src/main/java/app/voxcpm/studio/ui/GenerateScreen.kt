@@ -33,6 +33,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -245,11 +246,19 @@ fun GenerateScreen(vm: MainViewModel, modifier: Modifier = Modifier) {
         }
 
         if (vm.isGenerating) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.dp)
-                Spacer(Modifier.width(12.dp))
-                Text(vm.status ?: "Generating…", Modifier.weight(1f))
-                OutlinedButton(onClick = vm::cancelGeneration) { Text("Stop") }
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.dp)
+                    Spacer(Modifier.width(12.dp))
+                    Text(vm.progressText.ifEmpty { "Generating…" }, Modifier.weight(1f))
+                    OutlinedButton(onClick = vm::cancelGeneration) { Text("Stop") }
+                }
+                val fraction = vm.progressFraction
+                if (fraction != null) {
+                    LinearProgressIndicator(progress = { fraction }, modifier = Modifier.fillMaxWidth())
+                } else {
+                    LinearProgressIndicator(Modifier.fillMaxWidth())
+                }
             }
         } else {
             Button(

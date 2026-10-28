@@ -3,6 +3,7 @@ package app.voxcpm.studio
 import android.app.Application
 import android.media.MediaPlayer
 import android.net.Uri
+import android.os.SystemClock
 import android.provider.OpenableColumns
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
@@ -19,6 +20,7 @@ import app.voxcpm.studio.data.VoxApi
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -28,6 +30,14 @@ enum class VoiceMode(val label: String) {
     Default("Default"),
     Design("Voice design"),
     Clone("Voice clone"),
+}
+
+/** Short texts still pay fixed overhead (network, model setup), so they count as at least this long. */
+private const val MIN_COST_CHARS = 20
+
+private fun formatTime(seconds: Float): String {
+    val s = seconds.toInt()
+    return "%d:%02d".format(s / 60, s % 60)
 }
 
 class MainViewModel(app: Application) : AndroidViewModel(app) {
@@ -59,6 +69,12 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         private set
     var error by mutableStateOf<String?>(null)
     var status by mutableStateOf<String?>(null)
+    /** Live "elapsed / time left" line while generating. */
+    var progressText by mutableStateOf("")
+        private set
+    /** 0..1 once there is a time estimate, null while still estimating. */
+    var progressFraction by mutableStateOf<Float?>(null)
+        private set
     /** When on, every non-empty line of [text] becomes its own clip. */
     var batchMode by mutableStateOf(false)
     /** Clips made by the most recent Generate press. */
@@ -82,6 +98,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     private fun api() = VoxApi(settings.serverUrl, settings.apiKey)
 
     fun saveSettings() {
+        val newUrl = serverUrl.trim().trimEnd('/')
+        if (newUrl != settings.serverUrl) settings.secPerChar = 0f // different server, different speed
         settings.serverUrl = serverUrl
         settings.apiKey = apiKey
         serverUrl = settings.serverUrl
@@ -183,12 +201,45 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         error = null
         lastBatch.clear()
         isGenerating = true
+        // Generation time grows with the step count, though not fully linearly.
+        val stepFactor = 0.5f + 0.5f * timesteps / 10f
+        val costs = texts.map { maxOf(it.length, MIN_COST_CHARS) * stepFactor }
         generateJob = viewModelScope.launch {
             var done = 0
             var audioSec = 0f
+            val batchStart = SystemClock.elapsedRealtime()
+            var clipStart = batchStart
+            var clipIndex = 0
+
+            fun refreshProgress() {
+                val now = SystemClock.elapsedRealtime()
+                val elapsed = (now - batchStart) / 1000f
+                val prefix = if (texts.size > 1) "Clip ${clipIndex + 1} of ${texts.size} · " else ""
+                val rate = settings.secPerChar
+                if (rate <= 0f) {
+                    progressFraction = null
+                    progressText = "$prefix${formatTime(elapsed)} elapsed · estimating time…"
+                    return
+                }
+                val clipElapsed = (now - clipStart) / 1000f
+                val left = (rate * costs[clipIndex] - clipElapsed).coerceAtLeast(0f) +
+                    rate * costs.drop(clipIndex + 1).sum()
+                progressFraction = (elapsed / (elapsed + left)).coerceIn(0f, 0.99f)
+                progressText = "$prefix${formatTime(elapsed)} elapsed · " +
+                    if (left < 1f) "almost done…" else "about ${formatTime(left)} left"
+            }
+
+            val ticker = launch {
+                while (true) {
+                    refreshProgress()
+                    delay(1000)
+                }
+            }
             try {
                 for ((i, clipText) in texts.withIndex()) {
-                    status = if (texts.size == 1) "Generating…" else "Generating clip ${i + 1} of ${texts.size}…"
+                    clipIndex = i
+                    clipStart = SystemClock.elapsedRealtime()
+                    refreshProgress()
                     val id = UUID.randomUUID().toString()
                     val tmp = File(historyStore.dir, "$id.part")
                     val result = try {
@@ -203,6 +254,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                         }
                         throw e
                     }
+                    val measured = (SystemClock.elapsedRealtime() - clipStart) / 1000f / costs[i]
+                    val old = settings.secPerChar
+                    settings.secPerChar = if (old <= 0f) measured else old * 0.6f + measured * 0.4f
+
                     val item = HistoryItem(
                         id = id, text = clipText, control = control, mode = modeLabel,
                         seed = result.seed, durationSec = result.durationSec,
@@ -217,13 +272,16 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                         status = buildString {
                             append("Done")
                             result.durationSec?.let { append(" · %.1fs audio".format(it)) }
-                            result.generationSec?.let { append(" in %.1fs".format(it)) }
+                            append(" · took ${formatTime((SystemClock.elapsedRealtime() - batchStart) / 1000f)}")
                             result.seed?.let { append(" · seed $it") }
                         }
                         play(item)
                     }
                 }
-                if (texts.size > 1) status = "Done · ${texts.size} clips · %.1fs audio".format(audioSec)
+                val took = formatTime((SystemClock.elapsedRealtime() - batchStart) / 1000f)
+                if (texts.size > 1) {
+                    status = "Done · ${texts.size} clips · %.1fs audio · took $took".format(audioSec)
+                }
             } catch (e: Exception) {
                 if (e is CancellationException || generateJob?.isCancelled == true) {
                     status = "Stopped · $done of ${texts.size} clips made"
@@ -232,6 +290,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                     error = e.message ?: e.javaClass.simpleName
                 }
             } finally {
+                ticker.cancel()
                 isGenerating = false
                 activeApi = null
             }
