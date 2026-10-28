@@ -65,6 +65,11 @@ fun SettingsScreen(vm: MainViewModel, modifier: Modifier = Modifier) {
                     style = MaterialTheme.typography.bodySmall,
                 )
                 Text(
+                    "• No GPU left? In Colab keep the runtime type as CPU and run the same notebook. It works " +
+                        "but is slow (about 1–3 minutes per sentence): set Inference steps to 4 under Advanced.",
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                Text(
                     "• Colab limit reached? Use VoxCPM_Server_Kaggle.ipynb on kaggle.com (free, ~30 GPU hours " +
                         "per week): GPU T4 x2 + Internet on, Run All, paste the printed URL here.",
                     style = MaterialTheme.typography.bodySmall,

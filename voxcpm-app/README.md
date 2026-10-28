@@ -45,6 +45,11 @@ Android app  ──HTTP (multipart)──▶  server.py (FastAPI + voxcpm)  ─�
 2. Runtime → Change runtime type → **T4 GPU**.
 3. Run all cells. The last cell prints a URL like `https://xxxx.trycloudflare.com`.
 
+**No GPU left?** In Colab, keep the runtime type as **CPU** and run the same notebook. The server
+detects there's no GPU and loads the model in a way that fits the free CPU machine's memory. It is
+slow (roughly 10–25× slower than real time, i.e. 1–3 minutes per sentence); set **Inference steps
+to 4** in the app's Advanced settings to roughly halve the time.
+
 When you're done in Colab, use **Runtime → Disconnect and delete runtime** — an idle
 runtime still uses up your free GPU time.
 

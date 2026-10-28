@@ -31,7 +31,7 @@ class VoxApi(private val baseUrl: String, private val apiKey: String) {
 
     private val client = OkHttpClient.Builder()
         .connectTimeout(20, TimeUnit.SECONDS)
-        .readTimeout(10, TimeUnit.MINUTES)
+        .readTimeout(30, TimeUnit.MINUTES) // a long text on a CPU-only server can take many minutes
         .writeTimeout(2, TimeUnit.MINUTES)
         .build()
 
@@ -56,7 +56,12 @@ class VoxApi(private val baseUrl: String, private val apiKey: String) {
         client.newCall(request).execute().use { response ->
             ensureOk(response)
             val json = JSONObject(response.body!!.string())
-            return "${json.optString("model")} · ${json.optInt("sample_rate")} Hz"
+            val device = when (json.optString("device")) {
+                "cpu" -> " · CPU only (slow: use 4 inference steps)"
+                "cuda" -> " · GPU"
+                else -> ""
+            }
+            return "${json.optString("model").substringAfterLast('/')} · ${json.optInt("sample_rate")} Hz$device"
         }
     }
 

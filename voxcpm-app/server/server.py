@@ -33,17 +33,35 @@ MAX_TEXT_CHARS = int(os.environ.get("VOXCPM_MAX_CHARS", "2000"))
 app = FastAPI(title="VoxCPM Studio Server")
 
 _model = None
+_device = "unknown"
 _model_lock = threading.Lock()
 _generate_params: Optional[set] = None  # None = accepts **kwargs, don't filter
 
 
 def get_model():
-    global _model, _generate_params
+    global _model, _generate_params, _device
     if _model is None:
+        import torch
         from voxcpm import VoxCPM
 
-        print(f"Loading {MODEL_ID} ...", flush=True)
-        _model = VoxCPM.from_pretrained(MODEL_ID, load_denoiser=False)
+        on_gpu = torch.cuda.is_available()
+        _device = "cuda" if on_gpu else "cpu"
+        print(f"Loading {MODEL_ID} on {_device} ...", flush=True)
+        if on_gpu:
+            _model = VoxCPM.from_pretrained(MODEL_ID, load_denoiser=False)
+        else:
+            # voxcpm builds the model in float32 and only then converts it to bfloat16, which
+            # needs more RAM than a free Colab CPU machine has. Building it directly in bfloat16
+            # keeps the peak around 10.6 GB.
+            torch.set_num_threads(os.cpu_count() or 2)
+            torch.set_default_dtype(torch.bfloat16)
+            try:
+                # optimize=False: torch.compile is CUDA-only here and its warm-up run is slow on CPU.
+                _model = VoxCPM.from_pretrained(MODEL_ID, load_denoiser=False, optimize=False)
+            finally:
+                torch.set_default_dtype(torch.float32)
+            print("No GPU found: running on CPU. Expect roughly 10-25x slower than real time; "
+                  "fewer inference steps (e.g. 4) help most.", flush=True)
         # generate() is often a *args/**kwargs wrapper around _generate(), so inspect the real one.
         target = getattr(_model, "_generate", _model.generate)
         params = inspect.signature(target).parameters
@@ -114,7 +132,7 @@ def save_upload_as_wav(upload: UploadFile, workdir: str, name: str) -> str:
 
 @app.get("/health")
 def health(_: None = Depends(check_key)):
-    return {"status": "ok", "model": MODEL_ID, "sample_rate": sample_rate()}
+    return {"status": "ok", "model": MODEL_ID, "sample_rate": sample_rate(), "device": _device}
 
 
 @app.post("/tts")
