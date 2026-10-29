@@ -1,0 +1,33 @@
+name: Android Image Studio
+
+on:
+  push:
+    paths:
+      - "android-image-studio/**"
+      - ".github/workflows/android-image-studio.yml"
+  pull_request:
+    paths:
+      - "android-image-studio/**"
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: android-image-studio
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Unit tests
+        run: ./gradlew testDebugUnitTest
+      - name: Build debug APK
+        run: ./gradlew assembleDebug
+      - uses: actions/upload-artifact@v4
+        with:
+          name: image-studio-debug-apk
+          path: android-image-studio/app/build/outputs/apk/debug/app-debug.apk
