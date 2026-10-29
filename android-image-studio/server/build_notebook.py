@@ -33,7 +33,10 @@ MODELS = ["sdxl-turbo"]
 HF_TOKEN = \"\""""
 
 # diffusers and transformers are pinned as a pair: newer transformers releases break older diffusers.
-INSTALL = """%pip install -q diffusers==0.41.0 transformers==5.20.2 accelerate fastapi uvicorn python-multipart "qrcode[pil]"
+# Kaggle preinstalls an old torchao that crashes diffusers' import; the server does not use it.
+INSTALL = """# After an import error, restart the session before running again: imports already loaded stay broken.
+%pip uninstall -y -q torchao
+%pip install -q diffusers==0.41.0 transformers==5.20.2 accelerate fastapi uvicorn python-multipart "qrcode[pil]"
 """
 
 START = """import os, secrets
