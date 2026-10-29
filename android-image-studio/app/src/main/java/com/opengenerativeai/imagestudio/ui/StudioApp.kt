@@ -31,7 +31,8 @@ private enum class Tab(val label: String, val icon: ImageVector) {
 
 @Composable
 fun StudioApp(vm: StudioViewModel = viewModel()) {
-    var tab by rememberSaveable { mutableStateOf(if (vm.apiKey.isEmpty()) Tab.SETTINGS else Tab.CREATE) }
+    val ready = if (vm.backend == Backend.SERVER) vm.server != null else vm.apiKey.isNotEmpty()
+    var tab by rememberSaveable { mutableStateOf(if (ready) Tab.CREATE else Tab.SETTINGS) }
     var viewing by remember { mutableStateOf<String?>(null) }
     val snackbar = remember { SnackbarHostState() }
 
@@ -71,6 +72,11 @@ fun StudioApp(vm: StudioViewModel = viewModel()) {
     }
 
     viewing?.let { url ->
-        ImageViewer(url = url, onSave = { vm.saveImage(url) }, onDismiss = { viewing = null })
+        ImageViewer(
+            url = url,
+            onSave = { vm.saveImage(url) },
+            onShare = { vm.shareIntent(listOf(url)) },
+            onDismiss = { viewing = null },
+        )
     }
 }

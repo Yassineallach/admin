@@ -35,10 +35,10 @@ data class ImageModel(
 )
 
 /**
- * The model list bundled in assets/models.json, generated from Open Generative AI's
- * catalog by tools/extract_models.py.
+ * A model list: the one bundled in assets/models.json (generated from Open Generative AI's
+ * catalog by tools/extract_models.py), or the one a self-hosted server reports.
  */
-class ModelCatalog(val models: List<ImageModel>) {
+class ModelCatalog(val models: List<ImageModel>, val json: String) {
 
     fun forMode(mode: Mode) = models.filter { it.mode == mode }
 
@@ -53,7 +53,7 @@ class ModelCatalog(val models: List<ImageModel>) {
         fun parse(json: String): ModelCatalog {
             val array = JSONArray(json)
             val models = (0 until array.length()).map { parseModel(array.getJSONObject(it)) }
-            return ModelCatalog(models)
+            return ModelCatalog(models, json)
         }
 
         private fun parseModel(o: JSONObject): ImageModel {

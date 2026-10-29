@@ -48,6 +48,8 @@ dependencies {
     implementation(libs.coil.compose)
     implementation(libs.coil.network.okhttp)
     implementation(libs.kotlinx.coroutines.android)
+    // QR scanning for the notebook's connect code; runs in Play services, so no camera permission.
+    implementation(libs.play.services.code.scanner)
     debugImplementation(libs.androidx.ui.tooling)
     testImplementation(libs.junit)
     // android.jar only stubs org.json; unit tests need the real implementation.

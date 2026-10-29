@@ -20,6 +20,8 @@ data class Generation(
     val requestId: String? = null,
     val outputs: List<String> = emptyList(),
     val error: String? = null,
+    /** Base URL of the self-hosted server that ran the job; null for MuAPI. */
+    val server: String? = null,
 )
 
 /** Generation history, newest first, kept in a JSON file in app-private storage. */
@@ -52,6 +54,7 @@ class HistoryStore(context: Context) {
                     g.requestId?.let { put("requestId", it) }
                     put("outputs", JSONArray(g.outputs))
                     g.error?.let { put("error", it) }
+                    g.server?.let { put("server", it) }
                 })
             }
         }.toString()
@@ -71,6 +74,7 @@ class HistoryStore(context: Context) {
                     requestId = if (o.has("requestId")) o.getString("requestId") else null,
                     outputs = (0 until outputs.length()).map { outputs.getString(it) },
                     error = if (o.has("error")) o.getString("error") else null,
+                    server = if (o.has("server")) o.getString("server") else null,
                 )
             }
         }

@@ -19,11 +19,31 @@ class MuapiException(message: String, val requestId: String? = null) : Exception
  * Client for api.muapi.ai, following the same flow as Open Generative AI's muapi.js:
  * POST the job to /api/v1/{endpoint} with an x-api-key header, then poll
  * /api/v1/predictions/{request_id}/result until the status is terminal.
+ *
+ * The Kaggle/Colab notebook in server/ speaks the same protocol, so this client also drives it;
+ * only [baseUrl] and the key differ.
  */
 class MuapiClient(
     private val http: OkHttpClient = defaultHttpClient(),
-    private val baseUrl: String = "https://api.muapi.ai",
+    val baseUrl: String = MUAPI_URL,
 ) {
+
+    /** Fetches a self-hosted server's model list, in the same format as assets/models.json. */
+    suspend fun fetchCatalog(apiKey: String): ModelCatalog = withContext(Dispatchers.IO) {
+        val request = Request.Builder()
+            .url("$baseUrl/api/v1/models")
+            .header("x-api-key", apiKey)
+            .build()
+        http.newCall(request).execute().use { response ->
+            val body = response.body?.string().orEmpty()
+            if (!response.isSuccessful) {
+                throw MuapiException("Server answered ${response.code}: ${errorDetail(body)}")
+            }
+            runCatching { ModelCatalog.parse(body) }.getOrElse {
+                throw MuapiException("That address answered, but not like an Image Studio server.")
+            }
+        }
+    }
 
     /** Submits a job. Returns either a request id to poll, or the finished output URLs. */
     suspend fun submit(apiKey: String, endpoint: String, payload: JSONObject): Submission =
@@ -41,7 +61,7 @@ class MuapiClient(
                 val data = JSONObject(body)
                 val requestId = data.optString("request_id").ifEmpty { data.optString("id") }
                 if (requestId.isNotEmpty()) Submission.Queued(requestId)
-                else Submission.Done(extractOutputs(data))
+                else Submission.Done(extractOutputs(data).map(::resolve))
             }
         }
 
@@ -75,7 +95,7 @@ class MuapiClient(
             }
             val result = runCatching { JSONObject(body) }.getOrNull() ?: return@repeat
             when (result.optString("status").lowercase()) {
-                in SUCCESS -> return extractOutputs(result).ifEmpty {
+                in SUCCESS -> return extractOutputs(result).map(::resolve).ifEmpty {
                     throw MuapiException("The job finished without returning an image.", requestId)
                 }
                 in FAILURE -> throw MuapiException(
@@ -110,12 +130,16 @@ class MuapiClient(
             }
         }
 
+    /** Self-hosted servers return output paths like /outputs/x.png relative to [baseUrl]. */
+    private fun resolve(url: String) = if (url.startsWith("/")) baseUrl + url else url
+
     sealed interface Submission {
         data class Queued(val requestId: String) : Submission
         data class Done(val outputs: List<String>) : Submission
     }
 
     companion object {
+        const val MUAPI_URL = "https://api.muapi.ai"
         private val JSON = "application/json".toMediaType()
         private val SUCCESS = setOf("completed", "succeeded", "success")
         private val FAILURE = setOf("failed", "error", "cancelled", "canceled")

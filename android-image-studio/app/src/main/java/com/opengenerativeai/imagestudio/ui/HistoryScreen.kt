@@ -62,7 +62,13 @@ fun HistoryScreen(
         modifier = modifier.fillMaxSize(),
     ) {
         items(vm.history, key = { it.id }) { g ->
-            HistoryCard(g, onOpenImage, onReuse = { onReuse(g) }, onDelete = { vm.delete(g) })
+            HistoryCard(
+                g,
+                onOpenImage,
+                onReuse = { onReuse(g) },
+                onShare = { vm.shareIntent(g.outputs) },
+                onDelete = { vm.delete(g) },
+            )
         }
     }
 }
@@ -72,6 +78,7 @@ private fun HistoryCard(
     g: Generation,
     onOpenImage: (String) -> Unit,
     onReuse: () -> Unit,
+    onShare: () -> Intent,
     onDelete: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -129,11 +136,9 @@ private fun HistoryCard(
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                 IconButton(onClick = onReuse) { Icon(Icons.Default.Refresh, contentDescription = "Reuse prompt") }
                 if (g.outputs.isNotEmpty()) {
-                    IconButton(onClick = {
-                        val send = Intent(Intent.ACTION_SEND).setType("text/plain")
-                            .putExtra(Intent.EXTRA_TEXT, g.outputs.joinToString("\n"))
-                        context.startActivity(Intent.createChooser(send, null))
-                    }) { Icon(Icons.Default.Share, contentDescription = "Share link") }
+                    IconButton(onClick = { context.startActivity(onShare()) }) {
+                        Icon(Icons.Default.Share, contentDescription = "Share")
+                    }
                 }
                 IconButton(onClick = onDelete) { Icon(Icons.Default.Delete, contentDescription = "Delete") }
             }

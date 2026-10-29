@@ -85,7 +85,9 @@ fun CreateScreen(vm: StudioViewModel, onOpenImage: (String) -> Unit, modifier: M
                 }
         }
 
-        ResultPanel(current, vm.stage, onOpenImage, onClear = vm::clearCurrent)
+        val hint = if (vm.backend == Backend.SERVER) "Running free on your notebook's GPU. Keep the notebook open."
+        else "Pick a model, describe an image and tap Generate."
+        ResultPanel(current, vm.stage, hint, onOpenImage, onClear = vm::clearCurrent)
 
         Surface(
             onClick = { pickingModel = true },
@@ -150,6 +152,7 @@ fun CreateScreen(vm: StudioViewModel, onOpenImage: (String) -> Unit, modifier: M
 private fun ResultPanel(
     generation: Generation?,
     stage: String?,
+    hint: String,
     onOpenImage: (String) -> Unit,
     onClear: () -> Unit,
 ) {
@@ -168,7 +171,7 @@ private fun ResultPanel(
                 Text("What will you create?", style = MaterialTheme.typography.headlineSmall)
                 Spacer(Modifier.height(6.dp))
                 Text(
-                    "Pick a model, describe an image and tap Generate.",
+                    hint,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
                 )

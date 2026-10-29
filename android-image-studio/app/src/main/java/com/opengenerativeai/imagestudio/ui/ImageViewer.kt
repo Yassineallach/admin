@@ -38,7 +38,7 @@ import coil3.compose.AsyncImage
 
 /** Full-screen, pinch-to-zoom view of one generated image. */
 @Composable
-fun ImageViewer(url: String, onSave: () -> Unit, onDismiss: () -> Unit) {
+fun ImageViewer(url: String, onSave: () -> Unit, onShare: () -> Intent, onDismiss: () -> Unit) {
     val context = LocalContext.current
     var scale by remember { mutableFloatStateOf(1f) }
     var offset by remember { mutableStateOf(Offset.Zero) }
@@ -67,10 +67,7 @@ fun ImageViewer(url: String, onSave: () -> Unit, onDismiss: () -> Unit) {
                 horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally),
             ) {
                 FilledTonalButton(onClick = onSave) { Text("Save to gallery") }
-                FilledTonalButton(onClick = {
-                    val send = Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, url)
-                    context.startActivity(Intent.createChooser(send, null))
-                }) {
+                FilledTonalButton(onClick = { context.startActivity(onShare()) }) {
                     Icon(Icons.Default.Share, contentDescription = null)
                     Text("  Share")
                 }
