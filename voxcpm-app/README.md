@@ -102,9 +102,17 @@ Open the app → **Settings** → paste the server URL (and API key if you set o
 | Method | Path      | Description |
 |--------|-----------|-------------|
 | GET    | `/health` | `{"status","model","sample_rate"}` |
-| POST   | `/tts`    | multipart form → `audio/wav` |
+| POST   | `/tts`    | multipart form → `audio/wav` in one request |
+| POST   | `/jobs`   | same form → `{"id","status","position"}`; generation runs in the background |
+| GET    | `/jobs/{id}` | `{"status": queued/running/done/error/cancelled, "position", "error"}` |
+| GET    | `/jobs/{id}/audio` | `audio/wav` once the job is done |
+| DELETE | `/jobs/{id}` | cancel |
 
-`/tts` fields: `text` (required), `control` (voice description / style, sent to VoxCPM2 as a
+The app uses `/jobs` and polls every 2 s, so no request lasts long enough for a tunnel to cut it
+(Cloudflare quick tunnels end requests after ~100 s with error 524). With older servers it falls
+back to `/tts`.
+
+`/tts` and `/jobs` fields: `text` (required), `control` (voice description / style, sent to VoxCPM2 as a
 `(…)` prefix), `reference_audio` (file, enables cloning), `prompt_text` (transcript of the
 reference), `cfg_value` (default 2.0), `inference_timesteps` (default 10), `seed`.
 Response headers: `X-Seed`, `X-Duration`, `X-Sample-Rate`, `X-Generation-Seconds`.

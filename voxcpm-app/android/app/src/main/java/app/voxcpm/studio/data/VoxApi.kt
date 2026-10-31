@@ -11,6 +11,11 @@ import org.json.JSONObject
 import java.io.File
 import java.io.IOException
 import java.util.concurrent.TimeUnit
+import kotlin.concurrent.thread
+
+private const val POLL_MS = 2000L
+/** Consecutive failed status checks (about a minute) before giving up on a flaky connection. */
+private const val MAX_NETWORK_FAILURES = 30
 
 data class TtsRequest(
     val text: String,
@@ -37,9 +42,22 @@ class VoxApi(private val baseUrl: String, private val apiKey: String) {
 
     @Volatile private var currentCall: Call? = null
 
-    /** Aborts the request in flight, if any. */
+    @Volatile private var cancelled = false
+    @Volatile private var currentJob: String? = null
+    /** Whether the server has the /jobs API; null until the first clip finds out. */
+    @Volatile private var jobsSupported: Boolean? = null
+
+    /** Aborts the clip in progress, also dropping it from the server's queue. */
     fun cancel() {
+        cancelled = true
         currentCall?.cancel()
+        currentJob?.let { job ->
+            thread(name = "cancel-job") {
+                runCatching {
+                    client.newCall(Request.Builder().url(url("/jobs/$job")).auth().delete().build()).execute().close()
+                }
+            }
+        }
     }
 
     private fun Request.Builder.auth(): Request.Builder =
@@ -65,8 +83,26 @@ class VoxApi(private val baseUrl: String, private val apiKey: String) {
         }
     }
 
-    /** Generates speech and writes the wav to [output]. */
+    /**
+     * Generates speech and writes the wav to [output].
+     *
+     * Uses the server's job queue when it has one: the request returns at once and the app polls
+     * until the audio is ready, so tunnels that cut long requests (Cloudflare: ~100 s, error 524)
+     * can't break slow generations. Older servers fall back to a single /tts request.
+     */
     fun synthesize(req: TtsRequest, output: File): TtsResult {
+        if (jobsSupported != false) {
+            val job = submitJob(req)
+            if (job != null) {
+                jobsSupported = true
+                return awaitJob(job, output)
+            }
+            jobsSupported = false
+        }
+        return synthesizeDirect(req, output)
+    }
+
+    private fun formBody(req: TtsRequest): MultipartBody {
         val body = MultipartBody.Builder().setType(MultipartBody.FORM)
             .addFormDataPart("text", req.text)
             .addFormDataPart("control", req.control)
@@ -80,24 +116,100 @@ class VoxApi(private val baseUrl: String, private val apiKey: String) {
                 it.asRequestBody("application/octet-stream".toMediaType()),
             )
         }
-        val request = Request.Builder().url(url("/tts")).auth().post(body.build()).build()
-        val call = client.newCall(request).also { currentCall = it }
-        call.execute().use { response ->
+        return body.build()
+    }
+
+    private fun execute(request: Request): Response {
+        if (cancelled) throw IOException("Canceled")
+        return client.newCall(request).also { currentCall = it }.execute()
+    }
+
+    /** Queues the clip; returns its job id, or null when the server is too old to have /jobs. */
+    private fun submitJob(req: TtsRequest): String? {
+        val request = Request.Builder().url(url("/jobs")).auth().post(formBody(req)).build()
+        execute(request).use { response ->
+            if (response.code == 404 || response.code == 405) return null
             ensureOk(response)
-            output.parentFile?.mkdirs()
-            response.body!!.byteStream().use { input ->
-                output.outputStream().use { input.copyTo(it) }
-            }
-            return TtsResult(
-                seed = response.header("X-Seed")?.toIntOrNull()?.takeIf { it >= 0 },
-                durationSec = response.header("X-Duration")?.toFloatOrNull(),
-                generationSec = response.header("X-Generation-Seconds")?.toFloatOrNull(),
-            )
+            return JSONObject(response.body!!.string()).getString("id").also { currentJob = it }
         }
+    }
+
+    private fun awaitJob(job: String, output: File): TtsResult {
+        var networkFailures = 0
+        try {
+            while (true) {
+                Thread.sleep(POLL_MS)
+                val status = try {
+                    execute(Request.Builder().url(url("/jobs/$job")).auth().get().build()).use { response ->
+                        if (response.code == 404) {
+                            throw VoxApiException("The server lost this clip (was it restarted?). Try again.")
+                        }
+                        // Tunnels answer 5xx while they reconnect; treat it like a dropped connection.
+                        if (response.code >= 500) throw IOException("Server unavailable (${response.code})")
+                        ensureOk(response)
+                        JSONObject(response.body!!.string())
+                    }
+                } catch (e: VoxApiException) {
+                    throw e
+                } catch (e: IOException) {
+                    // Mobile data drops for a moment: keep waiting, the server is still working.
+                    if (cancelled || ++networkFailures > MAX_NETWORK_FAILURES) throw e
+                    continue
+                }
+                networkFailures = 0
+                when (status.optString("status")) {
+                    "done" -> return downloadJob(job, output)
+                    "error" -> throw VoxApiException(status.optString("error").ifBlank { "Generation failed" })
+                    "cancelled" -> throw IOException("Canceled")
+                }
+            }
+        } catch (e: InterruptedException) {
+            throw IOException("Canceled")
+        } finally {
+            currentJob = null
+        }
+    }
+
+    private fun downloadJob(job: String, output: File): TtsResult {
+        var attempt = 0
+        while (true) {
+            try {
+                return execute(Request.Builder().url(url("/jobs/$job/audio")).auth().get().build()).use { readAudio(it, output) }
+            } catch (e: VoxApiException) {
+                throw e
+            } catch (e: IOException) {
+                if (cancelled || ++attempt >= 3) throw e
+                Thread.sleep(POLL_MS)
+            }
+        }
+    }
+
+    private fun synthesizeDirect(req: TtsRequest, output: File): TtsResult {
+        val request = Request.Builder().url(url("/tts")).auth().post(formBody(req)).build()
+        return execute(request).use { readAudio(it, output) }
+    }
+
+    private fun readAudio(response: Response, output: File): TtsResult {
+        ensureOk(response)
+        output.parentFile?.mkdirs()
+        response.body!!.byteStream().use { input ->
+            output.outputStream().use { input.copyTo(it) }
+        }
+        return TtsResult(
+            seed = response.header("X-Seed")?.toIntOrNull()?.takeIf { it >= 0 },
+            durationSec = response.header("X-Duration")?.toFloatOrNull(),
+            generationSec = response.header("X-Generation-Seconds")?.toFloatOrNull(),
+        )
     }
 
     private fun ensureOk(response: Response) {
         if (response.isSuccessful) return
+        if (response.code == 524) {
+            throw VoxApiException(
+                "The tunnel timed out after 100 s (error 524). Restart the server notebook so it uses the " +
+                    "latest server.py, which avoids this.",
+            )
+        }
         val raw = response.body?.string().orEmpty()
         val detail = runCatching { JSONObject(raw).optString("detail") }.getOrNull()
             ?.takeIf { it.isNotBlank() } ?: raw.take(300).ifBlank { response.message }
