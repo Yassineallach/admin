@@ -101,6 +101,7 @@ fun RemoteScreen(graph: AppGraph, activity: MainActivity, onBack: () -> Unit, na
         onDispose {
             view.keepScreenOn = false
             activity.volumeKeysCaptured = false
+            presenter.releaseAll()
         }
     }
 

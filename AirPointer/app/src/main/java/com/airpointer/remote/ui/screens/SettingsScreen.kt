@@ -119,6 +119,12 @@ fun SettingsScreen(graph: AppGraph, onBack: () -> Unit) {
             }
             Divider()
             Text("Gesture pad", style = MaterialTheme.typography.labelSmall, color = Palette.TextTertiary)
+            val clicky = setOf(RemoteAction.LEFT_CLICK, RemoteAction.RIGHT_CLICK)
+            if (s.tapAction in clicky || s.doubleTapAction in clicky || s.longPressAction in clicky) {
+                Text("A click on the pad lands wherever the cursor is, and the thumb holding the phone often rests on the pad. " +
+                    "Use the Left/Right click buttons instead unless you really want this.",
+                    style = MaterialTheme.typography.bodySmall, color = Palette.Warning)
+            }
             SettingChoice("Tap", ACTIONS, s.tapAction, { it.label }) { v -> repo.update { it.copy(tapAction = v) } }
             SettingChoice("Double tap", ACTIONS, s.doubleTapAction, { it.label }) { v -> repo.update { it.copy(doubleTapAction = v) } }
             SettingChoice("Long press", ACTIONS, s.longPressAction, { it.label }) { v -> repo.update { it.copy(longPressAction = v) } }

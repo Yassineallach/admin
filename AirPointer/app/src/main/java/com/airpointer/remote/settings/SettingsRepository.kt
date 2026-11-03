@@ -2,6 +2,7 @@ package com.airpointer.remote.settings
 
 import android.content.Context
 import android.content.SharedPreferences
+import com.airpointer.remote.presenter.RemoteAction
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
@@ -11,7 +12,7 @@ class SettingsRepository(context: Context) {
     private val prefs: SharedPreferences =
         context.getSharedPreferences("air_pointer_settings", Context.MODE_PRIVATE)
 
-    private val _settings = MutableStateFlow(load())
+    private val _settings = MutableStateFlow(migrate(load()))
     val settings: StateFlow<AppSettings> = _settings
     val current: AppSettings get() = _settings.value
 
@@ -31,6 +32,17 @@ class SettingsRepository(context: Context) {
             gyroBiasX = it.gyroBiasX, gyroBiasY = it.gyroBiasY, gyroBiasZ = it.gyroBiasZ,
             calibratedAtMs = it.calibratedAtMs,
         )
+    }
+
+    private fun migrate(s: AppSettings): AppSettings {
+        val schema = prefs.getInt("schema", if (prefs.contains("sensitivity")) 1 else SCHEMA)
+        if (schema >= SCHEMA) return s
+        val migrated = s.copy(
+            tapAction = if (s.tapAction == RemoteAction.LEFT_CLICK) RemoteAction.NONE else s.tapAction,
+            longPressAction = if (s.longPressAction == RemoteAction.RIGHT_CLICK) RemoteAction.NONE else s.longPressAction,
+        )
+        save(migrated)
+        return migrated
     }
 
     private fun load(): AppSettings {
@@ -75,6 +87,7 @@ class SettingsRepository(context: Context) {
 
     private fun save(s: AppSettings) {
         prefs.edit()
+            .putInt("schema", SCHEMA)
             .putFloat("sensitivity", s.sensitivity)
             .putFloat("acceleration", s.acceleration)
             .putFloat("smoothing", s.smoothing)
@@ -110,6 +123,11 @@ class SettingsRepository(context: Context) {
             .putFloat("biasZ", s.gyroBiasZ)
             .putLong("calibratedAt", s.calibratedAtMs)
             .apply()
+    }
+
+    private companion object {
+        /** 2: gesture pad no longer clicks by default. */
+        const val SCHEMA = 2
     }
 
     private inline fun <reified E : Enum<E>> enumOr(key: String, default: E): E =

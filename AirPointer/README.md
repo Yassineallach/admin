@@ -39,7 +39,7 @@ adb install -r app/build/outputs/apk/release/app-release.apk
 The release build is **signed with the debug key** so it installs out of the box. Before you
 distribute it, replace `signingConfig` in `app/build.gradle.kts` with your own keystore.
 
-A prebuilt APK is in `dist/AirPointer-1.0.0.apk`.
+A prebuilt APK is in `dist/AirPointer-1.0.1.apk`.
 
 ---
 
@@ -75,6 +75,16 @@ offers *Previous / Next / Stop* controls.
 | Remote screen | Next / Previous, left / right click (press-and-hold to drag), pointer button (toggle or hold), recenter, pause/resume, black screen, start/end slideshow, gesture pad, scroll strip. |
 | Configurable | Gestures (tap, double tap, long press, 4 swipes), volume up/down actions, slide keys (arrows / PgUp-PgDn), PowerPoint laser mode (Ctrl+L / Ctrl+A), recenter method, sensitivity, acceleration, smoothing, dead zone, inversion, haptics, keep screen on. |
 | Diagnostics | HID profile support and registration state, host, protocol, report rate and failures, sensor model / rate / processing time, live yaw/pitch, bias and gravity, **local motion preview** (works without a PC), test square and test click, event log with copy. |
+
+### Gesture pad defaults
+Swipe ← = next slide, swipe → = previous slide. Tap, double tap and long press do **nothing** by
+default: the gripping thumb rests on the pad, and a click there would land wherever the moving
+cursor happens to be. Use the dedicated Left/Right click buttons for clicks.
+
+### Stuck-input protection
+Key and button *release* reports are retried if the Bluetooth stack rejects them. An "everything
+released" report is sent after every (re)connection, when tracking pauses and when the remote
+screen closes. This way Windows can never be left with a held Ctrl/Shift/arrow key or mouse button.
 
 ### Default key mapping
 | Action | Sent to PC |

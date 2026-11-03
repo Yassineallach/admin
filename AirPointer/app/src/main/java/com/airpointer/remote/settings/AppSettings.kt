@@ -27,9 +27,11 @@ data class AppSettings(
     val volumeKeysEnabled: Boolean = true,
     val volumeUpAction: RemoteAction = RemoteAction.PREVIOUS_SLIDE,
     val volumeDownAction: RemoteAction = RemoteAction.NEXT_SLIDE,
-    val tapAction: RemoteAction = RemoteAction.LEFT_CLICK,
+    // The pad is where the gripping thumb rests, so by default it never clicks: a click there
+    // lands wherever the moving cursor happens to be (taskbar, desktop icons, context menus).
+    val tapAction: RemoteAction = RemoteAction.NONE,
     val doubleTapAction: RemoteAction = RemoteAction.NONE,
-    val longPressAction: RemoteAction = RemoteAction.RIGHT_CLICK,
+    val longPressAction: RemoteAction = RemoteAction.NONE,
     val swipeLeftAction: RemoteAction = RemoteAction.NEXT_SLIDE,
     val swipeRightAction: RemoteAction = RemoteAction.PREVIOUS_SLIDE,
     val swipeUpAction: RemoteAction = RemoteAction.NONE,

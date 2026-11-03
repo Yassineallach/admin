@@ -118,7 +118,8 @@ class PresenterController(
         // When the link drops, release any held buttons so nothing stays "stuck" on reconnect.
         scope.launch {
             hid.state.map { it.connected }.distinctUntilChanged().collect { connected ->
-                if (!connected) io.post { buttons = 0; accumulator.clear() }
+                if (connected) io.postDelayed({ releaseAll() }, 300) // resync host state after (re)connect
+                else io.post { buttons = 0; accumulator.clear() }
             }
         }
         io.post { startSnapshotTicker() }
@@ -199,15 +200,39 @@ class PresenterController(
     /** Press + release a key (with optional modifiers). */
     fun key(code: Int, modifiers: Int = 0) = io.post {
         if (!hid.isConnected) return@post
-        hid.sendReport(HidDescriptor.REPORT_ID_KEYBOARD, HidReports.keyboard(modifiers, code))
-        io.postDelayed({ hid.sendReport(HidDescriptor.REPORT_ID_KEYBOARD, HidReports.keyboard(0)) }, KEY_HOLD_MS)
+        if (!hid.sendReport(HidDescriptor.REPORT_ID_KEYBOARD, HidReports.keyboard(modifiers, code))) return@post
+        // A lost release makes Windows auto-repeat the key or keep Ctrl/Shift held (Ctrl+click
+        // opens new windows), so the release is retried until the stack accepts it.
+        io.postDelayed({ sendReliably(HidDescriptor.REPORT_ID_KEYBOARD, HidReports.keyboard(0)) }, KEY_HOLD_MS)
+    }
+
+    /** Send a report, retrying a few times if the Bluetooth stack rejects it (io thread). */
+    private fun sendReliably(id: Int, data: ByteArray, attempt: Int = 0) {
+        if (!hid.isConnected) return
+        if (hid.sendReport(id, data)) return
+        if (attempt < RELEASE_RETRIES) io.postDelayed({ sendReliably(id, data, attempt + 1) }, RELEASE_RETRY_MS)
+        else log.w(TAG, "Release report $id could not be delivered")
+    }
+
+    /**
+     * Tell the host that no key and no mouse button is pressed. Sent on every (re)connection,
+     * when the remote screen closes and when tracking pauses, so the host can never be left with
+     * a stuck key or button from an earlier session or a dropped report.
+     */
+    fun releaseAll() = io.post {
+        buttons = 0
+        accumulator.clear()
+        sendReliably(HidDescriptor.REPORT_ID_KEYBOARD, HidReports.keyboard(0))
+        sendReliably(HidDescriptor.REPORT_ID_MOUSE, HidReports.mouse(0, 0, 0))
     }
 
     fun setButton(button: Int, down: Boolean) {
         freezeMotion()
         io.post {
             buttons = if (down) buttons or button else buttons and button.inv()
-            if (hid.isConnected) sendButtonsNow()
+            if (!hid.isConnected) return@post
+            if (down) sendButtonsNow()
+            else sendReliably(HidDescriptor.REPORT_ID_MOUSE, HidReports.mouse(buttons, 0, 0))
         }
     }
 
@@ -215,7 +240,7 @@ class PresenterController(
         setButton(button, true)
         io.postDelayed({
             buttons = buttons and button.inv()
-            if (hid.isConnected) sendButtonsNow()
+            sendReliably(HidDescriptor.REPORT_ID_MOUSE, HidReports.mouse(buttons, 0, 0))
         }, CLICK_HOLD_MS)
     }
 
@@ -227,6 +252,7 @@ class PresenterController(
 
     fun setPaused(value: Boolean) {
         paused = value
+        if (value) releaseAll()
         _tracking.update { it.copy(paused = value) }
         log.i(TAG, if (value) "Tracking paused" else "Tracking resumed")
     }
@@ -363,6 +389,8 @@ class PresenterController(
         const val CLICK_FREEZE_MS = 140L
         const val CLICK_HOLD_MS = 35L
         const val KEY_HOLD_MS = 25L
+        const val RELEASE_RETRIES = 5
+        const val RELEASE_RETRY_MS = 12L
         const val SWEEP_STEP = 40
         const val PREVIEW_RANGE = 1200f
     }
