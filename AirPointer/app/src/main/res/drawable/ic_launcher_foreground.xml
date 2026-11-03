@@ -1,0 +1,14 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <!-- Laser beam -->
+    <path android:fillColor="#33FF5A4F" android:pathData="M54,30 m-14,0 a14,14 0 1,0 28,0 a14,14 0 1,0 -28,0" />
+    <path android:fillColor="#FFFF5A4F" android:pathData="M54,30 m-6,0 a6,6 0 1,0 12,0 a6,6 0 1,0 -12,0" />
+    <!-- Remote body -->
+    <path android:fillColor="#FFF2F3F5"
+        android:pathData="M46,46 L62,46 Q66,46 66,50 L66,80 Q66,84 62,84 L46,84 Q42,84 42,80 L42,50 Q42,46 46,46 Z" />
+    <path android:fillColor="#FF0A0B0E" android:pathData="M54,56 m-5,0 a5,5 0 1,0 10,0 a5,5 0 1,0 -10,0" />
+    <path android:fillColor="#FFFF5A4F" android:pathData="M54,56 m-2.5,0 a2.5,2.5 0 1,0 5,0 a2.5,2.5 0 1,0 -5,0" />
+    <path android:fillColor="#FF0A0B0E" android:pathData="M47,68 L61,68 L61,71 L47,71 Z" />
+    <path android:fillColor="#FF0A0B0E" android:pathData="M47,74 L61,74 L61,77 L47,77 Z" />
+</vector>
