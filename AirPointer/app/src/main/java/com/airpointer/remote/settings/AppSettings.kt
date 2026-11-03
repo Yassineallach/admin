@@ -39,6 +39,12 @@ data class AppSettings(
     val haptics: Boolean = true,
     val keepScreenOn: Boolean = true,
     // Connection
+    /**
+     * Maximum mouse reports per second. The HID QoS asks the link for ~800 bytes/s; a report
+     * costs ~10 bytes on air, so streaming above ~70 Hz overruns it and the stack silently
+     * queues or drops reports (the cursor freezes even though every send "succeeds").
+     */
+    val reportRateHz: Int = 60,
     val autoReconnect: Boolean = true,
     val lastHostAddress: String? = null,
     val lastHostName: String? = null,

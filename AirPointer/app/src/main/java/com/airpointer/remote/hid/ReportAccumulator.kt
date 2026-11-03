@@ -6,7 +6,7 @@ package com.airpointer.remote.hid
  * Pure logic so it can be unit tested; the caller owns scheduling.
  */
 class ReportAccumulator(
-    val minIntervalNs: Long = 7_500_000L,
+    var minIntervalNs: Long = 16_666_667L,
     val maxDelta: Int = HidDescriptor.MOUSE_MAX_DELTA,
 ) {
     var pendingX = 0L; private set

@@ -100,6 +100,12 @@ class PresenterController(
             }
         }
         scope.launch {
+            settings.settings.map { it.reportRateHz }.distinctUntilChanged().collect { hz ->
+                val interval = 1_000_000_000L / hz.coerceIn(MIN_RATE_HZ, MAX_RATE_HZ)
+                io.post { accumulator.minIntervalNs = interval }
+            }
+        }
+        scope.launch {
             settings.settings.map { it.pointerMode }.distinctUntilChanged().collect { mode ->
                 setPointerActiveInternal(mode == PointerMode.TOGGLE, sendLaser = false)
             }
@@ -301,8 +307,12 @@ class PresenterController(
 
     /** Fallback recenter for hosts that ignore absolute pointers: slam to the corner, then move. */
     private fun relativeSweep() {
-        // 8-bit reports: ~100 × 127 counts reaches the top-left corner even on 4K screens.
-        repeat(SWEEP_CORNER_REPORTS) { hid.sendReport(HidDescriptor.REPORT_ID_MOUSE, HidReports.mouse(buttons, -127, -127)) }
+        // 25 × 127 counts, paced at the report rate, reaches the top-left corner (OS acceleration helps).
+        val gap = accumulator.minIntervalNs / 1_000_000L
+        repeat(SWEEP_CORNER_REPORTS / 4) { i ->
+            io.postDelayed({ hid.sendReport(HidDescriptor.REPORT_ID_MOUSE, HidReports.mouse(buttons, -127, -127)) }, i * gap)
+        }
+        val start = (SWEEP_CORNER_REPORTS / 4) * gap
         val s = settings.current
         var remainingX = s.hostWidth / 2
         var remainingY = s.hostHeight / 2
@@ -311,7 +321,7 @@ class PresenterController(
             val dx = minOf(SWEEP_STEP, remainingX); val dy = minOf(SWEEP_STEP, remainingY)
             remainingX -= dx; remainingY -= dy
             step++
-            io.postDelayed({ hid.sendReport(HidDescriptor.REPORT_ID_MOUSE, HidReports.mouse(buttons, dx, dy)) }, 40L + step * 8L)
+            io.postDelayed({ hid.sendReport(HidDescriptor.REPORT_ID_MOUSE, HidReports.mouse(buttons, dx, dy)) }, start + step * gap)
         }
     }
 
@@ -347,11 +357,13 @@ class PresenterController(
     /** Diagnostics: draw a 300-count square with the cursor to verify the HID link without sensors. */
     fun sendTestPattern() = io.post {
         if (!hid.isConnected) return@post
+        // Paced at the configured report rate so it exercises the link exactly like motion does.
         val dirs = listOf(1 to 0, 0 to 1, -1 to 0, 0 to -1)
+        val gap = accumulator.minIntervalNs / 1_000_000L
         var t = 0L
-        for ((sx, sy) in dirs) repeat(30) {
-            t += 10
-            io.postDelayed({ hid.sendReport(HidDescriptor.REPORT_ID_MOUSE, HidReports.mouse(buttons, sx * 10, sy * 10)) }, t)
+        for ((sx, sy) in dirs) repeat(20) {
+            t += gap
+            io.postDelayed({ hid.sendReport(HidDescriptor.REPORT_ID_MOUSE, HidReports.mouse(buttons, sx * 15, sy * 15)) }, t)
         }
     }
 
@@ -395,6 +407,8 @@ class PresenterController(
         const val RELEASE_RETRY_MS = 12L
         const val SWEEP_STEP = 40
         const val SWEEP_CORNER_REPORTS = 100
+        const val MIN_RATE_HZ = 20
+        const val MAX_RATE_HZ = 125
         const val PREVIEW_RANGE = 1200f
     }
 }

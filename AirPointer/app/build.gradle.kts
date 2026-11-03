@@ -13,8 +13,8 @@ android {
         // BluetoothHidDevice (HID peripheral role) was added in API 28 (Android 9).
         minSdk = 28
         targetSdk = 35
-        versionCode = 3
-        versionName = "1.0.2"
+        versionCode = 4
+        versionName = "1.0.3"
     }
 
     buildTypes {

@@ -39,7 +39,7 @@ adb install -r app/build/outputs/apk/release/app-release.apk
 The release build is **signed with the debug key** so it installs out of the box. Before you
 distribute it, replace `signingConfig` in `app/build.gradle.kts` with your own keystore.
 
-A prebuilt APK is in `dist/AirPointer-1.0.2.apk`.
+A prebuilt APK is in `dist/AirPointer-1.0.3.apk`.
 
 ---
 
@@ -122,10 +122,15 @@ app/src/main/java/com/airpointer/remote/
 └── ui/                         Compose screens: Home, Pairing, Remote, Settings, Diagnostics
 ```
 
+**Report rate.** Mouse reports are capped at 60 Hz by default (*Settings → Connection → Report
+rate*). The HID QoS requests about 800 bytes/s, and one report is about 10 bytes on air. Streaming
+faster overruns the link: Android's `sendReport()` still returns success while the stack silently
+queues or drops reports, so the cursor freezes. If the cursor freezes or lags, lower the rate.
+
 **Latency path.** Sensor events, motion processing and `sendReport` all run on one
 `HandlerThread` at `THREAD_PRIORITY_URGENT_DISPLAY`, so there are no thread hops between them.
 The gyroscope runs at 200 Hz, processing takes a few µs per sample, and reports go out every
-≥7.5 ms. End-to-end latency is mostly the Bluetooth link: the QoS requests an 11.25 ms latency,
+≥16.7 ms (60 Hz, configurable). End-to-end latency is mostly the Bluetooth link: the QoS requests an 11.25 ms latency,
 and typical total latency is about 15–30 ms.
 
 **Motion math.** The processor tracks the world "up" vector in the device frame with a

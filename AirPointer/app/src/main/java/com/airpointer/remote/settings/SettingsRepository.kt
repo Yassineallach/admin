@@ -75,6 +75,7 @@ class SettingsRepository(context: Context) {
             swipeDownAction = enumOr("swipeDownAction", d.swipeDownAction),
             haptics = prefs.getBoolean("haptics", d.haptics),
             keepScreenOn = prefs.getBoolean("keepScreenOn", d.keepScreenOn),
+            reportRateHz = prefs.getInt("reportRateHz", d.reportRateHz),
             autoReconnect = prefs.getBoolean("autoReconnect", d.autoReconnect),
             lastHostAddress = prefs.getString("lastHostAddress", null),
             lastHostName = prefs.getString("lastHostName", null),
@@ -115,6 +116,7 @@ class SettingsRepository(context: Context) {
             .putString("swipeDownAction", s.swipeDownAction.name)
             .putBoolean("haptics", s.haptics)
             .putBoolean("keepScreenOn", s.keepScreenOn)
+            .putInt("reportRateHz", s.reportRateHz)
             .putBoolean("autoReconnect", s.autoReconnect)
             .putString("lastHostAddress", s.lastHostAddress)
             .putString("lastHostName", s.lastHostName)

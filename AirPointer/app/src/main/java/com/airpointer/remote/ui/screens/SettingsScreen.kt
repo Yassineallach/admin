@@ -142,6 +142,11 @@ fun SettingsScreen(graph: AppGraph, onBack: () -> Unit) {
 
         SectionLabel("Connection")
         Panel {
+            SettingChoice("Report rate", listOf(30, 45, 60, 90, 125), s.reportRateHz, { "$it Hz" + if (it == 60) " (default)" else "" }) { v ->
+                repo.update { it.copy(reportRateHz = v) }
+            }
+            Text("Lower it if the cursor freezes or lags behind the phone. Rates above 60 Hz can overrun the Bluetooth link on some PCs.",
+                style = MaterialTheme.typography.bodySmall, color = Palette.TextSecondary)
             SettingSwitch("Auto-reconnect", s.autoReconnect, { v -> repo.update { it.copy(autoReconnect = v) } },
                 "Reconnect to the last computer on start-up and after an unexpected drop.")
             if (s.lastHostAddress != null) {
