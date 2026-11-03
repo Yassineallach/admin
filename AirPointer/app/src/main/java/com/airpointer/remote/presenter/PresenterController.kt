@@ -156,14 +156,14 @@ class PresenterController(
     private fun flush() {
         if (!hid.isConnected) { accumulator.clear(); return }
         val c = accumulator.drain(SystemClock.elapsedRealtimeNanos())
-        hid.sendReport(HidDescriptor.REPORT_ID_MOUSE, HidReports.mouse(buttons, c.dx, c.dy, c.wheel, c.pan))
+        hid.sendReport(HidDescriptor.REPORT_ID_MOUSE, HidReports.mouse(buttons, c.dx, c.dy, c.wheel))
         if (accumulator.hasPending) scheduleFlush()
     }
 
     /** Sends the current button state immediately together with any pending motion. */
     private fun sendButtonsNow() {
         val c = accumulator.drain(SystemClock.elapsedRealtimeNanos())
-        hid.sendReport(HidDescriptor.REPORT_ID_MOUSE, HidReports.mouse(buttons, c.dx, c.dy, c.wheel, c.pan))
+        hid.sendReport(HidDescriptor.REPORT_ID_MOUSE, HidReports.mouse(buttons, c.dx, c.dy, c.wheel))
     }
 
     /** Suppress pointer motion briefly so the tap on the screen does not shake the cursor. */
@@ -288,7 +288,8 @@ class PresenterController(
         previewX = 0f; previewY = 0f
         if (!hid.isConnected) return@post
         accumulator.clear()
-        when (settings.current.recenterMethod) {
+        val method = if (hid.state.value.bootProtocol) RecenterMethod.RELATIVE_SWEEP else settings.current.recenterMethod
+        when (method) {
             RecenterMethod.ABSOLUTE -> {
                 val c = HidDescriptor.ABSOLUTE_MAX / 2
                 hid.sendReport(HidDescriptor.REPORT_ID_ABSOLUTE, HidReports.absolute(0, c, c))
@@ -300,7 +301,8 @@ class PresenterController(
 
     /** Fallback recenter for hosts that ignore absolute pointers: slam to the corner, then move. */
     private fun relativeSweep() {
-        repeat(4) { hid.sendReport(HidDescriptor.REPORT_ID_MOUSE, HidReports.mouse(buttons, -32767, -32767)) }
+        // 8-bit reports: ~100 × 127 counts reaches the top-left corner even on 4K screens.
+        repeat(SWEEP_CORNER_REPORTS) { hid.sendReport(HidDescriptor.REPORT_ID_MOUSE, HidReports.mouse(buttons, -127, -127)) }
         val s = settings.current
         var remainingX = s.hostWidth / 2
         var remainingY = s.hostHeight / 2
@@ -309,7 +311,7 @@ class PresenterController(
             val dx = minOf(SWEEP_STEP, remainingX); val dy = minOf(SWEEP_STEP, remainingY)
             remainingX -= dx; remainingY -= dy
             step++
-            io.postDelayed({ hid.sendReport(HidDescriptor.REPORT_ID_MOUSE, HidReports.mouse(buttons, dx, dy)) }, step * 8L)
+            io.postDelayed({ hid.sendReport(HidDescriptor.REPORT_ID_MOUSE, HidReports.mouse(buttons, dx, dy)) }, 40L + step * 8L)
         }
     }
 
@@ -392,6 +394,7 @@ class PresenterController(
         const val RELEASE_RETRIES = 5
         const val RELEASE_RETRY_MS = 12L
         const val SWEEP_STEP = 40
+        const val SWEEP_CORNER_REPORTS = 100
         const val PREVIEW_RANGE = 1200f
     }
 }

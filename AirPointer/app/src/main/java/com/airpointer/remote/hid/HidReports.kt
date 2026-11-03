@@ -3,15 +3,14 @@ package com.airpointer.remote.hid
 /** Encoders for the input reports declared in [HidDescriptor] (payload only, without report ID). */
 object HidReports {
 
-    fun mouse(buttons: Int, dx: Int, dy: Int, wheel: Int = 0, pan: Int = 0): ByteArray {
-        val x = dx.coerceIn(-32767, 32767)
-        val y = dy.coerceIn(-32767, 32767)
+    /** Boot-compatible mouse report: buttons, X, Y, wheel (each delta clamped to ±127). */
+    fun mouse(buttons: Int, dx: Int, dy: Int, wheel: Int = 0): ByteArray {
+        val m = HidDescriptor.MOUSE_MAX_DELTA
         return byteArrayOf(
             (buttons and 0x1F).toByte(),
-            (x and 0xFF).toByte(), ((x shr 8) and 0xFF).toByte(),
-            (y and 0xFF).toByte(), ((y shr 8) and 0xFF).toByte(),
+            dx.coerceIn(-m, m).toByte(),
+            dy.coerceIn(-m, m).toByte(),
             wheel.coerceIn(-127, 127).toByte(),
-            pan.coerceIn(-127, 127).toByte(),
         )
     }
 

@@ -23,11 +23,14 @@ class ReportAccumulatorTest {
     @Test
     fun carriesOverflowIntoNextReport() {
         val a = ReportAccumulator()
-        a.add(40_000, 0, wheel = 200)
+        a.add(300, -130, wheel = 200)
         val c1 = a.drain(0)
-        assertEquals(32767, c1.dx); assertEquals(127, c1.wheel)
+        assertEquals(127, c1.dx); assertEquals(-127, c1.dy); assertEquals(127, c1.wheel)
         assertTrue(a.hasPending)
         val c2 = a.drain(10_000_000)
-        assertEquals(40_000 - 32767, c2.dx); assertEquals(73, c2.wheel)
+        assertEquals(127, c2.dx); assertEquals(-3, c2.dy); assertEquals(73, c2.wheel)
+        val c3 = a.drain(20_000_000)
+        assertEquals(46, c3.dx)
+        assertFalse(a.hasPending)
     }
 }

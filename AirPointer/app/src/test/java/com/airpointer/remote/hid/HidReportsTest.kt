@@ -7,17 +7,31 @@ import org.junit.Test
 class HidReportsTest {
 
     @Test
-    fun mouseReportIsLittleEndianSigned() {
-        val r = HidReports.mouse(MouseButtons.LEFT or MouseButtons.RIGHT, -1, 300, wheel = -2, pan = 1)
-        assertArrayEquals(byteArrayOf(0x03, 0xFF.toByte(), 0xFF.toByte(), 0x2C, 0x01, 0xFE.toByte(), 0x01), r)
+    fun mouseReportUsesBootMouseLayout() {
+        // Boot mouse = [buttons][X int8][Y int8](+ optional wheel). Must match in REPORT mode too.
+        val r = HidReports.mouse(MouseButtons.LEFT or MouseButtons.RIGHT, -1, 100, wheel = -2)
+        assertArrayEquals(byteArrayOf(0x03, 0xFF.toByte(), 0x64, 0xFE.toByte()), r)
     }
 
     @Test
     fun mouseReportClampsToLogicalRange() {
         val r = HidReports.mouse(0, 100_000, -100_000, wheel = 500)
-        assertEquals(32767, (r[1].toInt() and 0xFF) or (r[2].toInt() shl 8))
-        assertEquals(-32767, ((r[3].toInt() and 0xFF) or (r[4].toInt() shl 8)).toShort().toInt())
-        assertEquals(127, r[5].toInt())
+        assertEquals(127, r[1].toInt()); assertEquals(-127, r[2].toInt()); assertEquals(127, r[3].toInt())
+    }
+
+    @Test
+    fun reportIdsFollowAndroidStackConvention() {
+        // Bluedroid hard-codes keyboard = 1 and mouse = 2 for BOOT protocol. Swapping them makes
+        // mouse movement arrive as random keystrokes on the host.
+        assertEquals(1, HidDescriptor.REPORT_ID_KEYBOARD)
+        assertEquals(2, HidDescriptor.REPORT_ID_MOUSE)
+    }
+
+    /** Every byte of a mouse report must be interpreted as button/X/Y/wheel by the host. */
+    @Test
+    fun mouseCollectionDeclaresBootCompatibleFields() {
+        val fields = HidDescriptorParser.inputFields(HidDescriptor.DESCRIPTOR)[HidDescriptor.REPORT_ID_MOUSE]!!
+        assertEquals(listOf("button:5", "pad:3", "rel:8", "rel:8", "rel:8"), fields)
     }
 
     @Test
@@ -37,8 +51,8 @@ class HidReportsTest {
     fun descriptorMatchesReportSizes() {
         val bits = HidDescriptorParser.inputReportBits(HidDescriptor.DESCRIPTOR)
         assertEquals(setOf(1, 2, 3), bits.keys)
-        assertEquals(HidDescriptor.MOUSE_REPORT_SIZE * 8, bits[1])
-        assertEquals(HidDescriptor.KEYBOARD_REPORT_SIZE * 8, bits[2])
+        assertEquals(HidDescriptor.KEYBOARD_REPORT_SIZE * 8, bits[1])
+        assertEquals(HidDescriptor.MOUSE_REPORT_SIZE * 8, bits[2])
         assertEquals(HidDescriptor.ABSOLUTE_REPORT_SIZE * 8, bits[3])
         assertEquals(HidDescriptor.MOUSE_REPORT_SIZE, HidReports.mouse(0, 0, 0).size)
         assertEquals(HidDescriptor.ABSOLUTE_REPORT_SIZE, HidReports.absolute(0, 0, 0).size)
@@ -65,6 +79,35 @@ object HidDescriptorParser {
                 0x74 -> size = value              // Report Size
                 0x94 -> count = value             // Report Count
                 0x80 -> out[reportId] = (out[reportId] ?: 0) + size * count // Input
+            }
+            i += 1 + len
+        }
+        return out
+    }
+
+    /** Per report ID: the input fields as "kind:bits" (button / pad / rel / abs / array). */
+    fun inputFields(d: ByteArray): Map<Int, List<String>> {
+        val out = linkedMapOf<Int, MutableList<String>>()
+        var i = 0; var reportId = 0; var size = 0; var count = 0; var page = 0
+        while (i < d.size) {
+            val prefix = d[i].toInt() and 0xFF
+            val len = when (prefix and 0x03) { 3 -> 4; else -> prefix and 0x03 }
+            var value = 0
+            for (k in 0 until len) value = value or ((d[i + 1 + k].toInt() and 0xFF) shl (8 * k))
+            when (prefix and 0xFC) {
+                0x04 -> page = value
+                0x84 -> reportId = value
+                0x74 -> size = value
+                0x94 -> count = value
+                0x80 -> {
+                    val list = out.getOrPut(reportId) { mutableListOf() }
+                    when {
+                        value and 0x01 != 0 -> list += "pad:${size * count}"
+                        value and 0x02 == 0 -> list += "array:${size * count}"
+                        page == 0x09 -> list += "button:${size * count}"
+                        else -> repeat(count) { list += (if (value and 0x04 != 0) "rel:" else "abs:") + size }
+                    }
+                }
             }
             i += 1 + len
         }

@@ -39,7 +39,7 @@ adb install -r app/build/outputs/apk/release/app-release.apk
 The release build is **signed with the debug key** so it installs out of the box. Before you
 distribute it, replace `signingConfig` in `app/build.gradle.kts` with your own keystore.
 
-A prebuilt APK is in `dist/AirPointer-1.0.1.apk`.
+A prebuilt APK is in `dist/AirPointer-1.0.2.apk`.
 
 ---
 
@@ -53,6 +53,9 @@ A prebuilt APK is in `dist/AirPointer-1.0.1.apk`.
 5. Open **Presentation remote**. Point the phone at the screen and move it.
    *Settings → Calibrate* (phone flat on a table, about 1.5 s) removes gyro drift.
 
+> **Upgrading from 1.0.0 / 1.0.1?** The HID descriptor changed in 1.0.2. Windows caches the
+> descriptor, so remove the phone in *Bluetooth & devices* (and the PC on the phone) and pair again.
+>
 > **Paired the phone with this PC before installing Air Pointer?** Remove the pairing on *both*
 > sides and pair again while Air Pointer is running. Windows caches the old SDP service list
 > from the earlier pairing, and without fresh pairing it never sees the HID service.
@@ -67,7 +70,7 @@ offers *Previous / Next / Stop* controls.
 
 | Area | What it does |
 |---|---|
-| Bluetooth HID | Composite descriptor: relative mouse (5 buttons, 16-bit X/Y, wheel, horizontal pan), keyboard (6KRO), absolute pointer (recenter). Registers the SDP record, answers GET/SET_REPORT, tracks protocol mode, handles virtual-cable unplug. |
+| Bluetooth HID | Composite descriptor: keyboard (report ID 1, 6KRO), relative mouse (ID 2, 5 buttons, 8-bit X/Y/wheel in the boot-mouse layout), absolute pointer (ID 3, recenter). Registers the SDP record, answers GET/SET_REPORT, tracks protocol mode, handles virtual-cable unplug. |
 | Pairing | Make the phone discoverable, scan for computers, bond with them (`createBond`), list bonded devices, connect or disconnect. |
 | Reconnection | Auto-connects to the last host after registration; after an unexpected drop it retries with back-off (2 s → 30 s, 6 attempts). Bluetooth on/off is handled. |
 | Pointer | Gravity-compensated yaw/pitch, 1€ adaptive smoothing, soft dead zone, acceleration curve, sub-count accumulation, ~133 Hz report rate. |
@@ -106,7 +109,7 @@ app/src/main/java/com/airpointer/remote/
 │   ├── TiltPointerProcessor  fallback for phones with no gyroscope
 │   ├── OneEuroFilter, Vec3, MotionConfig
 ├── hid/
-│   ├── HidDescriptor       report descriptor (mouse ID1, keyboard ID2, absolute ID3)
+│   ├── HidDescriptor       report descriptor (keyboard ID1, mouse ID2, absolute ID3)
 │   ├── HidReports          report encoders, key codes
 │   ├── ReportAccumulator   coalesces 200 Hz motion into rate-limited reports
 │   ├── BluetoothHidController  BluetoothHidDevice proxy, registerApp, connect, reconnect, sendReport
@@ -198,7 +201,8 @@ above after installing.
     buttons, gestures and keys work.
 11. **200 Hz sensor cap.** Android 12+ limits apps without `HIGH_SAMPLING_RATE_SENSORS` to 200 Hz,
     which is what the app uses.
-12. **Boot protocol.** Hosts that switch to BOOT protocol (BIOS/UEFI) are logged but not supported.
-    Windows, macOS, Linux and ChromeOS use report protocol.
+12. **Boot protocol.** Report IDs follow the Android stack's convention (keyboard = 1, mouse = 2),
+    and the mouse report is byte-identical to the boot-mouse format. Input therefore reads correctly
+    whether the host uses REPORT or BOOT protocol. Recenter falls back to corner sweep in BOOT mode.
 13. **Other hosts.** macOS, Linux and ChromeOS accept the same composite descriptor. Keynote and
     Google Slides also respond to the arrow keys. Pairing steps differ per OS.
