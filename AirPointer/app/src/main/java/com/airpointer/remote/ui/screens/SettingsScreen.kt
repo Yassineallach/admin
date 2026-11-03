@@ -16,7 +16,6 @@ import androidx.compose.ui.unit.dp
 import com.airpointer.remote.AppGraph
 import com.airpointer.remote.core.CalibrationState
 import com.airpointer.remote.presenter.PointerMode
-import com.airpointer.remote.presenter.RecenterMethod
 import com.airpointer.remote.presenter.RemoteAction
 import com.airpointer.remote.presenter.SlideKeys
 import com.airpointer.remote.ui.components.Divider
@@ -100,12 +99,12 @@ fun SettingsScreen(graph: AppGraph, onBack: () -> Unit) {
             SettingSwitch("Invert horizontal", s.invertX, { v -> repo.update { it.copy(invertX = v) } })
             SettingSwitch("Invert vertical", s.invertY, { v -> repo.update { it.copy(invertY = v) } })
             Divider()
-            SettingChoice("Recenter method", RecenterMethod.entries.toList(), s.recenterMethod, { it.label }) { v -> repo.update { it.copy(recenterMethod = v) } }
-            if (s.recenterMethod == RecenterMethod.RELATIVE_SWEEP) {
-                SettingChoice("Computer resolution", RESOLUTIONS, s.hostWidth to s.hostHeight, { "${it.first} × ${it.second}" }) { (w, h) ->
-                    repo.update { it.copy(hostWidth = w, hostHeight = h) }
-                }
+            SettingChoice("Computer resolution", RESOLUTIONS, s.hostWidth to s.hostHeight, { "${it.first} × ${it.second}" }) { (w, h) ->
+                repo.update { it.copy(hostWidth = w, hostHeight = h) }
             }
+            Text("Used by Recenter: the cursor is pushed to the top-left corner, then moved half a screen. " +
+                "Turn off Windows 'Enhance pointer precision' for an exact centre.",
+                style = MaterialTheme.typography.bodySmall, color = Palette.TextSecondary)
         }
 
         SectionLabel("Presentation")

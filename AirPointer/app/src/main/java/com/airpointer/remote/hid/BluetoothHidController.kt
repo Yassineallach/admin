@@ -314,7 +314,6 @@ class BluetoothHidController(
                 val data = when (id.toInt()) {
                     HidDescriptor.REPORT_ID_MOUSE -> ByteArray(HidDescriptor.MOUSE_REPORT_SIZE)
                     HidDescriptor.REPORT_ID_KEYBOARD -> ByteArray(HidDescriptor.KEYBOARD_REPORT_SIZE)
-                    HidDescriptor.REPORT_ID_ABSOLUTE -> HidReports.absolute(0, HidDescriptor.ABSOLUTE_MAX / 2, HidDescriptor.ABSOLUTE_MAX / 2)
                     else -> null
                 }
                 if (data != null) { h.replyReport(device, type, id, data); return }
@@ -437,8 +436,6 @@ class BluetoothHidController(
     fun sendReport(id: Int, data: ByteArray): Boolean {
         val h = hid ?: return false
         val d = connectedDevice ?: return false
-        // In BOOT protocol only the boot keyboard (1) and boot mouse (2) exist on the host.
-        if (_state.value.bootProtocol && id != HidDescriptor.REPORT_ID_KEYBOARD && id != HidDescriptor.REPORT_ID_MOUSE) return false
         val ok = try { h.sendReport(d, id, data) } catch (e: SecurityException) { false }
         if (ok) reportsSent.incrementAndGet() else reportFailures.incrementAndGet()
         return ok

@@ -294,18 +294,11 @@ class PresenterController(
         previewX = 0f; previewY = 0f
         if (!hid.isConnected) return@post
         accumulator.clear()
-        val method = if (hid.state.value.bootProtocol) RecenterMethod.RELATIVE_SWEEP else settings.current.recenterMethod
-        when (method) {
-            RecenterMethod.ABSOLUTE -> {
-                val c = HidDescriptor.ABSOLUTE_MAX / 2
-                hid.sendReport(HidDescriptor.REPORT_ID_ABSOLUTE, HidReports.absolute(0, c, c))
-            }
-            RecenterMethod.RELATIVE_SWEEP -> relativeSweep()
-        }
+        relativeSweep()
         freezeMotion(120)
     }
 
-    /** Fallback recenter for hosts that ignore absolute pointers: slam to the corner, then move. */
+    /** Recenter with relative moves only: slam to the top-left corner, then move half a screen. */
     private fun relativeSweep() {
         // 25 × 127 counts, paced at the report rate, reaches the top-left corner (OS acceleration helps).
         val gap = accumulator.minIntervalNs / 1_000_000L

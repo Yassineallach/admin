@@ -25,11 +25,6 @@ enum class PointerMode(val label: String) {
     HOLD("Hold to point"),
 }
 
-enum class RecenterMethod(val label: String) {
-    ABSOLUTE("Absolute (precise)"),
-    RELATIVE_SWEEP("Corner sweep (compatibility)"),
-}
-
 enum class SlideKeys(val label: String) {
     ARROWS("Arrow keys"),
     PAGE_KEYS("Page Up / Page Down"),

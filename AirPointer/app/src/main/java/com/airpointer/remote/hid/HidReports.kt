@@ -7,7 +7,7 @@ object HidReports {
     fun mouse(buttons: Int, dx: Int, dy: Int, wheel: Int = 0): ByteArray {
         val m = HidDescriptor.MOUSE_MAX_DELTA
         return byteArrayOf(
-            (buttons and 0x1F).toByte(),
+            (buttons and 0x07).toByte(),
             dx.coerceIn(-m, m).toByte(),
             dy.coerceIn(-m, m).toByte(),
             wheel.coerceIn(-127, 127).toByte(),
@@ -21,15 +21,6 @@ object HidReports {
         return r
     }
 
-    fun absolute(buttons: Int, x: Int, y: Int): ByteArray {
-        val ax = x.coerceIn(0, HidDescriptor.ABSOLUTE_MAX)
-        val ay = y.coerceIn(0, HidDescriptor.ABSOLUTE_MAX)
-        return byteArrayOf(
-            (buttons and 0x07).toByte(),
-            (ax and 0xFF).toByte(), ((ax shr 8) and 0xFF).toByte(),
-            (ay and 0xFF).toByte(), ((ay shr 8) and 0xFF).toByte(),
-        )
-    }
 }
 
 object MouseButtons {

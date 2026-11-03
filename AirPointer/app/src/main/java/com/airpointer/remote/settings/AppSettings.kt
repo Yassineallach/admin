@@ -2,7 +2,6 @@ package com.airpointer.remote.settings
 
 import com.airpointer.remote.core.MotionConfig
 import com.airpointer.remote.presenter.PointerMode
-import com.airpointer.remote.presenter.RecenterMethod
 import com.airpointer.remote.presenter.RemoteAction
 import com.airpointer.remote.presenter.SlideKeys
 
@@ -18,7 +17,6 @@ data class AppSettings(
     val pointerMode: PointerMode = PointerMode.TOGGLE,
     val recenterOnActivate: Boolean = false,
     val laserOnActivate: Boolean = false,
-    val recenterMethod: RecenterMethod = RecenterMethod.ABSOLUTE,
     val hostWidth: Int = 1920,
     val hostHeight: Int = 1080,
     val scrollStepDp: Int = 22,

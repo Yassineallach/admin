@@ -58,7 +58,6 @@ class SettingsRepository(context: Context) {
             pointerMode = enumOr("pointerMode", d.pointerMode),
             recenterOnActivate = prefs.getBoolean("recenterOnActivate", d.recenterOnActivate),
             laserOnActivate = prefs.getBoolean("laserOnActivate", d.laserOnActivate),
-            recenterMethod = enumOr("recenterMethod", d.recenterMethod),
             hostWidth = prefs.getInt("hostWidth", d.hostWidth),
             hostHeight = prefs.getInt("hostHeight", d.hostHeight),
             scrollStepDp = prefs.getInt("scrollStepDp", d.scrollStepDp),
@@ -99,7 +98,6 @@ class SettingsRepository(context: Context) {
             .putString("pointerMode", s.pointerMode.name)
             .putBoolean("recenterOnActivate", s.recenterOnActivate)
             .putBoolean("laserOnActivate", s.laserOnActivate)
-            .putString("recenterMethod", s.recenterMethod.name)
             .putInt("hostWidth", s.hostWidth)
             .putInt("hostHeight", s.hostHeight)
             .putInt("scrollStepDp", s.scrollStepDp)

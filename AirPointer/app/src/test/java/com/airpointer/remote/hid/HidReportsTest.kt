@@ -9,7 +9,7 @@ class HidReportsTest {
     @Test
     fun mouseReportUsesBootMouseLayout() {
         // Boot mouse = [buttons][X int8][Y int8](+ optional wheel). Must match in REPORT mode too.
-        val r = HidReports.mouse(MouseButtons.LEFT or MouseButtons.RIGHT, -1, 100, wheel = -2)
+        val r = HidReports.mouse(MouseButtons.LEFT or MouseButtons.RIGHT or MouseButtons.BACK, -1, 100, wheel = -2)
         assertArrayEquals(byteArrayOf(0x03, 0xFF.toByte(), 0x64, 0xFE.toByte()), r)
     }
 
@@ -31,7 +31,7 @@ class HidReportsTest {
     @Test
     fun mouseCollectionDeclaresBootCompatibleFields() {
         val fields = HidDescriptorParser.inputFields(HidDescriptor.DESCRIPTOR)[HidDescriptor.REPORT_ID_MOUSE]!!
-        assertEquals(listOf("button:5", "pad:3", "rel:8", "rel:8", "rel:8"), fields)
+        assertEquals(listOf("button:3", "pad:5", "rel:8", "rel:8", "rel:8"), fields)
     }
 
     @Test
@@ -40,22 +40,28 @@ class HidReportsTest {
         assertArrayEquals(byteArrayOf(0x02, 0, 0x3E, 0, 0, 0, 0, 0), r)
     }
 
-    @Test
-    fun absoluteCenter() {
-        val r = HidReports.absolute(0, 16383, 16383)
-        assertArrayEquals(byteArrayOf(0, 0xFF.toByte(), 0x3F, 0xFF.toByte(), 0x3F), r)
-    }
-
     /** Parses the report descriptor and checks each report's declared size matches the encoders. */
     @Test
     fun descriptorMatchesReportSizes() {
         val bits = HidDescriptorParser.inputReportBits(HidDescriptor.DESCRIPTOR)
-        assertEquals(setOf(1, 2, 3), bits.keys)
+        assertEquals("only keyboard + mouse", setOf(1, 2), bits.keys)
         assertEquals(HidDescriptor.KEYBOARD_REPORT_SIZE * 8, bits[1])
         assertEquals(HidDescriptor.MOUSE_REPORT_SIZE * 8, bits[2])
-        assertEquals(HidDescriptor.ABSOLUTE_REPORT_SIZE * 8, bits[3])
         assertEquals(HidDescriptor.MOUSE_REPORT_SIZE, HidReports.mouse(0, 0, 0).size)
-        assertEquals(HidDescriptor.ABSOLUTE_REPORT_SIZE, HidReports.absolute(0, 0, 0).size)
+    }
+
+    @Test
+    fun descriptorHasExactlyOneMouseAndOneKeyboard() {
+        val d = HidDescriptor.DESCRIPTOR
+        var mice = 0; var keyboards = 0
+        for (i in 0 until d.size - 1) {
+            // Usage (Mouse/Keyboard) directly followed by Collection (Application)
+            if (d[i] == 0x09.toByte() && i + 3 < d.size && d[i + 2] == 0xA1.toByte() && d[i + 3] == 0x01.toByte()) {
+                if (d[i + 1] == 0x02.toByte()) mice++
+                if (d[i + 1] == 0x06.toByte()) keyboards++
+            }
+        }
+        assertEquals(1, mice); assertEquals(1, keyboards)
     }
 
     @Test
