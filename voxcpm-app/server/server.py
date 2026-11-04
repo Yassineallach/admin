@@ -166,10 +166,12 @@ class IndexTTSEngine:
         # The 0.6B emotion-from-text model costs ~1.2 GB more; skip it on CPU machines with little RAM.
         use_qwen = os.environ.get("INDEXTTS_QWEN_EMO", "1" if on_gpu else "0") == "1"
         print(f"Loading IndexTTS-2.5 from {INDEXTTS_MODEL_DIR} on {self.device} ...", flush=True)
+        # bfloat16 needs an Ampere or newer GPU; on a T4 (Colab, Kaggle) it is emulated or fails.
+        use_bf16 = on_gpu and torch.cuda.get_device_capability()[0] >= 8
         self.model = IndexTTS2(
             cfg_path=os.path.join(INDEXTTS_MODEL_DIR, "config.yaml"),
             model_dir=INDEXTTS_MODEL_DIR,
-            use_bf16=on_gpu,
+            use_bf16=use_bf16,
             use_qwen_emo=use_qwen,
         )
         self.emotion_text = use_qwen
@@ -216,13 +218,46 @@ class IndexTTSEngine:
         return np.asarray(wav, dtype=np.float32).squeeze() / 32768.0
 
 
+_load_lock = threading.Lock()
+_load_error: Optional[str] = None
+
+
 def get_model():
-    """Loads the selected engine once and returns it."""
+    """Loads the selected engine once (blocking) and returns it."""
     global _engine
-    if _engine is None:
-        _engine = IndexTTSEngine() if ENGINE == "indextts" else VoxCPMEngine()
-        print(f"{_engine.name} ready.", flush=True)
+    with _load_lock:
+        if _engine is None:
+            _engine = IndexTTSEngine() if ENGINE == "indextts" else VoxCPMEngine()
+            print(f"{_engine.name} ready.", flush=True)
     return _engine
+
+
+def start_loading():
+    """Loads the model in the background so the server answers "loading" instead of not at all."""
+    def load():
+        global _load_error
+        try:
+            get_model()
+        except BaseException as e:
+            import traceback
+
+            traceback.print_exc()
+            _load_error = f"{type(e).__name__}: {e}"
+
+    threading.Thread(target=load, name="load-model", daemon=True).start()
+
+
+def ready_model():
+    """The loaded engine, or an HTTP error that says why there is none yet."""
+    if _engine is not None:
+        return _engine
+    if _load_error:
+        raise HTTPException(status_code=500, detail=f"The model failed to load: {_load_error}")
+    name = "IndexTTS-2.5" if ENGINE == "indextts" else "VoxCPM2"
+    raise HTTPException(
+        status_code=503,
+        detail=f"Still loading {name}. The first start also downloads the model; try again in a minute.",
+    )
 
 
 def check_key(authorization: Optional[str] = Header(None), x_api_key: Optional[str] = Header(None)):
@@ -267,7 +302,7 @@ def save_upload_as_wav(upload: UploadFile, workdir: str, name: str) -> str:
 
 @app.get("/health")
 def health(_: None = Depends(check_key)):
-    engine = get_model()
+    engine = ready_model()
     return {
         "status": "ok",
         "engine": ENGINE,
@@ -294,6 +329,7 @@ def parse_emo_vector(raw: str) -> Optional[list]:
 
 def prepare(form: dict, reference_audio, workdir) -> dict:
     """Validates a request and turns it into engine parameters. Files go into [workdir]."""
+    engine = ready_model()
     text = form["text"].strip()
     if not text:
         raise HTTPException(status_code=400, detail="Text is empty")
@@ -302,10 +338,10 @@ def prepare(form: dict, reference_audio, workdir) -> dict:
     ref_path = None
     if reference_audio is not None and reference_audio.filename:
         ref_path = save_upload_as_wav(reference_audio, workdir, "reference")
-    elif "default" not in get_model().info()["modes"]:
+    elif "default" not in engine.info()["modes"]:
         raise HTTPException(
             status_code=400,
-            detail=f"{get_model().name} needs a reference voice: use Voice clone with a clip or saved voice",
+            detail=f"{engine.name} needs a reference voice: use Voice clone with a clip or saved voice",
         )
     return {
         "text": text,
@@ -516,5 +552,5 @@ if __name__ == "__main__":
     args = parser.parse_args()
     ENGINE = args.engine
     INDEXTTS_MODEL_DIR = args.model_dir
-    get_model()  # load before accepting requests
+    start_loading()  # answer /health with "loading" (503) meanwhile, and the error if loading fails
     uvicorn.run(app, host=args.host, port=args.port)

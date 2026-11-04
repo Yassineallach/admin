@@ -208,6 +208,19 @@ class VoxApi(private val baseUrl: String, private val apiKey: String) {
 
     private fun ensureOk(response: Response) {
         if (response.isSuccessful) return
+        if (response.code == 502 || response.code == 530) {
+            throw VoxApiException(
+                "The tunnel can't reach the server (error ${response.code}): it is still starting, or it stopped. " +
+                    "Check the notebook — the server cell says when the model is ready, and the Troubleshooting " +
+                    "cell shows the server's log.",
+            )
+        }
+        if (response.code == 503) {
+            throw VoxApiException(
+                runCatching { JSONObject(response.body!!.string()).optString("detail") }.getOrNull()
+                    ?.takeIf { it.isNotBlank() } ?: "The server is still loading the model. Try again in a minute.",
+            )
+        }
         if (response.code == 524) {
             throw VoxApiException(
                 "The tunnel timed out after 100 s (error 524). Restart the server notebook so it uses the " +
