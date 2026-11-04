@@ -18,6 +18,7 @@ data class HistoryItem(
     val timesteps: Int = 10,
     val promptText: String = "",
     val referencePath: String? = null,
+    val options: EngineOptions = EngineOptions(),
 ) {
     fun file(dir: File) = File(dir, "$id.wav")
 
@@ -27,6 +28,7 @@ data class HistoryItem(
         .put("createdAt", createdAt)
         .put("cfgValue", cfgValue.toDouble()).put("timesteps", timesteps).put("promptText", promptText)
         .put("referencePath", referencePath ?: JSONObject.NULL)
+        .put("options", options.toJson())
 
     companion object {
         fun fromJson(o: JSONObject) = HistoryItem(
@@ -41,6 +43,7 @@ data class HistoryItem(
             timesteps = o.optInt("timesteps", 10),
             promptText = o.optString("promptText"),
             referencePath = if (o.isNull("referencePath")) null else o.getString("referencePath"),
+            options = EngineOptions.fromJson(o.optJSONObject("options")),
         )
     }
 }

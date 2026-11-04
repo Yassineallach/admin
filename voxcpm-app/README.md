@@ -1,16 +1,27 @@
-# VoxCPM Studio — Android voice generator for VoxCPM2
+# VoxCPM Studio — Android voice generator for VoxCPM2 and IndexTTS-2.5
 
 An Android app (Kotlin + Jetpack Compose) for generating speech with
-[VoxCPM2](https://github.com/OpenBMB/VoxCPM) (`openbmb/VoxCPM2`, 48 kHz, 30 languages).
+[VoxCPM2](https://github.com/OpenBMB/VoxCPM) (`openbmb/VoxCPM2`, 48 kHz, 30 languages) or
+[IndexTTS-2.5](https://github.com/index-tts/index-tts) (`IndexTeam/IndexTTS-2.5`, 22 kHz,
+English / Chinese / Japanese / Spanish / Arabic, emotion control).
 
-VoxCPM2 is a 2B-parameter model that needs a GPU with ~8 GB VRAM, so it can't run
-inside a phone. The app is a client: it sends requests to a small server
-(`server/server.py`) that runs the model on a PC or in Google Colab.
+Both models need a GPU, so they can't run inside a phone. The app is a client: it sends requests
+to a small server (`server/server.py`) that runs one of the models on a PC or in Google Colab /
+Kaggle. The server tells the app which model it runs, and the Generate page shows the controls
+that model supports.
 
 ```
-Android app  ──HTTP (multipart)──▶  server.py (FastAPI + voxcpm)  ──▶  GPU
+Android app  ──HTTP (multipart)──▶  server.py --engine voxcpm | indextts  ──▶  GPU
              ◀──────── WAV ────────
 ```
+
+| | VoxCPM2 | IndexTTS-2.5 |
+|---|---|---|
+| Voice | default voice, voice design, cloning | cloning only (needs a reference voice) |
+| Control | style text, CFG, inference steps | 8 emotions + strength, emotion description, speech length |
+| Languages | 30, detected automatically | EN, ZH, JA, ES, AR (auto-detected or picked) |
+| GPU memory | ~8 GB | ~6 GB |
+| License | Apache-2.0 | bilibili Model Use License (large companies need a separate license; read it before commercial use) |
 
 ## Features
 
@@ -75,6 +86,22 @@ modal deploy modal_app.py         # prints https://<you>--voxcpm-server-serve.mo
 The URL never changes and the GPU shuts down by itself after 5 idle minutes. The first request
 after a pause takes 1–3 minutes while the model starts.
 
+**IndexTTS-2.5:** in the Colab or Kaggle notebook set `MODEL = "IndexTTS-2.5"` in the first cell.
+The notebook clones [index-tts](https://github.com/index-tts/index-tts), builds its Python 3.11
+environment with `uv sync`, downloads the weights (~5.5 GB) and starts
+`server.py --engine indextts` from that folder. On your own PC:
+
+```bash
+git clone https://github.com/index-tts/index-tts.git && cd index-tts
+pip install -U uv && uv sync
+uv pip install fastapi "uvicorn[standard]" python-multipart soundfile
+.venv/bin/python -c "from huggingface_hub import snapshot_download; snapshot_download('IndexTeam/IndexTTS-2.5', local_dir='checkpoints')"
+.venv/bin/python /path/to/voxcpm-app/server/server.py --engine indextts --model-dir checkpoints --port 8000
+```
+
+Emotion descriptions use IndexTTS's small Qwen emotion model, which is loaded on GPU only
+(`INDEXTTS_QWEN_EMO=1` forces it on). The Modal deployment runs VoxCPM2 only.
+
 **Your own PC (NVIDIA GPU, Python 3.10–3.12, CUDA 12+)**
 
 ```bash
@@ -112,9 +139,13 @@ The app uses `/jobs` and polls every 2 s, so no request lasts long enough for a 
 (Cloudflare quick tunnels end requests after ~100 s with error 524). With older servers it falls
 back to `/tts`.
 
-`/tts` and `/jobs` fields: `text` (required), `control` (voice description / style, sent to VoxCPM2 as a
-`(…)` prefix), `reference_audio` (file, enables cloning), `prompt_text` (transcript of the
-reference), `cfg_value` (default 2.0), `inference_timesteps` (default 10), `seed`.
+`/tts` and `/jobs` fields: `text` (required), `control` (VoxCPM2: voice description / style sent
+as a `(…)` prefix; IndexTTS-2.5: emotion description), `reference_audio` (file, enables cloning),
+`prompt_text` (transcript of the reference, VoxCPM2), `cfg_value` (default 2.0) and
+`inference_timesteps` (default 10) for VoxCPM2, `language` (`auto`/`en`/`zh`/`ja`/`es`/`ar`),
+`emo_vector` (8 comma-separated values: happy, angry, sad, afraid, disgusted, melancholic,
+surprised, calm), `emo_alpha` and `duration_factor` (0.5–2.0) for IndexTTS-2.5, and `seed`.
+`/health` returns the `engine` and its `capabilities`.
 Response headers: `X-Seed`, `X-Duration`, `X-Sample-Rate`, `X-Generation-Seconds`.
 
 Auth (when `VOXCPM_API_KEY` is set): `Authorization: Bearer <key>` or `X-API-Key: <key>`.

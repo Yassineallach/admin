@@ -18,6 +18,7 @@ data class PendingBatch(
     val seed: Int?,
     /** Private copy of the clone reference (see [ReferenceStore]), so clearing the cache can't break a resume. */
     val referencePath: String?,
+    val options: EngineOptions = EngineOptions(),
 ) {
     val remaining get() = texts.size - nextIndex
 
@@ -26,6 +27,7 @@ data class PendingBatch(
         .put("control", control).put("mode", mode).put("promptText", promptText)
         .put("cfgValue", cfgValue.toDouble()).put("timesteps", timesteps)
         .put("seed", seed ?: JSONObject.NULL).put("referencePath", referencePath ?: JSONObject.NULL)
+        .put("options", options.toJson())
 
     companion object {
         fun fromJson(o: JSONObject): PendingBatch {
@@ -41,6 +43,7 @@ data class PendingBatch(
                 timesteps = o.optInt("timesteps", 10),
                 seed = if (o.isNull("seed")) null else o.getInt("seed"),
                 referencePath = if (o.isNull("referencePath")) null else o.getString("referencePath"),
+                options = EngineOptions.fromJson(o.optJSONObject("options")),
             )
         }
     }

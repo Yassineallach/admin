@@ -36,6 +36,32 @@ class VoxApiIntegrationTest {
         }
     }
 
+    @Test fun indexTtsOptionsReachServer() {
+        val idx = System.getenv("VOX_TEST_IDX_URL") ?: ""
+        assumeTrue(idx.isNotEmpty())
+        val api = VoxApi(idx, "")
+        val info = api.health()
+        assertTrue(info.isIndexTts)
+        assertEquals(listOf("clone"), info.modes)
+        val options = EngineOptions(engine = "indextts", language = "ja", emotion = "sad", emotionStrength = 0.7f, durationFactor = 1.5f)
+        val out = File.createTempFile("vox", ".wav")
+        val result = api.synthesize(
+            req("こんにちは").copy(
+                control = "", language = options.language, emoVector = options.emotionVector(),
+                durationFactor = options.durationFactor,
+            ),
+            out,
+        )
+        assertEquals(1.5f, result.durationSec)
+    }
+
+    @Test fun serverInfoOfOldVoxcpmServer() {
+        val old = System.getenv("VOX_TEST_OLD_URL") ?: ""
+        assumeTrue(old.isNotEmpty())
+        val info = VoxApi(old, "").health()
+        assertTrue(!info.isIndexTts && "default" in info.modes && info.steps)
+    }
+
     @Test fun fallsBackToTtsOnOldServer() {
         val old = System.getenv("VOX_TEST_OLD_URL") ?: ""
         assumeTrue(old.isNotEmpty())

@@ -29,8 +29,8 @@ fun SettingsScreen(vm: MainViewModel, modifier: Modifier = Modifier) {
     ) {
         Text("Server", style = MaterialTheme.typography.headlineSmall)
         Text(
-            "VoxCPM2 is a 2B-parameter model that needs a GPU (~8 GB VRAM), so the app talks to a " +
-                "VoxCPM server you run on a PC or in Google Colab.",
+            "The voice models (VoxCPM2, IndexTTS-2.5) need a GPU, so the app talks to a server you run " +
+                "on a PC or in Google Colab / Kaggle.",
             style = MaterialTheme.typography.bodyMedium,
         )
         OutlinedTextField(
@@ -62,6 +62,11 @@ fun SettingsScreen(vm: MainViewModel, modifier: Modifier = Modifier) {
                 Text(
                     "• Free: open VoxCPM_Server_Colab.ipynb (voxcpm-app/server in the repo) in Google Colab " +
                         "with a T4 GPU and run all cells. Paste the printed https://….trycloudflare.com URL here.",
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                Text(
+                    "• Models: the notebooks run VoxCPM2 or IndexTTS-2.5 (pick it in the first cell). The app " +
+                        "adapts to whichever one the server runs; tap Test connection after switching.",
                     style = MaterialTheme.typography.bodySmall,
                 )
                 Text(

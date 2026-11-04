@@ -12,7 +12,9 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import app.voxcpm.studio.audio.WavRecorder
+import app.voxcpm.studio.data.EngineOptions
 import app.voxcpm.studio.data.HistoryItem
+import app.voxcpm.studio.data.ServerInfo
 import app.voxcpm.studio.data.HistoryStore
 import app.voxcpm.studio.data.PendingBatch
 import app.voxcpm.studio.data.PendingBatchStore
@@ -33,11 +35,21 @@ import java.util.UUID
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 
-enum class VoiceMode(val label: String) {
-    Default("Default"),
-    Design("Voice design"),
-    Clone("Voice clone"),
+enum class VoiceMode(val label: String, val key: String) {
+    Default("Default", "default"),
+    Design("Voice design", "design"),
+    Clone("Voice clone", "clone"),
 }
+
+private fun ttsRequest(
+    text: String, control: String, reference: File?, promptText: String,
+    cfgValue: Float, timesteps: Int, seed: Int?, options: EngineOptions,
+) = TtsRequest(
+    text = text, control = control, referenceAudio = reference, promptText = promptText,
+    cfgValue = cfgValue, inferenceTimesteps = timesteps, seed = seed,
+    language = options.language, emoVector = options.emotionVector(),
+    emoAlpha = if (options.emotion.isNotEmpty()) 1f else 0.6f, durationFactor = options.durationFactor,
+)
 
 /** Short texts still pay fixed overhead (network, model setup), so they count as at least this long. */
 private const val MIN_COST_CHARS = 20
@@ -69,6 +81,16 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     var cfgValue by mutableStateOf(2.0f)
     var timesteps by mutableStateOf(10)
     var seedText by mutableStateOf("")
+    // IndexTTS-2.5 options
+    var language by mutableStateOf("auto")
+    /** One of [EngineOptions.EMOTIONS], or "" for none. */
+    var emotion by mutableStateOf("")
+    var emotionStrength by mutableStateOf(0.8f)
+    var durationFactor by mutableStateOf(1f)
+
+    /** What the connected server's model supports; the last known one until it is checked again. */
+    var serverInfo by mutableStateOf(settings.serverInfo)
+        private set
 
     // Reference audio for cloning
     var referenceFile by mutableStateOf<File?>(null)
@@ -92,6 +114,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             referenceName = voice.name
             promptText = voice.promptText
         }
+        if (VoiceMode.Default.key !in serverInfo.modes) mode = VoiceMode.Clone
+        // Quietly check which model the server runs, so the controls match it.
+        if (settings.serverUrl.isNotBlank()) viewModelScope.launch { runCatching { refreshServerInfo() } }
     }
     private var recorder: WavRecorder? = null
 
@@ -150,12 +175,33 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         connectionStatus = "Connecting…"
         viewModelScope.launch {
             connectionStatus = try {
-                "Connected: " + withContext(Dispatchers.IO) { api().health() }
+                "Connected: " + refreshServerInfo().summary()
             } catch (e: Exception) {
                 "Failed: ${e.message ?: e.javaClass.simpleName}"
             }
         }
     }
+
+    /** Asks the server which model it runs and adapts the Generate page to it. */
+    private suspend fun refreshServerInfo(): ServerInfo {
+        val info = withContext(Dispatchers.IO) { api().health() }
+        if (info.engine != serverInfo.engine) settings.secPerChar = 0f // different model, different speed
+        serverInfo = info
+        settings.serverInfo = info
+        if (VoiceMode.Default.key !in info.modes && mode != VoiceMode.Clone) mode = VoiceMode.Clone
+        return info
+    }
+
+    /** Modes the connected model offers (IndexTTS-2.5 only clones). */
+    fun modeAvailable(m: VoiceMode) = m.key in serverInfo.modes
+
+    private fun currentOptions() = EngineOptions(
+        engine = serverInfo.engine,
+        language = if (serverInfo.languages.isNotEmpty()) language else "",
+        emotion = if (serverInfo.emotionVector) emotion else "",
+        emotionStrength = emotionStrength,
+        durationFactor = if (serverInfo.duration) durationFactor else 1f,
+    )
 
     fun setReferenceFromUri(uri: Uri) {
         val ctx = getApplication<Application>()
@@ -221,9 +267,12 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         if (isGenerating) return
         val texts = pendingTexts()
         if (texts.isEmpty()) { error = "Enter some text first"; return }
+        if (!modeAvailable(mode)) mode = VoiceMode.Clone
         val reference = if (mode == VoiceMode.Clone) referenceFile else null
         if (mode == VoiceMode.Clone && reference == null) {
-            error = "Pick or record a reference voice first"; return
+            error = if (modeAvailable(VoiceMode.Default)) "Pick or record a reference voice first"
+            else "${serverInfo.displayName} needs a voice to clone: pick a file, record one or choose from My voices"
+            return
         }
         val control = when (mode) {
             VoiceMode.Default -> ""
@@ -235,9 +284,13 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             PendingBatch(
                 texts = texts, nextIndex = 0, doneIds = emptyList(),
                 control = control, mode = mode.label,
-                promptText = if (reference != null) promptText.trim() else "",
-                cfgValue = cfgValue, timesteps = timesteps, seed = seedText.trim().toIntOrNull(),
+                promptText = if (reference != null && serverInfo.transcript) promptText.trim() else "",
+                cfgValue = cfgValue,
+                // Steps only exist for VoxCPM; 10 keeps the time estimate neutral for other models.
+                timesteps = if (serverInfo.steps) timesteps else 10,
+                seed = seedText.trim().toIntOrNull(),
                 referencePath = reference?.let { referenceStore.keep(it).absolutePath },
+                options = currentOptions(),
             )
         } catch (e: Exception) {
             error = "Could not prepare the reference audio: ${e.message}"; return
@@ -264,14 +317,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     private fun run(start: PendingBatch) {
         val texts = start.texts
-        val base = TtsRequest(
-            text = "",
-            control = start.control,
-            referenceAudio = start.referencePath?.let(::File),
-            promptText = start.promptText,
-            cfgValue = start.cfgValue,
-            inferenceTimesteps = start.timesteps,
-            seed = start.seed,
+        val base = ttsRequest(
+            text = "", control = start.control, reference = start.referencePath?.let(::File),
+            promptText = start.promptText, cfgValue = start.cfgValue, timesteps = start.timesteps,
+            seed = start.seed, options = start.options,
         )
         val api = api().also { activeApi = it }
         stopPlayback()
@@ -332,6 +381,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                         createdAt = System.currentTimeMillis(),
                         cfgValue = start.cfgValue, timesteps = start.timesteps,
                         promptText = start.promptText, referencePath = start.referencePath,
+                        options = start.options,
                     )
                     history.add(0, item)
                     persistHistory()
@@ -415,10 +465,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 return
             }
         }
-        val request = TtsRequest(
-            text = clipText, control = item.control, referenceAudio = reference,
-            promptText = item.promptText, cfgValue = item.cfgValue, inferenceTimesteps = item.timesteps,
-            seed = if (newSeed) null else item.seed,
+        val request = ttsRequest(
+            text = clipText, control = item.control, reference = reference,
+            promptText = item.promptText, cfgValue = item.cfgValue, timesteps = item.timesteps,
+            seed = if (newSeed) null else item.seed, options = item.options,
         )
         val cost = clipCost(clipText, item.timesteps)
         val api = api().also { activeApi = it }
@@ -451,6 +501,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 val updated = item.copy(
                     text = clipText, seed = result.seed, durationSec = result.durationSec,
                     createdAt = System.currentTimeMillis(), referencePath = keptReference,
+                    options = item.options.copy(engine = serverInfo.engine),
                 )
                 history.indexOfFirst { it.id == item.id }.takeIf { it >= 0 }?.let { history[it] = updated }
                 lastBatch.indexOfFirst { it.id == item.id }.takeIf { it >= 0 }?.let { lastBatch[it] = updated }
@@ -567,6 +618,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch(Dispatchers.IO) { voiceStore.save(snapshot) }
     }
 
+    fun engineName(engine: String) = if (engine == "indextts") "IndexTTS-2.5" else "VoxCPM2"
+
     fun cancelGeneration() {
         generateJob?.cancel()
         activeApi?.cancel()
@@ -575,6 +628,12 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun reuse(item: HistoryItem) {
         text = item.text
         seedText = item.seed?.toString().orEmpty()
+        item.options.let { o ->
+            if (o.language.isNotEmpty()) language = o.language
+            emotion = o.emotion
+            emotionStrength = o.emotionStrength
+            durationFactor = o.durationFactor
+        }
         when (item.mode) {
             VoiceMode.Design.label -> { mode = VoiceMode.Design; voiceDescription = item.control }
             VoiceMode.Clone.label -> { mode = VoiceMode.Clone; styleControl = item.control }

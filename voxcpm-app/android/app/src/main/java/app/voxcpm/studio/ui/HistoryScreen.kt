@@ -57,6 +57,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
 import app.voxcpm.studio.MainViewModel
+import app.voxcpm.studio.data.EngineOptions
 import app.voxcpm.studio.data.HistoryItem
 import kotlinx.coroutines.launch
 import java.text.DateFormat
@@ -170,7 +171,14 @@ fun HistoryCard(item: HistoryItem, vm: MainViewModel, onReuse: ((HistoryItem) ->
             Text(item.text, maxLines = 3, overflow = TextOverflow.Ellipsis)
             val meta = buildList {
                 add(item.mode)
+                if (item.options.engine != "voxcpm") add(vm.engineName(item.options.engine))
                 if (item.control.isNotBlank()) add("“${item.control}”")
+                if (item.options.emotion.isNotEmpty()) {
+                    add("${item.options.emotion} ${(item.options.emotionStrength * 100).toInt()}%")
+                }
+                item.options.language.takeIf { it.isNotEmpty() && it != "auto" }?.let {
+                    add(EngineOptions.LANGUAGE_NAMES[it] ?: it.uppercase())
+                }
                 item.durationSec?.let { add("%.1fs".format(it)) }
                 item.seed?.let { add("seed $it") }
                 add(DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(item.createdAt)))

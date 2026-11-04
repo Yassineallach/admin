@@ -31,6 +31,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.remember
 import app.voxcpm.studio.data.SavedVoice
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Memory
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Stop
@@ -69,6 +70,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import app.voxcpm.studio.MainViewModel
 import app.voxcpm.studio.VoiceMode
+import app.voxcpm.studio.data.EngineOptions
 import kotlin.math.roundToInt
 
 private val voicePresets = listOf(
@@ -78,6 +80,15 @@ private val voicePresets = listOf(
     "An elderly man, warm and slow storyteller",
     "A cheerful little girl",
     "A professional news anchor, clear and neutral",
+)
+
+private val emotionTextPresets = listOf(
+    "excited and joyful",
+    "calm and reassuring",
+    "sad, almost crying",
+    "angry, shouting",
+    "nervous and scared",
+    "whispering a secret",
 )
 
 private val stylePresets = listOf(
@@ -108,7 +119,13 @@ fun GenerateScreen(vm: MainViewModel, modifier: Modifier = Modifier) {
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Text("VoxCPM Studio", style = MaterialTheme.typography.headlineSmall)
+        val info = vm.serverInfo
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("VoxCPM Studio", Modifier.weight(1f), style = MaterialTheme.typography.headlineSmall)
+            AssistChip(onClick = {}, label = { Text(info.displayName) }, leadingIcon = {
+                Icon(Icons.Default.Memory, null, Modifier.size(18.dp))
+            })
+        }
 
         val clipCount = vm.pendingTexts().size
         OutlinedTextField(
@@ -118,6 +135,7 @@ fun GenerateScreen(vm: MainViewModel, modifier: Modifier = Modifier) {
             placeholder = {
                 Text(
                     if (vm.batchMode) "Hello and welcome.\nToday we talk about the weather.\nThanks for listening!"
+                    else if (info.isIndexTts) "Type in English, Chinese, Japanese, Spanish or Arabic"
                     else "Type in any of 30 languages — no language tag needed",
                 )
             },
@@ -142,6 +160,7 @@ fun GenerateScreen(vm: MainViewModel, modifier: Modifier = Modifier) {
                 SegmentedButton(
                     selected = vm.mode == m,
                     onClick = { vm.mode = m },
+                    enabled = vm.modeAvailable(m),
                     shape = SegmentedButtonDefaults.itemShape(i, VoiceMode.entries.size),
                 ) { Text(m.label, maxLines = 1) }
             }
@@ -167,6 +186,12 @@ fun GenerateScreen(vm: MainViewModel, modifier: Modifier = Modifier) {
                 )
             }
             VoiceMode.Clone -> {
+                if (!vm.modeAvailable(VoiceMode.Default)) {
+                    Text(
+                        "${info.displayName} always speaks in a cloned voice: pick a file, record one or choose from My voices.",
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
                 Card(Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         MyVoices(vm)
@@ -221,21 +246,47 @@ fun GenerateScreen(vm: MainViewModel, modifier: Modifier = Modifier) {
                         if (vm.isRecording) Text("Recording… speak clearly, then press Stop.", color = MaterialTheme.colorScheme.error)
                     }
                 }
-                OutlinedTextField(
-                    value = vm.promptText,
-                    onValueChange = { vm.promptText = it; vm.updateSelectedVoiceTranscript() },
-                    label = { Text("Transcript of the reference (optional)") },
-                    supportingText = { Text("Adding the exact words spoken in the clip gives the closest match.") },
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                OutlinedTextField(
-                    value = vm.styleControl,
-                    onValueChange = { vm.styleControl = it },
-                    label = { Text("Style control (optional)") },
-                    placeholder = { Text("e.g. slightly faster, cheerful tone") },
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                PresetRow(stylePresets) { vm.styleControl = it }
+                if (info.transcript) {
+                    OutlinedTextField(
+                        value = vm.promptText,
+                        onValueChange = { vm.promptText = it; vm.updateSelectedVoiceTranscript() },
+                        label = { Text("Transcript of the reference (optional)") },
+                        supportingText = { Text("Adding the exact words spoken in the clip gives the closest match.") },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+                if (info.emotionVector) EmotionPicker(vm)
+                if (info.emotionText) {
+                    OutlinedTextField(
+                        value = vm.styleControl,
+                        onValueChange = { vm.styleControl = it },
+                        label = { Text(if (info.isIndexTts) "Emotion description (optional)" else "Style control (optional)") },
+                        placeholder = {
+                            Text(if (info.isIndexTts) "e.g. sad, almost crying" else "e.g. slightly faster, cheerful tone")
+                        },
+                        supportingText = if (info.isIndexTts) {
+                            { Text("Overrides the emotion above when filled in.") }
+                        } else null,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    PresetRow(if (info.isIndexTts) emotionTextPresets else stylePresets) { vm.styleControl = it }
+                }
+            }
+        }
+
+        if (info.languages.isNotEmpty()) {
+            Text("Language", style = MaterialTheme.typography.titleSmall)
+            Row(
+                Modifier.horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                info.languages.forEach { code ->
+                    FilterChip(
+                        selected = vm.language == code,
+                        onClick = { vm.language = code },
+                        label = { Text(EngineOptions.LANGUAGE_NAMES[code] ?: code.uppercase()) },
+                    )
+                }
             }
         }
 
@@ -243,18 +294,30 @@ fun GenerateScreen(vm: MainViewModel, modifier: Modifier = Modifier) {
             Text(if (showAdvanced) "Hide advanced settings" else "Advanced settings")
         }
         if (showAdvanced) {
-            Text("Guidance (CFG): %.1f".format(vm.cfgValue))
-            Slider(
-                value = vm.cfgValue,
-                onValueChange = { vm.cfgValue = (it * 10).roundToInt() / 10f },
-                valueRange = 1f..3f, steps = 19,
-            )
-            Text("Inference steps: ${vm.timesteps} (more = higher quality, slower)")
-            Slider(
-                value = vm.timesteps.toFloat(),
-                onValueChange = { vm.timesteps = it.roundToInt() },
-                valueRange = 4f..30f, steps = 25,
-            )
+            if (info.cfg) {
+                Text("Guidance (CFG): %.1f".format(vm.cfgValue))
+                Slider(
+                    value = vm.cfgValue,
+                    onValueChange = { vm.cfgValue = (it * 10).roundToInt() / 10f },
+                    valueRange = 1f..3f, steps = 19,
+                )
+            }
+            if (info.steps) {
+                Text("Inference steps: ${vm.timesteps} (more = higher quality, slower)")
+                Slider(
+                    value = vm.timesteps.toFloat(),
+                    onValueChange = { vm.timesteps = it.roundToInt() },
+                    valueRange = 4f..30f, steps = 25,
+                )
+            }
+            if (info.duration) {
+                Text("Speech length: ×%.1f (higher = slower)".format(vm.durationFactor))
+                Slider(
+                    value = vm.durationFactor,
+                    onValueChange = { vm.durationFactor = (it * 10).roundToInt() / 10f },
+                    valueRange = 0.5f..2f, steps = 14,
+                )
+            }
             OutlinedTextField(
                 value = vm.seedText,
                 onValueChange = { v -> vm.seedText = v.filter { it.isDigit() }.take(9) },
@@ -455,4 +518,32 @@ private fun NameDialog(
         confirmButton = { TextButton(onClick = { onConfirm(name) }) { Text(confirmLabel) } },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
     )
+}
+
+/** IndexTTS-2.5 emotion: one of eight, with a strength. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun EmotionPicker(vm: MainViewModel) {
+    Text("Emotion", style = MaterialTheme.typography.titleSmall)
+    Row(
+        Modifier.horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        FilterChip(selected = vm.emotion.isEmpty(), onClick = { vm.emotion = "" }, label = { Text("None") })
+        EngineOptions.EMOTIONS.forEach { e ->
+            FilterChip(
+                selected = vm.emotion == e,
+                onClick = { vm.emotion = e },
+                label = { Text(e.replaceFirstChar { it.uppercase() }) },
+            )
+        }
+    }
+    if (vm.emotion.isNotEmpty()) {
+        Text("Strength: ${(vm.emotionStrength * 100).roundToInt()}%", style = MaterialTheme.typography.bodySmall)
+        Slider(
+            value = vm.emotionStrength,
+            onValueChange = { vm.emotionStrength = (it * 10).roundToInt() / 10f },
+            valueRange = 0.1f..1f, steps = 8,
+        )
+    }
 }

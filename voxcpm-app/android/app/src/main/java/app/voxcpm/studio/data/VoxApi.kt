@@ -25,6 +25,12 @@ data class TtsRequest(
     val cfgValue: Float,
     val inferenceTimesteps: Int,
     val seed: Int?,
+    // IndexTTS-2.5 only; VoxCPM servers ignore them.
+    val language: String = "",
+    /** 8 values in [ServerInfo.emotions] order, or null for no emotion. */
+    val emoVector: List<Float>? = null,
+    val emoAlpha: Float = 1f,
+    val durationFactor: Float = 1f,
 )
 
 data class TtsResult(val seed: Int?, val durationSec: Float?, val generationSec: Float?)
@@ -69,17 +75,11 @@ class VoxApi(private val baseUrl: String, private val apiKey: String) {
         return base.trimEnd('/') + path
     }
 
-    fun health(): String {
+    fun health(): ServerInfo {
         val request = Request.Builder().url(url("/health")).auth().get().build()
         client.newCall(request).execute().use { response ->
             ensureOk(response)
-            val json = JSONObject(response.body!!.string())
-            val device = when (json.optString("device")) {
-                "cpu" -> " · CPU only (slow: use 4 inference steps)"
-                "cuda" -> " · GPU"
-                else -> ""
-            }
-            return "${json.optString("model").substringAfterLast('/')} · ${json.optInt("sample_rate")} Hz$device"
+            return ServerInfo.fromJson(JSONObject(response.body!!.string()))
         }
     }
 
@@ -110,6 +110,10 @@ class VoxApi(private val baseUrl: String, private val apiKey: String) {
             .addFormDataPart("cfg_value", req.cfgValue.toString())
             .addFormDataPart("inference_timesteps", req.inferenceTimesteps.toString())
         req.seed?.let { body.addFormDataPart("seed", it.toString()) }
+        if (req.language.isNotEmpty()) body.addFormDataPart("language", req.language)
+        req.emoVector?.let { body.addFormDataPart("emo_vector", it.joinToString(",")) }
+        body.addFormDataPart("emo_alpha", req.emoAlpha.toString())
+        body.addFormDataPart("duration_factor", req.durationFactor.toString())
         req.referenceAudio?.let {
             body.addFormDataPart(
                 "reference_audio", it.name,
