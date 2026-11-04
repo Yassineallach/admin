@@ -94,7 +94,7 @@ environment with `uv sync`, downloads the weights (~5.5 GB) and starts
 ```bash
 git clone https://github.com/index-tts/index-tts.git && cd index-tts
 pip install -U uv && uv sync
-uv pip install fastapi "uvicorn[standard]" python-multipart soundfile
+uv pip install --python .venv/bin/python fastapi "uvicorn[standard]" python-multipart soundfile
 .venv/bin/python -c "from huggingface_hub import snapshot_download; snapshot_download('IndexTeam/IndexTTS-2.5', local_dir='checkpoints')"
 .venv/bin/python /path/to/voxcpm-app/server/server.py --engine indextts --model-dir checkpoints --port 8000
 ```
