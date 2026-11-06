@@ -1,126 +1,269 @@
-# Air Pointer — gyroscope presentation pointer for Android
+# Air Pointer — Remote Control Center for Android
 
-Air Pointer is a native Android app (Kotlin + Jetpack Compose). It turns a phone into a **real
-Bluetooth HID mouse + keyboard**. The computer pairs with it like any other Bluetooth mouse, so
-there is **no software, driver or receiver on the PC**. Move the phone in the air and the cursor
-follows. Slide controls send real keystrokes to PowerPoint.
+Air Pointer turns an Android phone into four remotes, each built on the real protocol of the
+device it controls:
 
-* Bluetooth: Android `BluetoothHidDevice` API (HID peripheral role, Android 9 / API 28+)
-* Motion: `SensorManager` gyroscope at 200 Hz plus the accelerometer, with gravity-compensated air-mouse math
-* Background operation: foreground service of type `connectedDevice`
+| Preset | What it controls | How it talks |
+|---|---|---|
+| 1 · **Presentation** | PowerPoint, Keynote, Google Slides, PDFs | Bluetooth HID *or* Wi-Fi companion |
+| 2 · **PC Mouse** | Windows / Linux cursor: **air mouse**, **touchpad**, **table mouse** (camera) | Bluetooth HID *or* Wi-Fi companion |
+| 3 · **TV Remote** | Android TV / Google TV, Samsung, LG, any TV over IR or Bluetooth | Each TV's own protocol (see §5) |
+| 4 · **Media Player** | VLC and MPV on the PC | VLC web interface; MPV JSON IPC through the companion |
+
+Native Kotlin + Jetpack Compose. The app needs Android 9 (API 28) or newer. The desktop
+companion is a single dependency-free Go binary for Windows and Linux.
 
 ---
 
 ## 1. Build
 
-### Requirements
-* JDK 17 or newer (the project targets Java 17 bytecode; tested with JDK 21)
-* Android SDK Platform 35 and Build-Tools 35 (Android Studio Ladybug or newer installs these)
-* Internet access the first time (Gradle downloads AGP 8.7.3, Kotlin 2.0.21 and Compose BOM 2024.12.01)
+### Android app
+Requirements: JDK 17+, Android SDK Platform 35 + Build-Tools 35 (Android Studio Ladybug or newer).
 
-### Android Studio
-1. *File → Open…* → select the `AirPointer/` folder.
-2. Let Gradle sync, choose the `app` configuration, and press **Run** with a phone connected over USB
-   (enable *Developer options → USB debugging*).
-
-### Command line
 ```bash
 cd AirPointer
-# tell Gradle where the SDK is (or set ANDROID_HOME)
 echo "sdk.dir=/path/to/Android/sdk" > local.properties
-
-./gradlew testDebugUnitTest   # 24 JVM unit tests: motion pipeline + HID reports
-./gradlew assembleDebug       # app/build/outputs/apk/debug/app-debug.apk
-./gradlew assembleRelease     # app/build/outputs/apk/release/app-release.apk (R8-minified, ~2 MB)
-./gradlew lintDebug           # Android Lint
-
+./gradlew testDebugUnitTest   # 55 JVM tests; 2 of them need live players and skip otherwise (§8)
+./gradlew assembleRelease     # app/build/outputs/apk/release/app-release.apk (R8, ~3 MB)
+./gradlew lintDebug
 adb install -r app/build/outputs/apk/release/app-release.apk
 ```
-The release build is **signed with the debug key** so it installs out of the box. Before you
-distribute it, replace `signingConfig` in `app/build.gradle.kts` with your own keystore.
+Or open the `AirPointer/` folder in Android Studio and press **Run**. The release build is
+signed with the debug key so it installs directly. Use your own keystore before distributing.
 
-A prebuilt APK is in `dist/AirPointer-1.0.4.apk`.
+### Desktop companion (Wi-Fi mode, MPV control)
+Requirements: Go 1.22+. No other dependencies.
 
----
+```bash
+cd AirPointer/companion
+go test ./...
+GOOS=windows GOARCH=amd64 go build -trimpath -ldflags "-s -w" -o ../dist/AirPointerCompanion-windows-amd64.exe .
+GOOS=linux   GOARCH=amd64 go build -trimpath -ldflags "-s -w" -o ../dist/airpointer-companion-linux-amd64 .
+GOOS=linux   GOARCH=arm64 go build -trimpath -ldflags "-s -w" -o ../dist/airpointer-companion-linux-arm64 .
+```
 
-## 2. First use (Windows 10/11)
-
-1. Install the APK, open **Air Pointer** and allow **Nearby devices** (and notifications).
-2. Wait for the home screen to say **Ready**. That means the phone has registered as a HID mouse/keyboard.
-3. **Devices & pairing → Make visible.**
-4. On the PC, open *Settings → Bluetooth & devices → Add device → Bluetooth* and pick the phone.
-   Confirm the code on both screens. Windows installs a mouse and a keyboard and connects.
-5. Open **Presentation remote**. Point the phone at the screen and move it.
-   *Settings → Calibrate* (phone flat on a table, about 1.5 s) removes gyro drift.
-
-> **Upgrading from an earlier version?** The HID descriptor changed in 1.0.2 and again in 1.0.4. Windows caches the
-> descriptor, so remove the phone in *Bluetooth & devices* (and the PC on the phone) and pair again.
->
-> **Paired the phone with this PC before installing Air Pointer?** Remove the pairing on *both*
-> sides and pair again while Air Pointer is running. Windows caches the old SDP service list
-> from the earlier pairing, and without fresh pairing it never sees the HID service.
-
-Later sessions: open the app and it reconnects to the last computer automatically. The connection
-survives the app going to the background thanks to the foreground service, and the notification
-offers *Previous / Next / Stop* controls.
+Prebuilt files are in `dist/`: `AirPointer-2.0.0.apk` and the three companion binaries.
 
 ---
 
-## 3. Features
+## 2. Choosing the PC connection: Bluetooth or Wi-Fi
 
-| Area | What it does |
-|---|---|
-| Bluetooth HID | Standard keyboard + mouse combo: keyboard (report ID 1, 6KRO, LED output) and mouse (ID 2, 3 buttons, 8-bit X/Y/wheel in the boot-mouse layout). Nothing else. Registers the SDP record, answers GET/SET_REPORT, tracks protocol mode, handles virtual-cable unplug. |
-| Pairing | Make the phone discoverable, scan for computers, bond with them (`createBond`), list bonded devices, connect or disconnect. |
-| Reconnection | Auto-connects to the last host after registration; after an unexpected drop it retries with back-off (2 s → 30 s, 6 attempts). Bluetooth on/off is handled. |
-| Pointer | Gravity-compensated yaw/pitch, 1€ adaptive smoothing, soft dead zone, acceleration curve, sub-count accumulation, ~133 Hz report rate. |
-| Drift | Manual calibration (rejects movement and restarts) plus automatic bias re-estimation whenever the phone is still. |
-| Remote screen | Next / Previous, left / right click (press-and-hold to drag), pointer button (toggle or hold), recenter, pause/resume, black screen, start/end slideshow, gesture pad, scroll strip. |
-| Configurable | Gestures (tap, double tap, long press, 4 swipes), volume up/down actions, slide keys (arrows / PgUp-PgDn), PowerPoint laser mode (Ctrl+L / Ctrl+A), recenter method, sensitivity, acceleration, smoothing, dead zone, inversion, haptics, keep screen on. |
-| Diagnostics | HID profile support and registration state, host, protocol, report rate and failures, sensor model / rate / processing time, live yaw/pitch, bias and gravity, **local motion preview** (works without a PC), test square and test click, event log with copy. |
+*Home → Connection* switches between the two for the Presentation and PC Mouse presets.
 
-### Gesture pad defaults
-Swipe ← = next slide, swipe → = previous slide. Tap, double tap and long press do **nothing** by
-default: the gripping thumb rests on the pad, and a click there would land wherever the moving
-cursor happens to be. Use the dedicated Left/Right click buttons for clicks.
+| | Bluetooth HID | Wi-Fi companion |
+|---|---|---|
+| Software on the PC | none: the phone is a Bluetooth mouse + keyboard | `AirPointerCompanion` running |
+| Phone requirement | firmware must support the HID Device profile (not all do) | any phone |
+| Report rate | 60 Hz (HID link budget, configurable) | 125 Hz |
+| Extra | works with TVs that accept Bluetooth keyboards | MPV control, latency readout |
 
-### Stuck-input protection
-Key and button *release* reports are retried if the Bluetooth stack rejects them. An "everything
-released" report is sent after every (re)connection, when tracking pauses and when the remote
-screen closes. This way Windows can never be left with a held Ctrl/Shift/arrow key or mouse button.
+### Wi-Fi setup
+1. Run the companion on the PC:
+   * **Windows:** double-click `AirPointerCompanion-windows-amd64.exe` and allow it through the
+     firewall on *Private* networks.
+   * **Linux:** `chmod +x airpointer-companion-linux-amd64 && ./airpointer-companion-linux-amd64`.
+2. The window shows the PC's address and a **6-digit PIN**. The PIN is saved, so you pair once.
+   Run with `-new-pin` to revoke all phones.
+3. On the phone: *Connection → Wi-Fi → Scan*, pick the computer, enter the PIN. If discovery is
+   blocked (some routers drop broadcasts), type the address shown in the companion window.
 
-### Default key mapping
-| Action | Sent to PC |
-|---|---|
-| Next / Previous slide | → / ← (or Page Down / Page Up) |
-| Start slideshow | F5 · from current slide: Shift+F5 |
-| End slideshow | Esc |
-| Black / white screen | B / W |
-| Laser pointer | Ctrl+L (on) · Ctrl+A (back to arrow) |
+**Linux permissions.** Input is injected through `/dev/uinput`, so it works on both X11 and
+Wayland. Either run the companion with `sudo`, or allow your user once:
+```bash
+echo 'KERNEL=="uinput", GROUP="input", MODE="0660", OPTIONS+="static_node=uinput"' | sudo tee /etc/udev/rules.d/60-airpointer.rules
+sudo usermod -aG input $USER && sudo udevadm control --reload-rules && sudo modprobe uinput   # then log out and back in
+```
+Without that permission the companion runs in **media-only** mode: MPV control still works, and
+the app tells you mouse and keyboard input are unavailable.
+
+**Security.** Pairing proves knowledge of the PIN with HMAC-SHA256 over a fresh random nonce,
+so the PIN never crosses the network. Traffic is not encrypted. Use it on your own network,
+not on public Wi-Fi.
+
+**Windows note.** Like any app that uses `SendInput`, the companion cannot control windows that
+run as administrator unless it runs as administrator too.
+
+### Bluetooth setup (no PC software)
+1. Wait for **Ready** on the home screen. *Connection → Bluetooth → Make visible.*
+2. On Windows: *Settings → Bluetooth & devices → Add device → Bluetooth*, pick the phone and
+   confirm the code on both screens.
+3. **Re-pair after updating from 1.x.** The HID descriptor gained a media-key collection in 2.0.
+   Windows caches the old descriptor, so remove the phone on the PC (and the PC on the phone)
+   and pair again.
 
 ---
 
-## 4. Architecture
+## 3. Preset 1 · Presentation
+Unchanged from 1.x: air pointer, next/previous (arrows or PgUp/PgDn), left/right click, pointer
+button (toggle or hold), recenter, pause, black/white screen, start/end slideshow, PowerPoint
+laser mode (Ctrl+L / Ctrl+A), configurable gesture pad, scroll strip, volume keys, and slide
+controls in the notification.
+
+---
+
+## 4. Preset 2 · PC Mouse
+
+### A. Air mouse
+The gyroscope pipeline from the presentation remote: gravity-compensated yaw/pitch, adaptive 1€
+smoothing, soft dead zone, acceleration curve, calibration and automatic drift compensation, with
+the cursor frozen around clicks.
+Controls: motion tracking on/off, sensitivity, acceleration, calibrate, left/right (press-and-hold
+works), **double click**, **drag lock** (holds the left button until you tap *Drop*: drag and
+drop), recenter, pause, scroll strip.
+
+### B. Table mouse: feasibility and what was built
+*Goal: slide the phone on the desk like an optical mouse.*
+
+* **Inertial sensors cannot do this.** Position from an accelerometer means integrating twice;
+  bias and noise make the estimate drift by tens of centimetres within a second or two. The
+  gyroscope measures rotation, not translation. So no IMU-only "positional tracking" was built,
+  as you asked.
+* **Camera optical flow can, under conditions.** An optical mouse compares successive images of
+  the surface and measures how far they shifted. The app does the same in
+  `OpticalFlowEstimator`: 320×240 frames from CameraX are reduced to an 80×60 grid and
+  normalised (so exposure changes don't count as motion), then matched coarse-to-fine on a
+  3-level pyramid with sub-pixel refinement. It tracks up to about ±27 % of the view per frame,
+  and unit tests confirm sub-pixel accuracy on synthetic textures.
+* **Which camera:**
+  * **Front camera, watching the ceiling (default).** Works when the ceiling has detail: lamps,
+    beams, edges, texture. A plain white ceiling in a dim room has nothing to track. Speed scales
+    with ceiling height, so there's a speed slider.
+  * **Back camera + torch, watching the desk.** Lying flat, the back lens sits about 1 mm above
+    the desk. Phone cameras can't focus closer than about 5–10 cm, so the image is mostly blur.
+    It only works on strongly patterned surfaces.
+* **Safety.** Each frame gets a confidence score (texture × match distinctness). Frames below the
+  threshold, frames taken while the gyroscope sees the phone tilting or lifting, and frames when
+  the phone isn't flat all produce **no movement**. The cursor stops instead of drifting. The
+  screen shows tracking quality and frame rate, and offers invert-X/Y in case a phone's camera
+  orientation differs.
+* **Verdict.** It's a real optical-flow mouse, but reliability depends on the room and the phone.
+  It hasn't been tested on a device. The touchpad below is the dependable alternative.
+
+### C. Touchpad
+A laptop-style touchpad on the screen:
+* one finger moves the pointer, with acceleration;
+* **tap = left click**, **two-finger tap = right click**;
+* **two-finger drag = scroll** (natural direction by default, switchable);
+* **long press = drag mode**: the left button is held until you lift.
+
+The logic lives in `TouchpadGestureEngine` and is unit-tested. The gyroscope is paused while the
+touchpad or table mode is open, so the two don't fight.
+
+---
+
+## 5. Preset 3 · TV Remote
+
+The app never assumes TVs share a protocol. Each connection type declares exactly which keys it
+supports; unsupported keys are greyed out, and a "Limitations" panel explains why.
+
+| Connection | Protocol actually implemented | Pairing |
+|---|---|---|
+| **Android TV / Google TV** (Sony, TCL, Hisense, Philips, Xiaomi, Chromecast with Google TV…) | *Android TV Remote Service v2*, the protocol Google's own TV remote uses: TLS with a client certificate kept in the Android Keystore; pairing on port 6467 (PairingRequest → Options → Configuration → Secret = SHA-256 of both RSA keys + code); remote on port 6466 (RemoteConfigure / SetActive / ping answers, `RemoteKeyInject` with Android key codes). Hand-written protobuf encoder, unit-tested. | 6-character code shown on the TV, entered once |
+| **Samsung** Tizen (2016+) | WebSocket `wss://TV:8002/api/v2/channels/samsung.remote.control`, `SendRemoteKey` commands, `SendInputString` for text; Wake-on-LAN using the MAC from `http://TV:8001/api/v2/` | Accept "Air Pointer" on the TV; the token is saved |
+| **LG** webOS (2014+) | SSAP over WebSocket (`wss://TV:3001`, falls back to `ws://TV:3000`): `register` with PROMPT pairing, `ssap://audio/…`, `ssap://tv/channel…`, `ssap://media.controls/…`, `ssap://system/turnOff`; arrows, OK, Back, Home and digits through the **pointer input socket**; text through `ssap://com.webos.service.ime/insertText`; Wake-on-LAN | Accept on the TV; the client key is saved |
+| **Infrared** (any TV) | `ConsumerIrManager` with NEC (LG, generic), Samsung32 and Sony SIRC-12 encoders; timings are unit-tested bit by bit | Choose the brand's code set |
+| **Bluetooth keyboard** | The phone's own HID keyboard + consumer-control (media key) collections: arrows, Enter, digits, Vol±, Mute, Ch±, Play/Pause, **AC Home**, **AC Back**, Menu, Power | Pair the phone from the TV's Bluetooth / accessories menu |
+
+**Discovery:** mDNS `_androidtvremote2._tcp` finds Android TV / Google TV; SSDP M-SEARCH finds
+Samsung (`RemoteControlReceiver`, server "Samsung/Tizen") and LG (`webos-second-screen`). Any TV
+can also be added by IP address. TVs are saved, and you can switch between them under *TVs*.
+
+**Certificate pinning:** TVs only offer self-signed certificates, so the app pins the
+certificate it sees at first pairing (SHA-256, trust on first use). Later connections presenting
+a different certificate are refused.
+
+**Voice:**
+* Samsung and LG: the phone's speech recogniser turns speech into text and types it into the
+  TV's focused text field.
+* Android TV: the button sends `KEYCODE_ASSIST`, which opens the TV's own Assistant; it listens
+  through the TV's or its remote's microphone.
+* Streaming the phone's microphone into the Android TV voice protocol is not implemented.
+
+**Power:**
+* Turning off works on every protocol.
+* Turning on depends on the TV's network standby (Samsung "Power on with mobile", LG "Mobile TV
+  On"), or on Android TV waking from Bluetooth.
+* Infrared always works, given line of sight.
+
+**Untested on real TVs.** None of these protocols have been tested against physical TVs. The
+message formats, encodings and pairing math are unit-tested; LG in particular may refuse
+unsigned remote apps for some permissions on newer firmware, and IR codes vary between models.
+
+---
+
+## 6. Preset 4 · Media Player (VLC and MPV)
+
+The two players expose completely different interfaces, so each has its own backend behind one
+`MediaBackend` interface.
+
+### VLC: HTTP web interface (phone → VLC directly)
+Setup in VLC on the PC: *Tools → Preferences → Show settings: All → Interface → Main
+interfaces* → tick **Web**; then *Main interfaces → Lua* → set a **Lua HTTP password**. Restart
+VLC and allow it through the firewall. In the app, enter the PC's address, port (8080) and
+password.
+
+Implemented with `GET /requests/status.json?command=…` and HTTP Basic auth:
+* `pl_pause`, `pl_stop`, `pl_previous`, `pl_next`;
+* `seek` (±10 s, ±30 s, absolute from the timeline);
+* `volume` (VLC's 0–512 scale; mute = remember the volume, set 0, restore — VLC has no mute command);
+* `rate` (speed), `fullscreen`, `subdelay` (subtitle sync);
+* `subtitle_track` / `audio_track`, with track ids read from `information.category["Stream N"]`.
+
+Status gives position, length, state, volume, rate and title.
+
+### MPV: JSON IPC (phone → companion → mpv socket)
+mpv only accepts IPC on a local socket, so the companion relays commands. Start mpv with:
+* Windows: `mpv --input-ipc-server=\\.\pipe\mpvsocket file.mkv`
+* Linux: `mpv --input-ipc-server=/tmp/mpvsocket file.mkv`
+
+Or add `input-ipc-server=…` to `mpv.conf`. The companion's `-mpv` flag changes the path.
+
+Commands are `{"command":[…],"request_id":N}`:
+* `cycle pause`, `stop`, `playlist-prev` / `playlist-next`;
+* `seek ±10 relative+exact`, `seek t absolute`;
+* `add volume`, `cycle mute`, `set_property speed`, `cycle fullscreen`;
+* `cycle sub-visibility`, `add sub-delay ±0.1`, `cycle audio`, `cycle sub`.
+
+Status reads `time-pos`, `duration`, `pause`, `idle-active`, `volume`, `mute`, `speed`,
+`media-title`, `sub-delay`, `sub-visibility`, `aid`, `sid` and `fullscreen`.
+
+**Timeline:** current position, total duration, remaining time, and a seek slider (drag, release
+to seek), polled every 0.7 s. Also: speed presets 0.5×–2×, subtitle delay ±0.1 s, and subtitle and
+audio track cycling. Buttons a backend doesn't support are disabled.
+
+---
+
+## 7. Architecture
 
 ```
 app/src/main/java/com/airpointer/remote/
-├── core/               Pure Kotlin, no Android deps → unit-tested on the JVM
-│   ├── AirMouseProcessor   gyro+accel → mouse deltas (bias, gravity, 1€, accel curve)
-│   ├── TiltPointerProcessor  fallback for phones with no gyroscope
-│   ├── OneEuroFilter, Vec3, MotionConfig
-├── hid/
-│   ├── HidDescriptor       report descriptor (keyboard ID1, mouse ID2)
-│   ├── HidReports          report encoders, key codes
-│   ├── ReportAccumulator   coalesces 200 Hz motion into rate-limited reports
-│   ├── BluetoothHidController  BluetoothHidDevice proxy, registerApp, connect, reconnect, sendReport
-│   └── BluetoothPairingManager discovery, bonding, bonded list
-├── motion/SensorMotionSource   SensorManager registration (200 Hz gyro on the I/O thread)
-├── presenter/PresenterController  orchestration: gate, clicks, keys, scroll, recenter, calibration
-├── service/AirPointerService   foreground service (connectedDevice) + notification controls
-├── settings/                   SharedPreferences-backed StateFlow settings
-├── diagnostics/DiagnosticsLog  ring-buffer event log
-└── ui/                         Compose screens: Home, Pairing, Remote, Settings, Diagnostics
+├── core/            pure Kotlin, unit-tested on the JVM
+│   ├── AirMouseProcessor, OneEuroFilter, TiltPointerProcessor, Vec3, MotionConfig
+│   ├── TouchpadGestureEngine      tap/2-finger tap/scroll/long-press drag
+│   └── OpticalFlowEstimator       camera block-matching (table mouse)
+├── transport/       ReportSink interface + TransportRouter (selected link)
+│   ├── WifiCompanionClient        TCP, HMAC PIN auth, ping, MPV relay
+│   └── CompanionDiscovery         UDP broadcast
+├── hid/             Bluetooth HID Device: descriptor (keyboard 1, mouse 2, consumer 3), reports,
+│                    BluetoothHidController (implements ReportSink), pairing manager
+├── presenter/       PresenterController: sensors → pointer → reports; keys, clicks, drag, media keys
+├── table/           TableMouseController (CameraX + IMU gating)
+├── tv/              TvConnection implementations: AndroidTvRemote (+Protobuf), SamsungTv, LgWebOsTv,
+│                    IrRemote (+IrEncoders), BluetoothTvRemote, PinnedTrust, WakeOnLan,
+│                    TvDiscovery (mDNS + SSDP), TvRepository, TvManager
+├── media/           MediaBackend, VlcBackend (HTTP), MpvBackend (JSON IPC)
+├── motion/, settings/, service/, diagnostics/
+└── ui/              Home hub + Presentation, PC Mouse, TV, TV devices, Media, Connection, Settings, Diagnostics
+
+companion/           Go: protocol.go (handshake, report decoding + diffing), discovery.go,
+                     inject_windows.go (SendInput), inject_linux.go (uinput), keymap.go,
+                     mpv*.go (Unix socket / named pipe), main.go
 ```
+
+Every pointer and keyboard mode emits the same HID-layout reports into a `ReportSink`. The
+Bluetooth controller sends them over the air; the Wi-Fi client sends them as `R <id> <hex>`
+lines, and the companion decodes them and turns state changes into OS events. One input
+pipeline therefore serves both transports, which is what kept the existing features unchanged.
 
 **Report rate.** Mouse reports are capped at 60 Hz by default (*Settings → Connection → Report
 rate*). The HID QoS requests about 800 bytes/s, and one report is about 10 bytes on air. Streaming
@@ -148,34 +291,47 @@ so nothing jumps afterwards.
 
 ---
 
-## 5. Testing
+---
 
-`./gradlew testDebugUnitTest` runs 24 JVM tests. `MotionSimulator` integrates a real phone
-orientation and generates the gyro + accelerometer samples that phone would produce. The tests
-check that:
+## 8. Testing: what was verified and what wasn't
 
-* yaw 0.5 rad → −550 counts horizontally, with no vertical leak (and the reverse for pitch);
-* the same yaw with the phone **rolled 50°** or **tilted 40°** gives the same horizontal motion;
-* calibration recovers an injected gyro bias to within 1e-3 rad/s and zero drift over 10 s; it restarts when the phone is bumped;
-* uncalibrated bias drifts > 80 counts in 10 s, while with automatic compensation it stays ≤ 3 counts;
-* Gaussian hand tremor (σ = 0.008 rad/s) moves the cursor ≤ 6 counts in 5 s;
-* very slow motion is not lost to rounding; acceleration boosts only fast moves;
-* gating off/on and sensor gaps never cause a jump;
-* the HID descriptor is parsed and each report's declared bit size matches its encoder; encoders produce correct little-endian bytes; overflow carries over between reports.
+**Automated (55 JVM tests + 6 Go tests, all passing; the 2 live-player tests skip without players):**
+* motion pipeline (14), 1€ filter, defaults smoke test;
+* HID descriptor parsing (exactly one mouse; report sizes match the encoders), report encoding, consumer reports;
+* touchpad gestures (5);
+* optical flow (6): integer and sub-pixel shifts, large shifts, exposure change, noise drift,
+  blank surface, row stride;
+* TV protocols (11): protobuf, key inject bytes, Android TV pairing secret against the reference
+  algorithm, NEC/Samsung32/SIRC timings, SSDP classification, Samsung/LG messages, Wake-on-LAN,
+  certificate pinning with real certificates;
+* companion wire protocol (3), with the HMAC proof cross-checked against the Go implementation;
+* Go: report diffing, keyboard shortcut ordering, consumer keys and release-on-disconnect,
+  key-map completeness, full handshake + commands + MPV relay over a socket, wrong PIN rejected.
 
-**On-device checks**
+**Integration against real software (run in this environment):**
+* `MediaIntegrationTest` drove a real **VLC 3.0.20** (web interface) and a real **mpv 0.37**
+  through the real **companion** binary:
+  * seek-to, ±10 s (exact), speed, subtitle delay and visibility, audio-track cycling,
+    play/pause, title/duration — all passed;
+  * mpv volume and mute passed;
+  * VLC volume was skipped: the headless container has no audio device, so VLC reports volume 0.
+* The companion's UDP discovery reply was checked live.
 
-1. *Diagnostics → Preview pointer locally*: exercises the full sensor pipeline without a PC.
-2. Once connected, *Diagnostics → Test square / Test click*: exercises the HID link without sensors.
+To rerun them: start the players, then
+`AIRPOINTER_VLC=host:8080:password AIRPOINTER_COMPANION=host:47778:PIN ./gradlew testDebugUnitTest`.
 
-**Not tested in this environment:** the Bluetooth link to a real Windows PC. It needs physical
-hardware, and Android emulators do not implement the HID Device role. Run the on-device checks
-above after installing.
+**Not verifiable here (needs hardware):**
+* Bluetooth HID with a real PC;
+* Windows `SendInput` and Linux uinput injection (compiled and code-reviewed only; the container has no `/dev/uinput`);
+* camera table mouse on a phone;
+* every TV protocol against a physical TV;
+* IR transmission.
 
 ---
 
-## 6. Hardware and OS limitations (read this)
+## 9. Hardware and OS limitations
 
+### Bluetooth and pointer
 1. **Android 9+ is required.** `BluetoothHidDevice` does not exist before API 28 (`minSdk = 28`).
 2. **Not every phone supports HID peripheral mode.** The profile is optional in AOSP
    (`bluetooth.profile.hid.device.enabled`), and some manufacturers and custom ROMs ship with it
@@ -212,3 +368,12 @@ above after installing.
     whether the host uses REPORT or BOOT protocol.
 13. **Other hosts.** macOS, Linux and ChromeOS accept the same composite descriptor. Keynote and
     Google Slides also respond to the arrow keys. Pairing steps differ per OS.
+
+### Wi-Fi, TV and media
+14. **Same network.** Phone and PC/TV must be on the same LAN. Guest Wi-Fi or "AP isolation"
+    blocks them from seeing each other; enter IP addresses manually if broadcasts are filtered.
+15. **Camera table mouse** depends on the environment (see §4B). It stops when unsure.
+16. **IR** needs a phone with an IR blaster (common on Xiaomi/Redmi/POCO and some Huawei phones;
+    rare elsewhere). The app detects it and disables the option otherwise.
+17. **Samsung TVs before 2016** (Orsay, port 55000) and **LG Netcast (pre-webOS)** are not supported.
+18. **Android TV voice** opens the TV's Assistant rather than streaming the phone's microphone.

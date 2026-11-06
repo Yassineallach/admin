@@ -17,7 +17,21 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.text.input.KeyboardType
+import com.airpointer.remote.transport.CompanionDiscovery
+import com.airpointer.remote.transport.TransportKind
+import com.airpointer.remote.transport.WifiCompanionClient
+import com.airpointer.remote.ui.components.Segmented
+import kotlinx.coroutines.launch
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -49,7 +63,23 @@ fun PairingScreen(graph: AppGraph, actions: AppActions, onBack: () -> Unit) {
         onDispose { pairing.detach() }
     }
 
-    ScreenScaffold("Devices & pairing", onBack) {
+    val settings by graph.settings.settings.collectAsStateWithLifecycle()
+
+    ScreenScaffold("Connection", onBack) {
+        Text("How should the phone reach your computer?", style = MaterialTheme.typography.bodyMedium, color = Palette.TextSecondary)
+        Segmented(TransportKind.entries.toList(), settings.transport, { if (it == TransportKind.WIFI) "Wi-Fi" else "Bluetooth" }) { t ->
+            graph.settings.update { it.copy(transport = t) }
+            if (t == TransportKind.WIFI) settings.let { st ->
+                if (st.wifiHost != null && st.wifiPin != null) graph.wifi.connect(st.wifiHost, st.wifiPort, st.wifiPin)
+            } else graph.wifi.disconnect()
+        }
+        Text(
+            if (settings.transport == TransportKind.WIFI)
+                "Wi-Fi: works with every phone and every Windows/Linux PC, lowest latency, adds MPV control. Needs the small Air Pointer Companion running on the PC."
+            else "Bluetooth: no software on the PC — the phone appears as a mouse and keyboard. Needs a phone whose firmware supports the HID Device profile.",
+            style = MaterialTheme.typography.bodySmall, color = Palette.TextTertiary,
+        )
+        if (settings.transport == TransportKind.WIFI) WifiSection(graph) else {
         if (!hid.registered) Panel {
             Text("Bluetooth HID is not ready", style = MaterialTheme.typography.titleMedium, color = Palette.Warning)
             Text(hid.unsupportedReason ?: hid.lastError ?: "Wait for the status on the home screen to read \"Ready\" before pairing. " +
@@ -129,6 +159,113 @@ fun PairingScreen(graph: AppGraph, actions: AppActions, onBack: () -> Unit) {
                 }
             }
         }
+        }
+    }
+}
+
+@Composable
+private fun WifiSection(graph: AppGraph) {
+    val settings by graph.settings.settings.collectAsStateWithLifecycle()
+    val wifi by graph.wifi.state.collectAsStateWithLifecycle()
+    val scope = rememberCoroutineScope()
+    var scanning by remember { mutableStateOf(false) }
+    var found by remember { mutableStateOf<List<CompanionDiscovery.Found>>(emptyList()) }
+    var pinFor by remember { mutableStateOf<Pair<String, Int>?>(null) }
+    var pinName by remember { mutableStateOf<String?>(null) }
+    var manualHost by remember { mutableStateOf(settings.wifiHost ?: "") }
+
+    fun scan() {
+        scanning = true
+        scope.launch { found = graph.companionDiscovery.scan(); scanning = false }
+    }
+    LaunchedEffect(Unit) { if (wifi.phase != WifiCompanionClient.Phase.CONNECTED) scan() }
+
+    SectionLabel("Computer")
+    Panel {
+        when (wifi.phase) {
+            WifiCompanionClient.Phase.CONNECTED -> {
+                Text("Connected to ${wifi.serverName}", style = MaterialTheme.typography.titleMedium, color = Palette.Positive)
+                Text("${wifi.host}:${wifi.port} · ${wifi.serverOs} · ${wifi.latencyMs?.let { "$it ms" } ?: "…"} · " +
+                    wifi.features.joinToString(), style = MaterialTheme.typography.bodySmall, color = Palette.TextSecondary)
+                if ("mouse" !in wifi.features) Text("The companion runs in media-only mode: input injection is not permitted on that computer (see the companion window).",
+                    style = MaterialTheme.typography.bodySmall, color = Palette.Warning)
+                SecondaryButton("Disconnect") { graph.wifi.disconnect() }
+            }
+            WifiCompanionClient.Phase.CONNECTING -> Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                CircularProgressIndicator(Modifier.size(20.dp), color = Palette.Accent, strokeWidth = 2.dp)
+                Text("Connecting to ${wifi.host}… ${wifi.error ?: ""}", style = MaterialTheme.typography.bodyMedium, color = Palette.TextSecondary)
+            }
+            else -> {
+                Text("Not connected", style = MaterialTheme.typography.titleMedium)
+                wifi.error?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = Palette.Negative) }
+            }
+        }
+    }
+
+    SectionLabel("Computers on this network")
+    Panel {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(if (scanning) "Searching…" else if (found.isEmpty()) "None found yet." else "${found.size} found",
+                style = MaterialTheme.typography.bodyMedium, color = Palette.TextSecondary, modifier = Modifier.weight(1f))
+            if (scanning) CircularProgressIndicator(Modifier.size(20.dp), color = Palette.Accent, strokeWidth = 2.dp)
+            else SecondaryButton("Scan") { scan() }
+        }
+        found.forEach { f ->
+            Divider()
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                IconBadge(Icons.Rounded.Computer, tint = Palette.Accent)
+                Column(Modifier.weight(1f)) {
+                    Text(f.name, style = MaterialTheme.typography.titleMedium)
+                    Text("${f.host}:${f.port}", style = MaterialTheme.typography.bodySmall, color = Palette.TextSecondary)
+                }
+                SecondaryButton("Connect") { pinFor = f.host to f.port; pinName = f.name }
+            }
+        }
+        Divider()
+        Text("Or enter the address shown in the companion window", style = MaterialTheme.typography.bodySmall, color = Palette.TextSecondary)
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            OutlinedTextField(manualHost, { manualHost = it }, Modifier.weight(1f), singleLine = true,
+                placeholder = { Text("192.168.1.20") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri))
+            SecondaryButton("Next", enabled = manualHost.isNotBlank()) {
+                val parts = manualHost.trim().split(':')
+                pinFor = parts[0] to (parts.getOrNull(1)?.toIntOrNull() ?: WifiCompanionClient.DEFAULT_PORT); pinName = null
+            }
+        }
+    }
+
+    SectionLabel("Set up the companion (once)")
+    Panel {
+        Text("1. Copy the companion to the PC: AirPointerCompanion-windows-amd64.exe (Windows) or airpointer-companion-linux-amd64 (Linux), from the project's dist folder.",
+            style = MaterialTheme.typography.bodySmall, color = Palette.TextSecondary)
+        Text("2. Run it. Allow it through the firewall on private networks. It shows the computer's address and a 6-digit PIN.",
+            style = MaterialTheme.typography.bodySmall, color = Palette.TextSecondary)
+        Text("3. Keep the phone and the PC on the same Wi-Fi network. Guest networks often block devices from seeing each other.",
+            style = MaterialTheme.typography.bodySmall, color = Palette.TextSecondary)
+    }
+
+    pinFor?.let { (host, port) ->
+        var pin by remember { mutableStateOf(if (settings.wifiHost == host) settings.wifiPin.orEmpty() else "") }
+        AlertDialog(
+            onDismissRequest = { pinFor = null },
+            containerColor = Palette.SurfaceHigh,
+            title = { Text("PIN for ${pinName ?: host}") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Enter the 6-digit PIN shown in the companion window.", style = MaterialTheme.typography.bodyMedium, color = Palette.TextSecondary)
+                    OutlinedTextField(pin, { v -> pin = v.filter { it.isDigit() }.take(6) }, singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword))
+                }
+            },
+            confirmButton = {
+                TextButton(enabled = pin.length == 6, onClick = {
+                    graph.settings.update { it.copy(transport = TransportKind.WIFI, wifiHost = host, wifiPort = port, wifiPin = pin, wifiName = pinName) }
+                    graph.wifi.connect(host, port, pin)
+                    pinFor = null
+                }) { Text("Connect", color = Palette.Accent) }
+            },
+            dismissButton = { TextButton(onClick = { pinFor = null }) { Text("Cancel", color = Palette.TextSecondary) } },
+        )
     }
 }
 

@@ -20,8 +20,13 @@ import android.os.SystemClock
 import androidx.core.content.ContextCompat
 import com.airpointer.remote.diagnostics.DiagnosticsLog
 import com.airpointer.remote.settings.SettingsRepository
+import com.airpointer.remote.transport.ReportSink
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import java.util.concurrent.Executor
 import java.util.concurrent.atomic.AtomicLong
@@ -39,7 +44,8 @@ class BluetoothHidController(
     private val io: Handler,
     private val log: DiagnosticsLog,
     private val settings: SettingsRepository,
-) {
+    scope: CoroutineScope,
+) : ReportSink {
     enum class Support { UNKNOWN, CHECKING, SUPPORTED, UNSUPPORTED }
     enum class Phase { IDLE, REGISTERING, READY, CONNECTING, CONNECTED, DISCONNECTING }
 
@@ -66,8 +72,10 @@ class BluetoothHidController(
     private val _state = MutableStateFlow(State())
     val state: StateFlow<State> = _state
 
-    val reportsSent = AtomicLong()
-    val reportFailures = AtomicLong()
+    override val reportsSent = AtomicLong()
+    override val reportFailures = AtomicLong()
+    override val connectedFlow: StateFlow<Boolean> =
+        _state.map { it.connected }.stateIn(scope, SharingStarted.Eagerly, false)
 
     private val adapter: BluetoothAdapter? =
         context.getSystemService(BluetoothManager::class.java)?.adapter
@@ -433,7 +441,7 @@ class BluetoothHidController(
     // ------------------------------------------------------------------ reports
 
     /** Send an input report. Must be called on the io thread. */
-    fun sendReport(id: Int, data: ByteArray): Boolean {
+    override fun sendReport(id: Int, data: ByteArray): Boolean {
         val h = hid ?: return false
         val d = connectedDevice ?: return false
         val ok = try { h.sendReport(d, id, data) } catch (e: SecurityException) { false }
@@ -441,7 +449,7 @@ class BluetoothHidController(
         return ok
     }
 
-    val isConnected: Boolean get() = connectedDevice != null
+    override val isConnected: Boolean get() = connectedDevice != null
 
     // ------------------------------------------------------------------ helpers
 

@@ -334,3 +334,38 @@ fun IconBadge(icon: ImageVector, tint: Color = Palette.TextPrimary, bg: Color = 
         Icon(icon, null, tint = tint, modifier = Modifier.size(size * 0.5f))
     }
 }
+
+/** Rounded segmented selector. */
+@Composable
+fun <T> Segmented(options: List<T>, selected: T, label: (T) -> String, modifier: Modifier = Modifier, onSelect: (T) -> Unit) {
+    Row(
+        modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(Palette.Surface)
+            .border(1.dp, Palette.Outline.copy(alpha = 0.6f), RoundedCornerShape(16.dp)).padding(4.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        for (o in options) {
+            val active = o == selected
+            Box(
+                Modifier.weight(1f).height(40.dp).clip(RoundedCornerShape(12.dp))
+                    .background(if (active) Palette.SurfaceHighest else Color.Transparent)
+                    .clickable { onSelect(o) },
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(label(o), style = MaterialTheme.typography.labelLarge, color = if (active) Palette.TextPrimary else Palette.TextSecondary,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+        }
+    }
+}
+
+/** A banner shown on remote screens when the selected link is down. */
+@Composable
+fun NotConnectedBanner(text: String, action: String, onAction: () -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(Palette.SurfaceHigh).padding(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(text, style = MaterialTheme.typography.bodyMedium, color = Palette.TextSecondary, modifier = Modifier.weight(1f))
+        SecondaryButton(action, onClick = onAction)
+    }
+}

@@ -28,6 +28,9 @@ class SettingsRepository(context: Context) {
         val d = AppSettings()
         d.copy(
             lastHostAddress = it.lastHostAddress,
+            transport = it.transport, wifiHost = it.wifiHost, wifiPort = it.wifiPort,
+            wifiPin = it.wifiPin, wifiName = it.wifiName,
+            mediaPlayer = it.mediaPlayer, vlcHost = it.vlcHost, vlcPort = it.vlcPort, vlcPassword = it.vlcPassword,
             lastHostName = it.lastHostName,
             gyroBiasX = it.gyroBiasX, gyroBiasY = it.gyroBiasY, gyroBiasZ = it.gyroBiasZ,
             calibratedAtMs = it.calibratedAtMs,
@@ -75,6 +78,15 @@ class SettingsRepository(context: Context) {
             haptics = prefs.getBoolean("haptics", d.haptics),
             keepScreenOn = prefs.getBoolean("keepScreenOn", d.keepScreenOn),
             reportRateHz = prefs.getInt("reportRateHz", d.reportRateHz),
+            transport = enumOr("transport", d.transport),
+            wifiHost = prefs.getString("wifiHost", null),
+            wifiPort = prefs.getInt("wifiPort", d.wifiPort),
+            wifiPin = prefs.getString("wifiPin", null),
+            wifiName = prefs.getString("wifiName", null),
+            mediaPlayer = prefs.getString("mediaPlayer", d.mediaPlayer) ?: d.mediaPlayer,
+            vlcHost = prefs.getString("vlcHost", null),
+            vlcPort = prefs.getInt("vlcPort", d.vlcPort),
+            vlcPassword = prefs.getString("vlcPassword", null),
             autoReconnect = prefs.getBoolean("autoReconnect", d.autoReconnect),
             lastHostAddress = prefs.getString("lastHostAddress", null),
             lastHostName = prefs.getString("lastHostName", null),
@@ -115,6 +127,15 @@ class SettingsRepository(context: Context) {
             .putBoolean("haptics", s.haptics)
             .putBoolean("keepScreenOn", s.keepScreenOn)
             .putInt("reportRateHz", s.reportRateHz)
+            .putString("transport", s.transport.name)
+            .putString("wifiHost", s.wifiHost)
+            .putInt("wifiPort", s.wifiPort)
+            .putString("wifiPin", s.wifiPin)
+            .putString("wifiName", s.wifiName)
+            .putString("mediaPlayer", s.mediaPlayer)
+            .putString("vlcHost", s.vlcHost)
+            .putInt("vlcPort", s.vlcPort)
+            .putString("vlcPassword", s.vlcPassword)
             .putBoolean("autoReconnect", s.autoReconnect)
             .putString("lastHostAddress", s.lastHostAddress)
             .putString("lastHostName", s.lastHostName)

@@ -34,10 +34,14 @@ import com.airpointer.remote.ui.screens.DiagnosticsScreen
 import com.airpointer.remote.ui.screens.HomeScreen
 import com.airpointer.remote.ui.screens.PairingScreen
 import com.airpointer.remote.ui.screens.RemoteScreen
+import com.airpointer.remote.ui.screens.MediaRemoteScreen
+import com.airpointer.remote.ui.screens.PcMouseScreen
 import com.airpointer.remote.ui.screens.SettingsScreen
+import com.airpointer.remote.ui.screens.TvDevicesScreen
+import com.airpointer.remote.ui.screens.TvRemoteScreen
 import com.airpointer.remote.ui.theme.Palette
 
-enum class Route { HOME, PAIRING, REMOTE, SETTINGS, DIAGNOSTICS }
+enum class Route { HOME, PAIRING, REMOTE, PC_MOUSE, TV, TV_DEVICES, MEDIA, SETTINGS, DIAGNOSTICS }
 
 /** Runtime permissions. Only BLUETOOTH_CONNECT is strictly required for HID on Android 12+. */
 object Permissions {
@@ -126,6 +130,10 @@ fun AirPointerRoot(activity: MainActivity) {
                 )
                 Route.PAIRING -> PairingScreen(graph, actions, back)
                 Route.REMOTE -> RemoteScreen(graph, activity, back, navigate)
+                Route.PC_MOUSE -> PcMouseScreen(graph, activity, back, navigate)
+                Route.TV -> TvRemoteScreen(graph, back, navigate)
+                Route.TV_DEVICES -> TvDevicesScreen(graph, back)
+                Route.MEDIA -> MediaRemoteScreen(graph, back, navigate)
                 Route.SETTINGS -> SettingsScreen(graph, back)
                 Route.DIAGNOSTICS -> DiagnosticsScreen(graph, back)
             }

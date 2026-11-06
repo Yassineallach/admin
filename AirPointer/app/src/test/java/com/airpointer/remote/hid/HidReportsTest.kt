@@ -44,7 +44,8 @@ class HidReportsTest {
     @Test
     fun descriptorMatchesReportSizes() {
         val bits = HidDescriptorParser.inputReportBits(HidDescriptor.DESCRIPTOR)
-        assertEquals("only keyboard + mouse", setOf(1, 2), bits.keys)
+        assertEquals("keyboard, mouse, consumer control", setOf(1, 2, 3), bits.keys)
+        assertEquals(HidDescriptor.CONSUMER_REPORT_SIZE * 8, bits[3])
         assertEquals(HidDescriptor.KEYBOARD_REPORT_SIZE * 8, bits[1])
         assertEquals(HidDescriptor.MOUSE_REPORT_SIZE * 8, bits[2])
         assertEquals(HidDescriptor.MOUSE_REPORT_SIZE, HidReports.mouse(0, 0, 0).size)
@@ -62,6 +63,13 @@ class HidReportsTest {
             }
         }
         assertEquals(1, mice); assertEquals(1, keyboards)
+    }
+
+    @Test
+    fun consumerReportIsLittleEndianUsage() {
+        assertArrayEquals(byteArrayOf(0x23, 0x02), HidReports.consumer(ConsumerUsages.AC_HOME))
+        assertArrayEquals(byteArrayOf(0xE9.toByte(), 0x00), HidReports.consumer(ConsumerUsages.VOLUME_UP))
+        assertArrayEquals(byteArrayOf(0, 0), HidReports.consumer(0))
     }
 
     @Test

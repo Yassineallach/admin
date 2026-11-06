@@ -4,6 +4,7 @@ import com.airpointer.remote.core.MotionConfig
 import com.airpointer.remote.presenter.PointerMode
 import com.airpointer.remote.presenter.RemoteAction
 import com.airpointer.remote.presenter.SlideKeys
+import com.airpointer.remote.transport.TransportKind
 
 data class AppSettings(
     // Pointer
@@ -37,6 +38,16 @@ data class AppSettings(
     val haptics: Boolean = true,
     val keepScreenOn: Boolean = true,
     // Connection
+    val transport: TransportKind = TransportKind.BLUETOOTH,
+    val wifiHost: String? = null,
+    val wifiPort: Int = 47778,
+    val wifiPin: String? = null,
+    val wifiName: String? = null,
+    // Media player remote
+    val mediaPlayer: String = "VLC",
+    val vlcHost: String? = null,
+    val vlcPort: Int = 8080,
+    val vlcPassword: String? = null,
     /**
      * Maximum mouse reports per second. The HID QoS asks the link for ~800 bytes/s; a report
      * costs ~10 bytes on air, so streaming above ~70 Hz overruns it and the stack silently

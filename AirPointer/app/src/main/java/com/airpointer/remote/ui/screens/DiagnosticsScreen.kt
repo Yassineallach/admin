@@ -81,6 +81,19 @@ fun DiagnosticsScreen(graph: AppGraph, onBack: () -> Unit) {
             }
         }
 
+        SectionLabel("Wi-Fi companion")
+        Panel {
+            val wifi by graph.wifi.state.collectAsStateWithLifecycle()
+            val settings by graph.settings.settings.collectAsStateWithLifecycle()
+            InfoRow("Selected link", settings.transport.label)
+            InfoRow("State", wifi.phase.name.lowercase(), if (wifi.phase == com.airpointer.remote.transport.WifiCompanionClient.Phase.CONNECTED) Palette.Positive else Palette.TextPrimary)
+            InfoRow("Computer", wifi.serverName?.let { "$it (${wifi.serverOs})\n${wifi.host}:${wifi.port}" } ?: wifi.host ?: "—")
+            InfoRow("Round trip", wifi.latencyMs?.let { "$it ms" } ?: "—")
+            InfoRow("Features", wifi.features.joinToString().ifBlank { "—" })
+            InfoRow("Reports sent", "${graph.wifi.reportsSent.get()}")
+            wifi.error?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = Palette.Warning) }
+        }
+
         SectionLabel("Motion sensors")
         Panel {
             InfoRow("Mode", graph.presenter.sensorMode.label)

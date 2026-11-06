@@ -31,7 +31,7 @@ class MainActivity : ComponentActivity() {
 
     private fun volumeRouted(keyCode: Int): Boolean {
         if (keyCode != KeyEvent.KEYCODE_VOLUME_UP && keyCode != KeyEvent.KEYCODE_VOLUME_DOWN) return false
-        return volumeKeysCaptured && graph.settings.current.volumeKeysEnabled && graph.hid.state.value.connected
+        return volumeKeysCaptured && graph.settings.current.volumeKeysEnabled && graph.link.isConnected
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {

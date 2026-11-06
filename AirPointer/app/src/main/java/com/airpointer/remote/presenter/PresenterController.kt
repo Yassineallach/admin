@@ -6,7 +6,8 @@ import com.airpointer.remote.core.CalibrationState
 import com.airpointer.remote.core.PointerDelta
 import com.airpointer.remote.core.Vec3
 import com.airpointer.remote.diagnostics.DiagnosticsLog
-import com.airpointer.remote.hid.BluetoothHidController
+import com.airpointer.remote.transport.ReportSink
+import com.airpointer.remote.transport.TransportKind
 import com.airpointer.remote.hid.HidDescriptor
 import com.airpointer.remote.hid.HidReports
 import com.airpointer.remote.hid.KeyCodes
@@ -30,7 +31,7 @@ import kotlinx.coroutines.launch
  * Threading: UI calls are posted to the [io] thread; all report state lives on that thread.
  */
 class PresenterController(
-    private val hid: BluetoothHidController,
+    private val link: ReportSink,
     private val motion: SensorMotionSource,
     private val settings: SettingsRepository,
     private val io: Handler,
@@ -100,7 +101,8 @@ class PresenterController(
             }
         }
         scope.launch {
-            settings.settings.map { it.reportRateHz }.distinctUntilChanged().collect { hz ->
+            settings.settings.map { if (it.transport == TransportKind.WIFI) WIFI_RATE_HZ else it.reportRateHz }
+                .distinctUntilChanged().collect { hz ->
                 val interval = 1_000_000_000L / hz.coerceIn(MIN_RATE_HZ, MAX_RATE_HZ)
                 io.post { accumulator.minIntervalNs = interval }
             }
@@ -112,7 +114,7 @@ class PresenterController(
         }
         // Run sensors only when someone can use the output.
         scope.launch {
-            combine(hid.state.map { it.connected }.distinctUntilChanged(), _tracking, _calibration) { connected, t, c ->
+            combine(link.connectedFlow, _tracking, _calibration) { connected, t, c ->
                 !t.paused && (connected || t.preview) || c is CalibrationState.Running
             }.distinctUntilChanged().collect { shouldRun ->
                 io.post {
@@ -123,7 +125,7 @@ class PresenterController(
         }
         // When the link drops, release any held buttons so nothing stays "stuck" on reconnect.
         scope.launch {
-            hid.state.map { it.connected }.distinctUntilChanged().collect { connected ->
+            link.connectedFlow.collect { connected ->
                 if (connected) io.postDelayed({ releaseAll() }, 300) // resync host state after (re)connect
                 else io.post { buttons = 0; accumulator.clear() }
             }
@@ -135,7 +137,7 @@ class PresenterController(
 
     private fun gateOpen(): Boolean =
         !paused && pointerActive && !calibrating &&
-            (hid.isConnected || previewEnabled) &&
+            (link.isConnected || previewEnabled) &&
             SystemClock.elapsedRealtime() >= freezeUntilMs
 
     private fun onMotionDelta(d: PointerDelta) {
@@ -143,7 +145,7 @@ class PresenterController(
             previewX = (previewX + d.dx).coerceIn(-PREVIEW_RANGE, PREVIEW_RANGE)
             previewY = (previewY + d.dy).coerceIn(-PREVIEW_RANGE, PREVIEW_RANGE)
         }
-        if (!hid.isConnected) return
+        if (!link.isConnected) return
         accumulator.add(d.dx, d.dy)
         scheduleFlush()
     }
@@ -160,16 +162,16 @@ class PresenterController(
     private val flushRunnable = Runnable { flushScheduled = false; flush() }
 
     private fun flush() {
-        if (!hid.isConnected) { accumulator.clear(); return }
+        if (!link.isConnected) { accumulator.clear(); return }
         val c = accumulator.drain(SystemClock.elapsedRealtimeNanos())
-        hid.sendReport(HidDescriptor.REPORT_ID_MOUSE, HidReports.mouse(buttons, c.dx, c.dy, c.wheel))
+        link.sendReport(HidDescriptor.REPORT_ID_MOUSE, HidReports.mouse(buttons, c.dx, c.dy, c.wheel))
         if (accumulator.hasPending) scheduleFlush()
     }
 
     /** Sends the current button state immediately together with any pending motion. */
     private fun sendButtonsNow() {
         val c = accumulator.drain(SystemClock.elapsedRealtimeNanos())
-        hid.sendReport(HidDescriptor.REPORT_ID_MOUSE, HidReports.mouse(buttons, c.dx, c.dy, c.wheel))
+        link.sendReport(HidDescriptor.REPORT_ID_MOUSE, HidReports.mouse(buttons, c.dx, c.dy, c.wheel))
     }
 
     /** Suppress pointer motion briefly so the tap on the screen does not shake the cursor. */
@@ -205,8 +207,8 @@ class PresenterController(
 
     /** Press + release a key (with optional modifiers). */
     fun key(code: Int, modifiers: Int = 0) = io.post {
-        if (!hid.isConnected) return@post
-        if (!hid.sendReport(HidDescriptor.REPORT_ID_KEYBOARD, HidReports.keyboard(modifiers, code))) return@post
+        if (!link.isConnected) return@post
+        if (!link.sendReport(HidDescriptor.REPORT_ID_KEYBOARD, HidReports.keyboard(modifiers, code))) return@post
         // A lost release makes Windows auto-repeat the key or keep Ctrl/Shift held (Ctrl+click
         // opens new windows), so the release is retried until the stack accepts it.
         io.postDelayed({ sendReliably(HidDescriptor.REPORT_ID_KEYBOARD, HidReports.keyboard(0)) }, KEY_HOLD_MS)
@@ -214,8 +216,8 @@ class PresenterController(
 
     /** Send a report, retrying a few times if the Bluetooth stack rejects it (io thread). */
     private fun sendReliably(id: Int, data: ByteArray, attempt: Int = 0) {
-        if (!hid.isConnected) return
-        if (hid.sendReport(id, data)) return
+        if (!link.isConnected) return
+        if (link.sendReport(id, data)) return
         if (attempt < RELEASE_RETRIES) io.postDelayed({ sendReliably(id, data, attempt + 1) }, RELEASE_RETRY_MS)
         else log.w(TAG, "Release report $id could not be delivered")
     }
@@ -230,13 +232,16 @@ class PresenterController(
         accumulator.clear()
         sendReliably(HidDescriptor.REPORT_ID_KEYBOARD, HidReports.keyboard(0))
         sendReliably(HidDescriptor.REPORT_ID_MOUSE, HidReports.mouse(0, 0, 0))
+        sendReliably(HidDescriptor.REPORT_ID_CONSUMER, HidReports.consumer(0))
+        dragLocked = false
+        _dragLock.value = false
     }
 
     fun setButton(button: Int, down: Boolean) {
         freezeMotion()
         io.post {
             buttons = if (down) buttons or button else buttons and button.inv()
-            if (!hid.isConnected) return@post
+            if (!link.isConnected) return@post
             if (down) sendButtonsNow()
             else sendReliably(HidDescriptor.REPORT_ID_MOUSE, HidReports.mouse(buttons, 0, 0))
         }
@@ -250,8 +255,47 @@ class PresenterController(
         }, CLICK_HOLD_MS)
     }
 
+    /** Two clicks inside the OS double-click interval. */
+    fun doubleClick(button: Int = MouseButtons.LEFT) {
+        click(button)
+        io.postDelayed({ click(button) }, CLICK_HOLD_MS + DOUBLE_CLICK_GAP_MS)
+    }
+
+    @Volatile var dragLocked = false
+        private set
+    private val _dragLock = MutableStateFlow(false)
+    val dragLock: StateFlow<Boolean> = _dragLock
+
+    /** Drag lock: holds the left button until toggled again, for drag-and-drop with any input mode. */
+    fun setDragLock(locked: Boolean) {
+        if (dragLocked == locked) return
+        dragLocked = locked
+        _dragLock.value = locked
+        setButton(MouseButtons.LEFT, locked)
+    }
+
+    /**
+     * Relative pointer movement from a non-gyro source (touchpad, camera optical flow).
+     * Goes through the same coalescing/rate limiting as the air mouse.
+     */
+    fun moveBy(dx: Int, dy: Int) {
+        if (dx == 0 && dy == 0) return
+        io.post {
+            if (!link.isConnected) return@post
+            accumulator.add(dx, dy)
+            scheduleFlush()
+        }
+    }
+
+    /** Press + release a consumer-control usage (media / TV keys). */
+    fun consumer(usage: Int) = io.post {
+        if (!link.isConnected) return@post
+        if (!link.sendReport(HidDescriptor.REPORT_ID_CONSUMER, HidReports.consumer(usage))) return@post
+        io.postDelayed({ sendReliably(HidDescriptor.REPORT_ID_CONSUMER, HidReports.consumer(0)) }, KEY_HOLD_MS + 15)
+    }
+
     fun scroll(steps: Int) = io.post {
-        if (!hid.isConnected || steps == 0) return@post
+        if (!link.isConnected || steps == 0) return@post
         accumulator.add(0, 0, wheel = steps)
         scheduleFlush()
     }
@@ -292,7 +336,7 @@ class PresenterController(
         motion.processor.resetMotion()
         motion.tilt.recenter()
         previewX = 0f; previewY = 0f
-        if (!hid.isConnected) return@post
+        if (!link.isConnected) return@post
         accumulator.clear()
         relativeSweep()
         freezeMotion(120)
@@ -303,7 +347,7 @@ class PresenterController(
         // 25 × 127 counts, paced at the report rate, reaches the top-left corner (OS acceleration helps).
         val gap = accumulator.minIntervalNs / 1_000_000L
         repeat(SWEEP_CORNER_REPORTS / 4) { i ->
-            io.postDelayed({ hid.sendReport(HidDescriptor.REPORT_ID_MOUSE, HidReports.mouse(buttons, -127, -127)) }, i * gap)
+            io.postDelayed({ link.sendReport(HidDescriptor.REPORT_ID_MOUSE, HidReports.mouse(buttons, -127, -127)) }, i * gap)
         }
         val start = (SWEEP_CORNER_REPORTS / 4) * gap
         val s = settings.current
@@ -314,7 +358,7 @@ class PresenterController(
             val dx = minOf(SWEEP_STEP, remainingX); val dy = minOf(SWEEP_STEP, remainingY)
             remainingX -= dx; remainingY -= dy
             step++
-            io.postDelayed({ hid.sendReport(HidDescriptor.REPORT_ID_MOUSE, HidReports.mouse(buttons, dx, dy)) }, start + step * gap)
+            io.postDelayed({ link.sendReport(HidDescriptor.REPORT_ID_MOUSE, HidReports.mouse(buttons, dx, dy)) }, start + step * gap)
         }
     }
 
@@ -349,14 +393,14 @@ class PresenterController(
 
     /** Diagnostics: draw a 300-count square with the cursor to verify the HID link without sensors. */
     fun sendTestPattern() = io.post {
-        if (!hid.isConnected) return@post
+        if (!link.isConnected) return@post
         // Paced at the configured report rate so it exercises the link exactly like motion does.
         val dirs = listOf(1 to 0, 0 to 1, -1 to 0, 0 to -1)
         val gap = accumulator.minIntervalNs / 1_000_000L
         var t = 0L
         for ((sx, sy) in dirs) repeat(20) {
             t += gap
-            io.postDelayed({ hid.sendReport(HidDescriptor.REPORT_ID_MOUSE, HidReports.mouse(buttons, sx * 15, sy * 15)) }, t)
+            io.postDelayed({ link.sendReport(HidDescriptor.REPORT_ID_MOUSE, HidReports.mouse(buttons, sx * 15, sy * 15)) }, t)
         }
     }
 
@@ -367,7 +411,7 @@ class PresenterController(
     private val snapshotTicker = object : Runnable {
         override fun run() {
             val now = SystemClock.elapsedRealtime()
-            val sent = hid.reportsSent.get()
+            val sent = link.reportsSent.get()
             val span = (now - lastSnapshotMs).coerceAtLeast(1)
             val rate = (sent - lastReportsSent) * 1000f / span
             lastReportsSent = sent; lastSnapshotMs = now
@@ -382,7 +426,7 @@ class PresenterController(
                 still = p.isStill,
                 reportRateHz = rate,
                 reportsSent = sent,
-                reportFailures = hid.reportFailures.get(),
+                reportFailures = link.reportFailures.get(),
                 processingUs = motion.lastProcessingNs / 1000f,
                 previewX = previewX,
                 previewY = previewY,
@@ -396,11 +440,14 @@ class PresenterController(
         const val CLICK_FREEZE_MS = 140L
         const val CLICK_HOLD_MS = 35L
         const val KEY_HOLD_MS = 25L
+        const val DOUBLE_CLICK_GAP_MS = 60L
         const val RELEASE_RETRIES = 5
         const val RELEASE_RETRY_MS = 12L
         const val SWEEP_STEP = 40
         const val SWEEP_CORNER_REPORTS = 100
         const val MIN_RATE_HZ = 20
+        /** Wi-Fi has no HID QoS budget: stream at a mouse-like 125 Hz. */
+        const val WIFI_RATE_HZ = 125
         const val MAX_RATE_HZ = 125
         const val PREVIEW_RANGE = 1200f
     }

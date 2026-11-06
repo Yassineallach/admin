@@ -13,8 +13,8 @@ android {
         // BluetoothHidDevice (HID peripheral role) was added in API 28 (Android 9).
         minSdk = 28
         targetSdk = 35
-        versionCode = 5
-        versionName = "1.0.4"
+        versionCode = 6
+        versionName = "2.0.0"
     }
 
     buildTypes {
@@ -57,7 +57,16 @@ dependencies {
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.material:material-icons-extended")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
+    // HTTP (VLC web interface) and WebSocket (Samsung / LG TVs)
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    // Camera optical flow for the table mouse
+    val camerax = "1.4.1"
+    implementation("androidx.camera:camera-core:$camerax")
+    implementation("androidx.camera:camera-camera2:$camerax")
+    implementation("androidx.camera:camera-lifecycle:$camerax")
     debugImplementation("androidx.compose.ui:ui-tooling")
 
     testImplementation("junit:junit:4.13.2")
+    testImplementation("org.json:json:20240303") // real org.json on the JVM (Android's is a stub)
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
 }

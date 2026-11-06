@@ -6,6 +6,8 @@ package com.airpointer.remote.hid
  *
  *  Report 1 — Keyboard: modifiers + reserved + 6-key array (boot keyboard layout), LED output.
  *  Report 2 — Mouse: 3 buttons + padding, 8-bit X/Y/wheel (boot mouse layout + wheel).
+ *  Report 3 — Consumer control: one 16-bit usage (volume, mute, play/pause, AC Home/Back…).
+ *            Every multimedia keyboard has this collection; TVs and PCs use it for media keys.
  *
  * An earlier version also declared a second, absolute "mouse" collection for recentering.
  * With it, Windows accepted keyboard input but ignored the relative mouse, so it was removed.
@@ -18,10 +20,12 @@ object HidDescriptor {
     // host "types" random keys, which opens random windows.
     const val REPORT_ID_KEYBOARD = 1
     const val REPORT_ID_MOUSE = 2
+    const val REPORT_ID_CONSUMER = 3
 
     /** buttons, X, Y, wheel — byte-for-byte the boot-mouse layout, so BOOT and REPORT agree. */
     const val MOUSE_REPORT_SIZE = 4
     const val KEYBOARD_REPORT_SIZE = 8
+    const val CONSUMER_REPORT_SIZE = 2
 
     /** Largest relative movement per mouse report (8-bit signed). */
     const val MOUSE_MAX_DELTA = 127
@@ -92,6 +96,20 @@ object HidDescriptor {
         0xC0,              //   End Collection
         0xC0,              // End Collection
 
+
+        // ---------------- Consumer control (ID 3): media and TV keys ----------------
+        0x05, 0x0C,        // Usage Page (Consumer)
+        0x09, 0x01,        // Usage (Consumer Control)
+        0xA1, 0x01,        // Collection (Application)
+        0x85, REPORT_ID_CONSUMER, // Report ID (3)
+        0x15, 0x00,        //   Logical Minimum (0)
+        0x26, 0xFF, 0x03,  //   Logical Maximum (1023)
+        0x19, 0x00,        //   Usage Minimum (0)
+        0x2A, 0xFF, 0x03,  //   Usage Maximum (1023)
+        0x75, 0x10,        //   Report Size (16)
+        0x95, 0x01,        //   Report Count (1)
+        0x81, 0x00,        //   Input (Data, Array) — one usage at a time, 0 = released
+        0xC0,              // End Collection
     )
 
     private fun bytes(vararg v: Int) = ByteArray(v.size) { v[it].toByte() }

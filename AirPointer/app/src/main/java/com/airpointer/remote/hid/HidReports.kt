@@ -14,6 +14,10 @@ object HidReports {
         )
     }
 
+    /** Consumer control report: a single 16-bit usage, 0 = all released. */
+    fun consumer(usage: Int): ByteArray =
+        byteArrayOf((usage and 0xFF).toByte(), ((usage shr 8) and 0x03).toByte())
+
     fun keyboard(modifiers: Int, vararg keys: Int): ByteArray {
         val r = ByteArray(HidDescriptor.KEYBOARD_REPORT_SIZE)
         r[0] = (modifiers and 0xFF).toByte()
@@ -38,6 +42,14 @@ object KeyCodes {
     const val L = 0x0F
     const val W = 0x1A
     const val ENTER = 0x28
+    const val BACKSPACE = 0x2A
+    const val TAB = 0x2B
+    const val DIGIT_1 = 0x1E // 1…9 = 0x1E…0x26, 0 = 0x27
+    const val DIGIT_0 = 0x27
+    const val F = 0x09
+    const val M = 0x10
+    const val HOME = 0x4A
+    const val END = 0x4D
     const val ESCAPE = 0x29
     const val SPACE = 0x2C
     const val F5 = 0x3E
@@ -52,4 +64,25 @@ object KeyCodes {
     const val MOD_LEFT_SHIFT = 0x02
     const val MOD_LEFT_ALT = 0x04
     const val MOD_LEFT_GUI = 0x08
+}
+
+/** USB HID Usage Tables §15 — Consumer page. */
+object ConsumerUsages {
+    const val POWER = 0x30
+    const val MENU = 0x40
+    const val INFO = 0x60
+    const val CHANNEL_UP = 0x9C
+    const val CHANNEL_DOWN = 0x9D
+    const val FAST_FORWARD = 0xB3
+    const val REWIND = 0xB4
+    const val NEXT_TRACK = 0xB5
+    const val PREVIOUS_TRACK = 0xB6
+    const val STOP = 0xB7
+    const val PLAY_PAUSE = 0xCD
+    const val MUTE = 0xE2
+    const val VOLUME_UP = 0xE9
+    const val VOLUME_DOWN = 0xEA
+    const val AC_SEARCH = 0x221
+    const val AC_HOME = 0x223
+    const val AC_BACK = 0x224
 }

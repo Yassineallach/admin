@@ -82,7 +82,7 @@ import com.airpointer.remote.ui.Route
 import com.airpointer.remote.ui.components.RemoteKey
 import com.airpointer.remote.ui.components.SecondaryButton
 import com.airpointer.remote.ui.components.StatusDot
-import com.airpointer.remote.ui.statusOf
+import com.airpointer.remote.ui.rememberLinkStatus
 import com.airpointer.remote.ui.theme.Palette
 import kotlin.math.abs
 
@@ -93,7 +93,8 @@ fun RemoteScreen(graph: AppGraph, activity: MainActivity, onBack: () -> Unit, na
     val tracking by graph.presenter.tracking.collectAsStateWithLifecycle()
     val presenter = graph.presenter
     val view = LocalView.current
-    val status = statusOf(hid, true)
+    val link = rememberLinkStatus(graph)
+    val status = link.info
 
     DisposableEffect(settings.keepScreenOn) {
         view.keepScreenOn = settings.keepScreenOn
@@ -117,14 +118,14 @@ fun RemoteScreen(graph: AppGraph, activity: MainActivity, onBack: () -> Unit, na
             Column(Modifier.weight(1f).padding(start = 4.dp)) {
                 Text(status.title, style = MaterialTheme.typography.titleMedium)
                 Text(
-                    hid.host?.name ?: status.detail, style = MaterialTheme.typography.bodySmall,
+                    link.hostName ?: status.detail, style = MaterialTheme.typography.bodySmall,
                     color = Palette.TextSecondary, maxLines = 1,
                 )
             }
             IconButton(onClick = { navigate(Route.SETTINGS) }) { Icon(Icons.Rounded.Tune, "Settings", tint = Palette.TextSecondary) }
         }
 
-        AnimatedVisibility(!hid.connected, enter = expandVertically() + fadeIn(), exit = shrinkVertically() + fadeOut()) {
+        AnimatedVisibility(!link.connected, enter = expandVertically() + fadeIn(), exit = shrinkVertically() + fadeOut()) {
             Row(
                 Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(Palette.SurfaceHigh).padding(12.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -132,8 +133,9 @@ fun RemoteScreen(graph: AppGraph, activity: MainActivity, onBack: () -> Unit, na
                 Text("Not connected — controls are inactive.", style = MaterialTheme.typography.bodyMedium,
                     color = Palette.TextSecondary, modifier = Modifier.weight(1f))
                 val last = settings.lastHostAddress
-                if (last != null && hid.registered) SecondaryButton("Connect") { graph.hid.connect(last) }
-                else SecondaryButton("Pair") { navigate(Route.PAIRING) }
+                if (link.transport == com.airpointer.remote.transport.TransportKind.BLUETOOTH && last != null && hid.registered)
+                    SecondaryButton("Connect") { graph.hid.connect(last) }
+                else SecondaryButton("Connection") { navigate(Route.PAIRING) }
             }
         }
 
@@ -310,7 +312,7 @@ private fun gestureHint(s: com.airpointer.remote.settings.AppSettings): String =
 }.joinToString("\n")
 
 @Composable
-private fun ScrollStrip(graph: AppGraph, stepDp: Int, modifier: Modifier) {
+internal fun ScrollStrip(graph: AppGraph, stepDp: Int, modifier: Modifier) {
     val density = LocalDensity.current
     val step = with(density) { stepDp.dp.toPx() }
     val view = LocalView.current
