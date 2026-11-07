@@ -184,7 +184,7 @@ class Layer:
         for it in self.items:
             if it.picture is not None:
                 n_img += 1
-                media = f"xl/media/shape_icon_{n_img}_{abs(hash(sheet_title)) % 10000}.png"
+                media = f"xl/media/shape_icon_{uuid.uuid4().hex[:12]}.png"
                 files[media] = it.picture
                 img_rid = f"rId{next_rel}"; next_rel += 1
                 drels = drels.replace("</Relationships>", f'<Relationship Id="{img_rid}" Type="{REL_IMG}" Target="../media/{media.split("/")[-1]}"/></Relationships>')

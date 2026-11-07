@@ -1692,7 +1692,8 @@ class Builder:
     def protect(self):
         if self.ed != "excel":
             return
-        self.ws[S_DASH].protection.objects = True
+        for _n in (S_DASH, S_MCAL, S_WCAL, S_TF, S_KB, S_GC, S_DM, S_INS, S_PM):
+            self.ws[_n].protection.objects = True
         for name in (S_DASH, S_MCAL, S_WCAL, S_TF, S_KB, S_GC, S_DM, S_INS):
             ws = self.ws[name]
             for rng_ in self.unlocked[name]:
@@ -1731,6 +1732,39 @@ class Builder:
             else:
                 ws.print_title_rows = f"{HDR}:{HDR}"
 
+    def add_sidebars(self):
+        """Shared icon sidebar on every tab except the dashboard (which draws its own copy of the same bar)."""
+        import sidebar
+        from drawing_inject import Layer, col_px_list, row_px_list
+        from openpyxl.drawing.image import Image as XLImage
+        import io
+        from PIL import Image as PILImage
+        self.side_layers = {}
+        for name in ORDER:
+            if name == S_DASH:
+                continue
+            ws = self.ws[name]
+            ws.column_dimensions["A"].width = 9.43          # ~66 px: 54 px bar + 12 px breathing room
+            last = max(ws.max_row, 60)
+            fp = ws.freeze_panes
+            if fp is None:
+                ws.freeze_panes = "B1"
+            elif fp.startswith("A"):
+                ws.freeze_panes = "B" + fp[1:]
+            if self.ed == "excel":
+                # openpyxl only creates a drawing part when something is drawn: add an invisible 1x1 picture
+                if not ws._charts and not ws._images:
+                    buf = io.BytesIO()
+                    PILImage.new("RGBA", (1, 1), (0, 0, 0, 0)).save(buf, "PNG")
+                    img = XLImage(io.BytesIO(buf.getvalue()))
+                    img.width = img.height = 1
+                    ws.add_image(img, "A1")
+                lay = Layer(col_px_list(ws, 2), row_px_list(ws, last + 1), font=self.T.font_name)
+                sidebar.draw(lay, name, lay.y(last + 1))
+                self.side_layers[name] = lay
+            else:
+                sidebar.cells(ws, self.T, quote, name, last)
+
     def build(self):
         self.build_setup()
         self.build_pov()
@@ -1747,6 +1781,7 @@ class Builder:
         self.build_kb()
         self.build_gc()
         self.build_ins()
+        self.add_sidebars()
         self.protect()
         self.page_setup()
         self.wb.active = ORDER.index(S_DASH if self.demo else S_SETUP)
@@ -1809,6 +1844,8 @@ def main():
             layer = getattr(builder.dash, "layer", None)
             if layer is not None:
                 layer.inject(p, S_DASH, cached_values=cached_text(p, S_DASH, layer))
+            for name, lay in getattr(builder, "side_layers", {}).items():
+                lay.inject(p, name)
             files.append(p)
             print("wrote", p)
     return files

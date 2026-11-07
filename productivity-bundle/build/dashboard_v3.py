@@ -34,6 +34,7 @@ from openpyxl.styles import Alignment, Border, Font, Side
 from openpyxl.utils import get_column_letter as L
 
 import icons
+import sidebar
 from common import (BG, BORDER, DANGER, DANGER_BG, DARK, FMT_PCT, FMT_SDATE, INFO, LAVENDER, MIDNIGHT, NAVY, SECONDARY,
                     SOFT_BLUE, SOFT_LAV, SOFT_TEAL, TEAL, WARNING, WHITE, add_list_dv, fill, place_chart)
 from drawing_inject import Layer, col_px_list, row_px_list
@@ -100,11 +101,6 @@ def clean_chart(ch, legend=True, axes=True):
 
 
 class DashV3:
-    NAV = [("All-in-One Dashboard", "bar_chart", "Home"), ("Setup", "gear", "Setup"), ("Monthly Calendar", "calendar", "Month"),
-           ("Weekly Calendar", "week", "Week"), ("Project Overview", "table", "Projects"), ("Project Manager", "people", "Manager"),
-           ("Project Budget", "money", "Budget"), ("Variable Tasks", "clipboard", "Tasks"), ("Recurring Tasks", "repeat", "Repeat"),
-           ("Task Schedule", "clock", "Schedule"), ("Task Filter", "filter", "Filter"), ("Decision Matrix", "scale", "Decide"),
-           ("Kanban Board", "kanban", "Kanban"), ("Gantt Chart", "gantt", "Gantt"), ("Instructions", "question", "Help")]
 
     def __init__(self, b, ctx):
         self.b, self.T = b, b.T
@@ -318,13 +314,9 @@ class DashV3:
 
     # ---------------------------------------------------------------- sidebar + header
     def sidebar_cells(self):
-        for r in range(1, LAST_ROW + 1):
-            for c in range(1, 4):
-                self.ws.cell(row=r, column=c).fill = fill(NAVY)
-        for i, (tab, _icon, short) in enumerate(self.NAV):
-            r = 3 + i * 3
-            self.put(1, r, 3, r + 1, f'=HYPERLINK("#{self.c["quote"](tab)}!A1","{short}")',
-                     self.F(8, True, WHITE if i else "A9D8D1"), Alignment(horizontal="center", vertical="center"))
+        if not self.excel:   # Excel draws the shared sidebar as shapes (see shapes())
+            sidebar.cells(self.ws, self.T, self.c["quote"], self.c["S_DASH"], LAST_ROW, 1, 3,
+                          [ROWS.get(r, 20) for r in range(1, LAST_ROW + 2)])
 
     def header(self):
         c, SC = self.c, self.c["SC"]
@@ -633,15 +625,7 @@ class DashV3:
 
         def card(x0, y0, x1, y1, **kw):
             lay.shape(x0 - G, y0 - G, x1 + G, y1 + G, **kw)
-        lay.shape(0, 0, X(4) - 6, Y(LAST_ROW + 1), radius=0.2, fill=None, grad=([(0, "0F6E68"), (100, "0B4F4C")], 90), name="Sidebar")
-        for i, (tab, icon, _short) in enumerate(self.NAV):
-            cy = 62 + i * 66
-            if i == 0:
-                lay.shape(X(1) + 9, cy - 21, X(1) + 51, cy + 21, geom="ellipse", fill="E1F3F0", name="Active")
-                png = icons.ICONS[icon](c="0F6E68", size=64)
-            else:
-                png = icons.ICONS[icon](c="FFFFFF", size=64)
-            lay.picture(X(1) + 16, cy - 14, X(1) + 44, cy + 14, png, link_sheet=None if i == 0 else tab, tooltip=tab)
+        sidebar.draw(lay, self.c["S_DASH"], Y(LAST_ROW + 1))
         # tiles
         for ((c1, c2), v, sub, lab, hl, icon) in self.tile_cells:
             x0, x1, y0, y1 = X(c1), X(c2 + 1), Y(3), Y(8)

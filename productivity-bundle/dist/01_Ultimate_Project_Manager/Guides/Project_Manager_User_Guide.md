@@ -28,6 +28,8 @@ The Google Sheets edition is built from the same generator, adapted for Google S
 
 ## The 15 tabs
 
+Every tab has the same sidebar on the left: click an icon to jump to that tab (hover for its name); the current tab's icon is highlighted. In Google Sheets the sidebar shows short text links instead of icons. The sidebar stays visible when you scroll sideways; on long tabs it scrolls up with the sheet when you scroll down.
+
 | # | Tab | Section | Purpose |
 |---|---|---|---|
 | 1 | Setup | Setup | Workspace details, currency, week start, every dropdown list |
