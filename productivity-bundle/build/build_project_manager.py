@@ -24,6 +24,8 @@ from openpyxl.worksheet.table import Table, TableStyleInfo
 
 from common import *  # noqa: F401,F403
 from common import _cells
+import common as _C
+_C.TAB_ORDER[:] = []
 import sample_data_pm as SD
 
 # ---------------------------------------------------------------- sheet names
@@ -44,8 +46,8 @@ S_GC = "Gantt Chart"
 S_INS = "Instructions"
 ORDER = [S_SETUP, S_DASH, S_MCAL, S_WCAL, S_POV, S_PM, S_PB, S_VT, S_RT, S_TS, S_TF, S_DM, S_KB, S_GC, S_INS]
 
-HDR = 6          # header row of every database tab
-R1 = 7           # first data row
+HDR = 7          # header row of every database tab (rows 4-5 = KPI strip, 6 = spacer)
+R1 = 8           # first data row
 POV_N, VT_N, PB_N, RT_N, TS_N, PD_N = 100, 500, 500, 200, 300, 300
 POV_LAST, VT_LAST, PB_LAST, RT_LAST, TS_LAST = R1 + POV_N - 1, R1 + VT_N - 1, R1 + PB_N - 1, R1 + RT_N - 1, R1 + TS_N - 1
 
@@ -130,6 +132,7 @@ class Builder:
         for n, c in tab.items():
             self.ws[n].sheet_properties.tabColor = c
         self.unlocked: dict[str, list[str]] = {n: [] for n in ORDER}
+        _C.TAB_ORDER[:] = ORDER
 
     # ------------------------------------------------------------ utilities
     def F(self, *a, **k):
@@ -211,7 +214,7 @@ class Builder:
     # ================================================================ TAB 1 SETUP
     def build_setup(self):
         ws, T = self.ws[S_SETUP], self.T
-        setup_sheet(ws, {"B": 26, "C": 26, **{L(i): 20 for i in range(4, 17)}})
+        setup_sheet(ws, {"B": 29, "C": 26, **{L(i): 20 for i in range(4, 17)}})
         title_bar(ws, T, "SETUP  ·  Workspace Configuration", "Start here — every dropdown and calculation in the workbook reads from this tab.", 15, demo=self.demo)
         self.merge_style(ws, "B5:O8", border=None, f=fill(SOFT_BLUE),
                          value=("WELCOME TO THE ULTIMATE PROJECT MANAGER.   1) Fill in your workspace details below.   "
@@ -220,7 +223,11 @@ class Builder:
                                 "Light-blue cells are inputs; grey cells are formulas — don't type over them. "
                                 + ("This copy contains DEMO DATA: see Instructions › 'Removing demo data'." if self.demo else "")),
                          font=T.font(10, False, MIDNIGHT), align=LEFT_WRAP)
+        for rr in range(5, 9):
+            ws.row_dimensions[rr].height = 18
+        ws.row_dimensions[4].height = 12
         legend(ws, T, 9, 2)
+        ws.row_dimensions[9].height = 24
         section(ws, T, 10, 2, 5, "WORKSPACE & PREFERENCES")
         prefs = [
             ("Your name", "Alex Morgan" if self.demo else None, None, "Shown on dashboards"),
@@ -230,7 +237,7 @@ class Builder:
             ("Currency", "USD", "cur", "Pick from list"),
             ("Currency symbol", f'=IFERROR(INDEX({SS("C")},MATCH(C15,{SS("B")},0)),"$")', "calc", "Automatic"),
             ("Week starts on", "Monday", "week", "Used by Monthly Calendar"),
-            ("Default year", "=YEAR(C20)", "year", "Pre-selects calendar years (formula = current year; pick to override)"),
+            ("Default year", "=YEAR(C20)", "year", "Current year by default — pick to override"),
             ("Today's date override", None, "date", "Leave blank to use the real date"),
             ("Effective today", '=IF(C19="",TODAY(),C19)', "calc", "Drives every 'today' calculation"),
             ("Due-soon window (days)", 7, "int", "Tasks due within N days turn amber"),
@@ -241,7 +248,7 @@ class Builder:
             r = 11 + i
             ws[f"B{r}"] = lab
             ws[f"B{r}"].font = T.font(10, True)
-            ws[f"B{r}"].border = BOX
+            ws[f"B{r}"].alignment = Alignment(vertical="center", indent=1)
             ws[f"C{r}"] = val
             if kind in ("calc",):
                 self.calc(S_SETUP, f"C{r}", numfmt=FMT_DATE if "today" in lab.lower() else None)
@@ -252,6 +259,7 @@ class Builder:
             ws.merge_cells(f"D{r}:E{r}")
             ws[f"D{r}"] = hint
             ws[f"D{r}"].font = T.font(9, False, SECONDARY, italic=True)
+            ws[f"D{r}"].alignment = Alignment(vertical="center", indent=1)
         add_list_dv(ws, "C15", SS("B"))
         add_list_dv(ws, "C17", SS("I"))
         add_list_dv(ws, "C18", SS("H"))
@@ -275,15 +283,12 @@ class Builder:
             ws.merge_cells(f"G{r}:O{r}")
             ws[f"G{r}"] = t
             ws[f"G{r}"].font = T.font(9, False, DARK)
-            ws[f"G{r}"].alignment = Alignment(vertical="center", wrap_text=True)
+            ws[f"G{r}"].alignment = Alignment(vertical="center", wrap_text=True, indent=1)
             ws.row_dimensions[r].height = 26
 
         section(ws, T, 25, 2, 12, "DROPDOWN LISTS  —  edit freely (20 slots each)")
         for c, (head, items) in LISTS.items():
-            ws[f"{c}26"] = head
-            ws[f"{c}26"].font = T.font(10, True, WHITE)
-            ws[f"{c}26"].fill = fill(MIDNIGHT)
-            ws[f"{c}26"].alignment = CENTER
+            header_row(ws, T, 26, ord(c) - 64, [head], height=24)
             if c in ("G", "H", "I") and not self.demo:
                 items = ["Me"] if c == "G" else []
             for i in range(LRN - LR1 + 1):
@@ -296,14 +301,15 @@ class Builder:
 
         section(ws, T, 49, 2, 15, "SYSTEM LISTS  —  used by formulas; edit with care", color=LAVENDER)
         for c, (head, items) in SYSTEM.items():
-            ws[f"{c}50"] = head
-            ws[f"{c}50"].font = T.font(10, True, WHITE)
-            ws[f"{c}50"].fill = fill(LAVENDER)
-            ws[f"{c}50"].alignment = CENTER
+            header_row(ws, T, 50, ord(c) - 64, [head], color=LAVENDER, height=24)
             for i in range(SRN - SR1 + 1):
                 ws[f"{c}{SR1 + i}"] = items[i] if i < len(items) else None
-            paint(ws, f"{c}{SR1}:{c}{SRN}", f=FILL_OPT, font=T.font(10), border=BOX, align=LEFT)
+            paint(ws, f"{c}{SR1}:{c}{SRN}", f=FILL_OPT, font=T.font(10), border=_C.CELL_BOX, align=LEFT)
         ws.freeze_panes = "A4"
+        ws.row_dimensions[24].height = 12
+        ws.row_dimensions[47].height = 12
+        ws.row_dimensions[48].height = 12
+        skin(ws, 15, 71, cards=[(2, 5, 15, 8), (2, 10, 5, 23), (7, 10, 15, 17), (2, 25, 12, 46), (2, 49, 15, 70)], hide_headers=True)
 
         names = {
             TODAY: "$C$20", "CurrencySymbol": "$C$16", "DueSoonDays": "$C$21", "BudgetAlert": "$C$22", "WeekStart": "$C$17",
@@ -322,15 +328,19 @@ class Builder:
         widths = [10, 31, 54, 25, 18, 15, 15, 11, 13, 11, 13, 13, 14, 12, 9, 9, 10, 13, 12, 8, 12]
         setup_sheet(ws, {i + 2: w for i, w in enumerate(widths)})
         title_bar(ws, T, "PROJECT OVERVIEW  ·  Portfolio", "One row per project. Progress, budget and task counts are calculated automatically.", 22, demo=self.demo)
-        legend(ws, T, 4, 2)
-        ws["P4"] = "Currency:"
-        ws["Q4"] = "=CurrencySymbol"
-        ws["P4"].font = ws["Q4"].font = T.font(9, True, SECONDARY)
+        rr = lambda c: f"{c}{R1}:{c}{POV_LAST}"
+        nxt = stat_strip(ws, T, 4, [
+            ("PROJECTS", f'=COUNTIF({rr("C")},"?*")', "0", NAVY),
+            ("ACTIVE", f'=COUNTIF({rr("J")},{PSTAT[1]})+COUNTIF({rr("J")},{PSTAT[2]})', "0", BLUE),
+            ("OVERDUE", f'=COUNTIF({rr("S")},"Overdue")', "0", DANGER),
+            ("AVG PROGRESS", f'=IFERROR(AVERAGEIF({rr("C")},"?*",{rr("K")}),0)', FMT_PCT, TEAL),
+            ("TOTAL BUDGET", f'=SUM({rr("L")})', "#,##0", LAVENDER),
+            ("CURRENCY", "=TRIM(CurrencySymbol)", None, MED_GRAY)])
+        if nxt + 6 <= ws.max_column:
+            legend(ws, T, 5, nxt, compact=True)
+        ws.row_dimensions[6].height = 10
         header_row(ws, T, HDR, 2, heads)
-        for c in "PQRSTUV":
-            ws[f"{c}{HDR}"].fill = fill(MED_GRAY)
-        ws[f"P{HDR - 1}"] = "AUTOMATION HELPERS (calculated)"
-        ws[f"P{HDR - 1}"].font = T.font(8, True, SECONDARY)
+        mark_helper_headers(ws, HDR, 16, 22)
         last = POV_LAST
         for i in range(POV_N):
             ws[f"B{R1 + i}"] = f"P-{i + 1:03d}"
@@ -351,8 +361,8 @@ class Builder:
                        f'=IF(C{{r}}="","",IF(J{{r}}={P_DONE},"Completed",IF(J{{r}}={P_CANCEL},"Cancelled",'
                        f'IF(AND(H{{r}}<>"",H{{r}}<{TODAY}),"Overdue",IF(AND(L{{r}}>0,M{{r}}>L{{r}}),"Over budget",'
                        f'IF(R{{r}}>0,"At risk","On track"))))))')
-        self.fill_down(ws, "T", R1, last, '=IF(OR(C{r}="",H{r}=""),"",INT(H{r})&"|"&COUNTIFS(H$7:H{r},H{r},C$7:C{r},"?*"))')
-        self.fill_down(ws, "U", R1, last, '=IF(C{r}="","",COUNTIF(C$7:C{r},"?*"))')
+        self.fill_down(ws, "T", R1, last, '=IF(OR(C{r}="",H{r}=""),"",INT(H{r})&"|"&COUNTIFS(H$8:H{r},H{r},C$8:C{r},"?*"))')
+        self.fill_down(ws, "U", R1, last, '=IF(C{r}="","",COUNTIF(C$8:C{r},"?*"))')
         self.fill_down(ws, "V", R1, last, '=IF(OR(C{r}="",H{r}=""),"",H{r}+ROW()/100000)')
         self.calc(S_POV, f"K{R1}:V{last}")
         paint(ws, f"V{R1}:V{last}", numfmt="0.00")
@@ -373,6 +383,7 @@ class Builder:
             cf_formula(ws, f"S{R1}:S{last}", f'S{R1}="{txt}"', bg, fg, True)
         ws.freeze_panes = f"D{R1}"
         self.table(ws, "tblProjects", f"B{HDR}:V{last}")
+        skin(ws, 22, last)
         if self.demo:
             for i, p in enumerate(SD.PROJECTS):
                 r = R1 + i
@@ -389,13 +400,20 @@ class Builder:
         widths = [9, 28, 54, 31, 14, 17, 15, 15, 10, 12, 10, 10, 10, 26, 11, 9, 11, 17, 12, 12, 8, 8, 6, 12, 10]
         setup_sheet(ws, {i + 2: w for i, w in enumerate(widths)})
         title_bar(ws, T, "VARIABLE TASKS  ·  One-time task database", "Add one task per row. Everything else in the workbook reads from this table.", 26, demo=self.demo)
-        legend(ws, T, 4, 2)
-        header_row(ws, T, HDR, 2, heads)
-        for i in range(15, 27):
-            ws.cell(row=HDR, column=i).fill = fill(MED_GRAY)
-        ws[f"P{HDR - 1}"] = "AUTOMATION HELPERS (calculated — do not edit)"
-        ws[f"P{HDR - 1}"].font = T.font(8, True, SECONDARY)
         last = VT_LAST
+        rr = lambda c: f"{c}{R1}:{c}{last}"
+        nxt = stat_strip(ws, T, 4, [
+            ("TASKS", f'=COUNTIF({rr("C")},"?*")', "0", NAVY),
+            ("OPEN", f'=COUNTIFS({rr("C")},"?*",{rr("K")},"<>"&{DONE})', "0", BLUE),
+            ("OVERDUE", f'=COUNTIF({rr("P")},"Overdue")', "0", DANGER),
+            ("DUE SOON", f'=COUNTIF({rr("P")},"Due soon")', "0", WARNING),
+            ("COMPLETION", f'=IF(COUNTIF({rr("C")},"?*")=0,0,COUNTIFS({rr("C")},"?*",{rr("K")},{DONE})/COUNTIF({rr("C")},"?*"))', FMT_PCT, TEAL),
+            ("OPEN HOURS", f'=SUMIFS({rr("L")},{rr("K")},"<>"&{DONE})', "0.0", LAVENDER)])
+        if nxt + 6 <= ws.max_column:
+            legend(ws, T, 5, nxt, compact=True)
+        ws.row_dimensions[6].height = 10
+        header_row(ws, T, HDR, 2, heads)
+        mark_helper_headers(ws, HDR, 16, 26)
         for i in range(VT_N):
             ws[f"B{R1 + i}"] = f"T-{i + 1:03d}"
         self.calc(S_VT, f"B{R1}:B{last}", align=CENTER, color=SECONDARY)
@@ -408,8 +426,8 @@ class Builder:
         f_ = {
             "P": f'=IF(OR(C{{r}}="",I{{r}}="",K{{r}}={DONE}),"",IF(I{{r}}<{TODAY},"Overdue",IF(I{{r}}-{TODAY}<=DueSoonDays,"Due soon","")))',
             "Q": f'=IF(OR(C{{r}}="",I{{r}}=""),"",I{{r}}-{TODAY})',
-            "R": '=IF(OR(C{r}="",I{r}=""),"",INT(I{r})&"|"&COUNTIFS(I$7:I{r},I{r},C$7:C{r},"?*"))',
-            "S": '=IF(OR(C{r}="",K{r}=""),"",K{r}&"|"&COUNTIFS(K$7:K{r},K{r},C$7:C{r},"?*"))',
+            "R": '=IF(OR(C{r}="",I{r}=""),"",INT(I{r})&"|"&COUNTIFS(I$8:I{r},I{r},C$8:C{r},"?*"))',
+            "S": '=IF(OR(C{r}="",K{r}=""),"",K{r}&"|"&COUNTIFS(K$8:K{r},K{r},C$8:C{r},"?*"))',
             "T": f'=IF(AND(C{{r}}<>"",I{{r}}<>"",K{{r}}<>{DONE}),IF(I{{r}}>={TODAY},I{{r}}+ROW()/100000,""),"")',
             "U": '=IF(P{r}="Overdue",I{r}+ROW()/100000,"")',
             "V": (f'=IF(AND(C{{r}}<>"",OR({TF}!$C$6="",E{{r}}={TF}!$C$6),OR({TF}!$C$7="",J{{r}}={TF}!$C$7),'
@@ -417,9 +435,9 @@ class Builder:
                   f'OR({TF}!$C$11="",AND(I{{r}}<>"",I{{r}}>={TF}!$C$11)),OR({TF}!$C$12="",AND(I{{r}}<>"",I{{r}}<={TF}!$C$12)),'
                   f'OR({TF}!$C$13="",AND({TF}!$C$13="Complete",K{{r}}={DONE}),AND({TF}!$C$13="Incomplete",K{{r}}<>{DONE})),'
                   f'OR({TF}!$C$14="",AND({TF}!$C$14="Overdue only",P{{r}}="Overdue"),AND({TF}!$C$14="Not overdue",P{{r}}<>"Overdue")),'
-                  f'OR({TF}!$C$15="",ISNUMBER(SEARCH({TF}!$C$15,C{{r}}&" "&D{{r}}&" "&O{{r}})))),MAX(V$6:V{{p}})+1,"")'),
-            "W": (f'=IF(AND(C{{r}}<>"",H{{r}}<>"",I{{r}}<>"",OR({GC}!$C$5="",E{{r}}={GC}!$C$5),'
-                  f'OR({GC}!$J$5<>"Yes",K{{r}}<>{DONE})),MAX(W$6:W{{p}})+1,"")'),
+                  f'OR({TF}!$C$15="",ISNUMBER(SEARCH({TF}!$C$15,C{{r}}&" "&D{{r}}&" "&O{{r}})))),MAX(V$7:V{{p}})+1,"")'),
+            "W": (f'=IF(AND(C{{r}}<>"",H{{r}}<>"",I{{r}}<>"",OR({GC}!$C$6="",E{{r}}={GC}!$C$6),'
+                  f'OR({GC}!$G$6<>"Yes",K{{r}}<>{DONE})),MAX(W$7:W{{p}})+1,"")'),
             "X": f'=IF(C{{r}}="","",IF(K{{r}}={DONE},1,0))',
             "Y": f'=IF(AND(C{{r}}<>"",H{{r}}<>""),IF(H{{r}}<={TODAY},H{{r}}+ROW()/100000,""),"")',
             "Z": f'=IF(C{{r}}="","",IF(K{{r}}={DONE},1,IF(N{{r}}="",0,N{{r}})))',
@@ -447,6 +465,7 @@ class Builder:
             cf_formula(ws, f"J{R1}:J{last}", f'J{R1}="{p}"', bg, fg, True)
         ws.freeze_panes = f"D{R1}"
         self.table(ws, "tblTasks", f"B{HDR}:Z{last}")
+        skin(ws, 26, last)
         if self.demo:
             for i, t in enumerate(SD.build_tasks()):
                 r = R1 + i
@@ -463,9 +482,17 @@ class Builder:
         widths = [11, 31, 16, 14, 14, 15, 12, 15, 20, 32, 14, 3, 20, 14, 14, 14, 12]
         setup_sheet(ws, {i + 2: w for i, w in enumerate(widths)})
         title_bar(ws, T, "PROJECT BUDGET  ·  Planned vs actual", "One row per budget line or expense. Totals roll up to Project Overview and the Dashboard.", 18, demo=self.demo)
-        legend(ws, T, 4, 2)
-        header_row(ws, T, HDR, 2, heads)
         last = PB_LAST
+        rr = lambda c: f"{c}{R1}:{c}{last}"
+        nxt = stat_strip(ws, T, 4, [
+            ("PLANNED", f'=SUM({rr("E")})', "#,##0", BLUE),
+            ("ACTUAL", f'=SUM({rr("F")})', "#,##0", LAVENDER),
+            ("REMAINING", f'=SUM({rr("E")})-SUM({rr("F")})', "#,##0", TEAL),
+            ("UTILIZATION", f'=IF(SUM({rr("E")})=0,0,SUM({rr("F")})/SUM({rr("E")}))', FMT_PCT, NAVY)], end_col=12)
+        if nxt + 6 <= ws.max_column:
+            legend(ws, T, 5, nxt, compact=True)
+        ws.row_dimensions[6].height = 10
+        header_row(ws, T, HDR, 2, heads)
         self.inp(S_PB, f"B{R1}:B{last}", align=CENTER)
         self.inp(S_PB, f"D{R1}:F{last}")
         self.inp(S_PB, f"I{R1}:K{last}")
@@ -490,32 +517,35 @@ class Builder:
         cf_formula(ws, f"G{R1}:G{last}", f'AND(ISNUMBER(G{R1}),G{R1}<0)', DANGER_BG, DANGER, True)
         cf_databar(ws, f"H{R1}:H{last}", BLUE)
         # summary panel N:R
-        section(ws, T, HDR - 1, 14, 18, "BUDGET SUMMARY  (currency: see Setup)")
+        TB = HDR + 1   # summary table rows start below its title
+        section(ws, T, HDR, 14, 18, "Budget summary")
         tot = [("Total planned", f"=SUM(E{R1}:E{last})", FMT_CUR), ("Total actual", f"=SUM(F{R1}:F{last})", FMT_CUR),
-               ("Remaining", f"=O{HDR}-O{HDR + 1}", FMT_CUR), ("Utilization", f'=IF(O{HDR}=0,0,O{HDR + 1}/O{HDR})', FMT_PCT),
+               ("Remaining", f"=O{TB}-O{TB + 1}", FMT_CUR), ("Utilization", f'=IF(O{TB}=0,0,O{TB + 1}/O{TB})', FMT_PCT),
                ("Lines over budget", f'=COUNTIF(L{R1}:L{last},"Over budget")', "0"), ("Lines near limit", f'=COUNTIF(L{R1}:L{last},"Near limit")', "0")]
         for i, (lab, fm, nf) in enumerate(tot):
-            r = HDR + i
+            r = TB + i
             ws[f"N{r}"] = lab
             ws[f"N{r}"].font = T.font(10, True)
-            ws[f"N{r}"].border = BOX
+            ws[f"N{r}"].border = _C.CELL_BOX
+            ws[f"N{r}"].alignment = Alignment(vertical="center", indent=1)
             ws[f"O{r}"] = fm
             self.calc(S_PB, f"O{r}", numfmt=nf, align=RIGHT)
-        cf_formula(ws, f"O{HDR + 2}", f"O{HDR + 2}<0", DANGER_BG, DANGER, True)
-        header_row(ws, T, 14, 14, ["Category", "Planned", "Actual", "Remaining", "Used %"], color=MIDNIGHT)
+        cf_formula(ws, f"O{TB + 2}", f"O{TB + 2}<0", DANGER_BG, DANGER, True)
+        header_row(ws, T, 16, 14, ["Category", "Planned", "Actual", "Remaining", "Used %"], color=MIDNIGHT, height=24)
         for i in range(10):
-            r = 15 + i
+            r = 17 + i
             ws[f"N{r}"] = f"={SC('K', LR1 + i)}&\"\""
             ws[f"O{r}"] = f'=IF(N{r}="","",SUMIFS($E${R1}:$E${last},$D${R1}:$D${last},N{r}))'
             ws[f"P{r}"] = f'=IF(N{r}="","",SUMIFS($F${R1}:$F${last},$D${R1}:$D${last},N{r}))'
             ws[f"Q{r}"] = f'=IF(N{r}="","",O{r}-P{r})'
             ws[f"R{r}"] = f'=IF(OR(N{r}="",N(O{r})=0),"",P{r}/O{r})'
-        self.calc(S_PB, "N15:R24")
-        paint(ws, "O15:Q24", numfmt=FMT_CUR)
-        paint(ws, "R15:R24", numfmt=FMT_PCT)
-        cf_formula(ws, "Q15:Q24", 'AND(ISNUMBER(Q15),Q15<0)', DANGER_BG, DANGER, True)
+        self.calc(S_PB, "N17:R26")
+        paint(ws, "O17:Q26", numfmt=FMT_CUR)
+        paint(ws, "R17:R26", numfmt=FMT_PCT)
+        cf_formula(ws, "Q17:Q26", 'AND(ISNUMBER(Q17),Q17<0)', DANGER_BG, DANGER, True)
         ws.freeze_panes = f"D{R1}"
         self.table(ws, "tblBudget", f"B{HDR}:L{last}")
+        skin(ws, 18, last, cards=[(14, HDR, 18, 27)])
         if self.demo:
             for i, (pi, cat, pl, ac, off, ven, desc) in enumerate(SD.BUDGET):
                 r = R1 + i
@@ -536,18 +566,28 @@ class Builder:
         widths = [9, 26, 27, 14, 17, 12, 11, 15, 15, 10, 10, 15, 15, 9, 12, 11, 24, 6, 6, 14, 8, 14]
         setup_sheet(ws, {i + 2: w for i, w in enumerate(widths)})
         title_bar(ws, T, "RECURRING TASKS  ·  Repeating work", "Daily, weekly, biweekly, monthly, quarterly, annual or custom (every N days). Next dates calculate automatically.", 23, demo=self.demo)
-        legend(ws, T, 4, 2)
-        ws["P4"] = "This month:"
-        ws["Q4"] = f"=DATE(YEAR({TODAY}),MONTH({TODAY}),1)"
-        ws["R4"] = f"=EOMONTH({TODAY},0)"
-        ws["P4"].font = T.font(9, True, SECONDARY)
-        for c in ("Q4", "R4"):
-            ws[c].number_format = FMT_SDATE
-            ws[c].font = T.font(9, False, SECONDARY)
-        header_row(ws, T, HDR, 2, heads)
-        for i in range(19, 24):
-            ws.cell(row=HDR, column=i).fill = fill(MED_GRAY)
         last = RT_LAST
+        ws["Y4"], ws["Z4"] = "Month start", "Month end"
+        ws["Y5"] = f"=DATE(YEAR({TODAY}),MONTH({TODAY}),1)"
+        ws["Z5"] = f"=EOMONTH({TODAY},0)"
+        for c in ("Y4", "Z4", "Y5", "Z5"):
+            ws[c].number_format = FMT_SDATE
+            ws[c].font = T.font(8, False, SECONDARY)
+        ws.column_dimensions["X"].width = 3
+        ws.column_dimensions["Y"].width = 12
+        ws.column_dimensions["Z"].width = 12
+        rr = lambda c: f"{c}{R1}:{c}{last}"
+        nxt = stat_strip(ws, T, 4, [
+            ("RECURRING TASKS", f'=COUNTIF({rr("C")},"?*")', "0", NAVY),
+            ("ACTIVE", f'=COUNTIFS({rr("C")},"?*",{rr("L")},"<>"&{PAUSED})', "0", TEAL),
+            ("DUE IN 7 DAYS", f'=COUNTIFS({rr("O")},">=0",{rr("O")},"<=7")', "0", WARNING),
+            ("PAUSED", f'=COUNTIF({rr("L")},{PAUSED})', "0", MED_GRAY),
+            ("RUNS THIS MONTH", f'=SUM({rr("P")})', "0", LAVENDER)], end_col=22)
+        if nxt + 6 <= ws.max_column:
+            legend(ws, T, 5, nxt, compact=True)
+        ws.row_dimensions[6].height = 10
+        header_row(ws, T, HDR, 2, heads)
+        mark_helper_headers(ws, HDR, 19, 23)
         for i in range(RT_N):
             ws[f"B{R1 + i}"] = f"R-{i + 1:03d}"
         self.calc(S_RT, f"B{R1}:B{last}", align=CENTER, color=SECONDARY)
@@ -566,9 +606,9 @@ class Builder:
             "N": f'=IF(C{{r}}="","",IF(L{{r}}={PAUSED},"Paused",IF(W{{r}}="","Check setup",IF(AND(J{{r}}<>"",W{{r}}>J{{r}}),"Ended",W{{r}}))))',
             "O": f'=IF(ISNUMBER(N{{r}}),N{{r}}-{TODAY},"")',
             "P": ('=IF(OR(C{r}="",I{r}="",T{r}="",L{r}=' + PAUSED + '),"",IF(S{r}="M",'
-                  'IF(AND((YEAR($Q$4)-YEAR(I{r}))*12+MONTH($Q$4)-MONTH(I{r})>=0,MOD((YEAR($Q$4)-YEAR(I{r}))*12+MONTH($Q$4)-MONTH(I{r}),T{r})=0,'
-                  'EDATE(I{r},(YEAR($Q$4)-YEAR(I{r}))*12+MONTH($Q$4)-MONTH(I{r}))<=IF(J{r}="",$R$4,MIN($R$4,J{r}))),1,0),'
-                  'IF(IF(J{r}="",$R$4,MIN($R$4,J{r}))<I{r},0,MAX(0,INT((IF(J{r}="",$R$4,MIN($R$4,J{r}))-I{r})/T{r})-MAX(0,ROUNDUP(($Q$4-I{r})/T{r},0))+1))))'),
+                  'IF(AND((YEAR($Y$5)-YEAR(I{r}))*12+MONTH($Y$5)-MONTH(I{r})>=0,MOD((YEAR($Y$5)-YEAR(I{r}))*12+MONTH($Y$5)-MONTH(I{r}),T{r})=0,'
+                  'EDATE(I{r},(YEAR($Y$5)-YEAR(I{r}))*12+MONTH($Y$5)-MONTH(I{r}))<=IF(J{r}="",$Z$5,MIN($Z$5,J{r}))),1,0),'
+                  'IF(IF(J{r}="",$Z$5,MIN($Z$5,J{r}))<I{r},0,MAX(0,INT((IF(J{r}="",$Z$5,MIN($Z$5,J{r}))-I{r})/T{r})-MAX(0,ROUNDUP(($Y$5-I{r})/T{r},0))+1))))'),
         }
         for c, tpl in F.items():
             self.fill_down(ws, c, R1, last, tpl)
@@ -592,6 +632,7 @@ class Builder:
         cf_formula(ws, f"N{R1}:N{last}", f'N{R1}="Check setup"', DANGER_BG, DANGER, True)
         ws.freeze_panes = f"D{R1}"
         self.table(ws, "tblRecurring", f"B{HDR}:W{last}")
+        skin(ws, 26, last)
         if self.demo:
             for i, (n, pr, cat, who, fq, cu, so, eo, pri, st, lc, cnt) in enumerate(SD.RECURRING):
                 r = R1 + i
@@ -608,10 +649,19 @@ class Builder:
         widths = [15, 12, 12, 28, 22, 10, 12, 10, 17, 26, 12]
         setup_sheet(ws, {i + 2: w for i, w in enumerate(widths)})
         title_bar(ws, T, "TASK SCHEDULE  ·  Time blocks", "Block time for tasks. Pick a task from the dropdown — project, priority, status and owner fill in automatically. Feeds the Weekly Calendar.", 12, demo=self.demo)
-        legend(ws, T, 4, 2)
-        header_row(ws, T, HDR, 2, heads)
-        ws.cell(row=HDR, column=12).fill = fill(MED_GRAY)
         last = TS_LAST
+        rr = lambda c: f"{c}{R1}:{c}{last}"
+        wk = f"({TODAY}-WEEKDAY({TODAY},2)+1)"
+        nxt = stat_strip(ws, T, 4, [
+            ("TIME BLOCKS", f'=COUNT({rr("B")})', "0", NAVY),
+            ("THIS WEEK", f'=COUNTIFS({rr("B")},">="&{wk},{rr("B")},"<="&{wk}+6)', "0", BLUE),
+            ("HOURS THIS WEEK", f'=SUMIFS({rr("I")},{rr("B")},">="&{wk},{rr("B")},"<="&{wk}+6)', "0.0", TEAL),
+            ("TODAY", f'=COUNTIF({rr("B")},{TODAY})', "0", WARNING)])
+        if nxt + 6 <= ws.max_column:
+            legend(ws, T, 5, nxt, compact=True)
+        ws.row_dimensions[6].height = 10
+        header_row(ws, T, HDR, 2, heads)
+        mark_helper_headers(ws, HDR, 12, 12)
         self.inp(S_TS, f"B{R1}:E{last}")
         self.inp(S_TS, f"K{R1}:K{last}")
         paint(ws, f"B{R1}:B{last}", numfmt=FMT_DATE)
@@ -630,6 +680,7 @@ class Builder:
             cf_formula(ws, f"G{R1}:G{last}", f'G{R1}="{p}"', bg, fg, True)
         ws.freeze_panes = f"C{R1}"
         self.table(ws, "tblSchedule", f"B{HDR}:L{last}")
+        skin(ws, 12, last)
         if self.demo:
             monday = SD.ANCHOR - dt.timedelta(days=SD.ANCHOR.weekday())
             for i, (dd, h, m, dur, task) in enumerate(SD.SCHEDULE):
@@ -666,19 +717,22 @@ class Builder:
         ws["F5"].font = T.font(9, True, SECONDARY)
         ws["F5"].alignment = RIGHT
         self.calc(S_MCAL, "G5", FMT_DATE, CENTER)
+        ws.row_dimensions[4].height = 12
+        ws.row_dimensions[5].height = 26
+        ws.row_dimensions[6].height = 12
         # calc cells row 6 (hidden-ish helpers)
-        ws["J5"] = "Month #"
-        ws["K5"] = f'=IFERROR(MATCH(E5,{SS("G")},0),MONTH({TODAY}))'
-        ws["J6"] = "First of month"
-        ws["K6"] = "=DATE(C5,K5,1)"
-        ws["J7"] = "Grid start"
-        ws["K7"] = f'=K6-MOD(WEEKDAY(K6)-IF(WeekStart="Sunday",1,2),7)'
+        ws["P5"] = "Month #"
+        ws["Q5"] = f'=IFERROR(MATCH(E5,{SS("G")},0),MONTH({TODAY}))'
+        ws["P6"] = "First of month"
+        ws["Q6"] = "=DATE(C5,Q5,1)"
+        ws["P7"] = "Grid start"
+        ws["Q7"] = f'=Q6-MOD(WEEKDAY(Q6)-IF(WeekStart="Sunday",1,2),7)'
         for r in (5, 6, 7):
-            ws[f"J{r}"].font = T.font(8, False, SECONDARY)
-            self.calc(S_MCAL, f"K{r}", FMT_SDATE if r > 5 else "0", CENTER)
+            ws[f"P{r}"].font = T.font(8, False, SECONDARY)
+            self.calc(S_MCAL, f"Q{r}", FMT_SDATE if r > 5 else "0", CENTER)
         # Month banner
         ws.merge_cells("B7:H7")
-        ws["B7"] = "=K6"
+        ws["B7"] = "=Q6"
         ws["B7"].number_format = "mmmm yyyy"
         ws["B7"].font = T.font(16, True, NAVY)
         ws["B7"].alignment = Alignment(horizontal="center", vertical="center")
@@ -686,7 +740,7 @@ class Builder:
         # day headers
         for d in range(7):
             c = L(2 + d)
-            ws[f"{c}8"] = f"=K7+{d}"
+            ws[f"{c}8"] = f"=Q7+{d}"
             ws[f"{c}8"].number_format = "dddd"
             ws[f"{c}8"].fill = fill(NAVY)
             ws[f"{c}8"].font = T.font(10, True, WHITE)
@@ -699,11 +753,11 @@ class Builder:
                 c = L(2 + d)
                 hc = L(16 + d)  # helper column
                 date_ref = f"{c}{base}"
-                ws[date_ref] = f"=$K$7+{w * 7 + d}"
+                ws[date_ref] = f"=$Q$7+{w * 7 + d}"
                 ws[date_ref].number_format = "d"
                 ws[date_ref].font = T.font(11, True, DARK)
                 ws[date_ref].alignment = Alignment(horizontal="right", vertical="top", indent=1)
-                inm = f"MONTH({date_ref})=$K$5"
+                inm = f"MONTH({date_ref})=$Q$5"
                 for k in (1, 2):
                     rr = base + k
                     ws[f"{c}{rr}"] = f'=IF({inm},IFERROR(INDEX({VT("C")},MATCH(INT({date_ref})&"|{k}",{VT("R")},0)),""),"")'
@@ -730,7 +784,7 @@ class Builder:
         grid = "B9:H38"
         # same-sheet conditional formatting
         cf_formula(ws, grid, "AND(ROW(B9)>=9,MOD(ROW(B9)-9,5)=0,B9=$G$5)", BLUE, WHITE, True, stop=True)
-        cf_formula(ws, grid, "AND(MOD(ROW(B9)-9,5)=0,MONTH(B9)<>$K$5)", BG, MED_GRAY, stop=True)
+        cf_formula(ws, grid, "AND(MOD(ROW(B9)-9,5)=0,MONTH(B9)<>$Q$5)", BG, MED_GRAY, stop=True)
         cf_formula(ws, grid, "P9=-1", DANGER_BG, DANGER, True, stop=True)
         cat_cols = [SOFT_BLUE, SOFT_TEAL, SOFT_LAV, WARNING_BG, INFO_BG, "E8F6F3", "FDF0E6", "EEF0F4"]
         for i, colr in enumerate(cat_cols):
@@ -740,20 +794,21 @@ class Builder:
         # side panel stats
         section(ws, T, 9, 10, 11, "THIS MONTH")
         stats = [
-            ("Tasks due", f'=COUNTIFS({VT("C")},"?*",{VT("I")},">="&K6,{VT("I")},"<"&EDATE(K6,1))', "0"),
-            ("Completed", f'=COUNTIFS({VT("C")},"?*",{VT("I")},">="&K6,{VT("I")},"<"&EDATE(K6,1),{VT("K")},{DONE})', "0"),
+            ("Tasks due", f'=COUNTIFS({VT("C")},"?*",{VT("I")},">="&Q6,{VT("I")},"<"&EDATE(Q6,1))', "0"),
+            ("Completed", f'=COUNTIFS({VT("C")},"?*",{VT("I")},">="&Q6,{VT("I")},"<"&EDATE(Q6,1),{VT("K")},{DONE})', "0"),
             ("Still open", "=K10-K11", "0"),
-            ("Overdue", f'=COUNTIFS({VT("P")},"Overdue",{VT("I")},">="&K6,{VT("I")},"<"&EDATE(K6,1))', "0"),
+            ("Overdue", f'=COUNTIFS({VT("P")},"Overdue",{VT("I")},">="&Q6,{VT("I")},"<"&EDATE(Q6,1))', "0"),
             ("Completion", '=IF(K10=0,0,K11/K10)', FMT_PCT),
-            ("Project deadlines", f'=COUNTIFS({POV("H")},">="&K6,{POV("H")},"<"&EDATE(K6,1),{POV("C")},"?*")', "0"),
-            ("Scheduled blocks", f'=COUNTIFS({TS("B")},">="&K6,{TS("B")},"<"&EDATE(K6,1))', "0"),
-            ("Scheduled hours", f'=SUMIFS({TS("I")},{TS("B")},">="&K6,{TS("B")},"<"&EDATE(K6,1))', FMT_HRS),
+            ("Project deadlines", f'=COUNTIFS({POV("H")},">="&Q6,{POV("H")},"<"&EDATE(Q6,1),{POV("C")},"?*")', "0"),
+            ("Scheduled blocks", f'=COUNTIFS({TS("B")},">="&Q6,{TS("B")},"<"&EDATE(Q6,1))', "0"),
+            ("Scheduled hours", f'=SUMIFS({TS("I")},{TS("B")},">="&Q6,{TS("B")},"<"&EDATE(Q6,1))', FMT_HRS),
         ]
         for i, (lab, fm, nf) in enumerate(stats):
             r = 10 + i
             ws[f"J{r}"] = lab
             ws[f"J{r}"].font = T.font(10)
-            ws[f"J{r}"].border = BOX
+            ws[f"J{r}"].border = _C.CELL_BOX
+            ws[f"J{r}"].alignment = Alignment(vertical="center", indent=1)
             ws[f"K{r}"] = fm
             self.calc(S_MCAL, f"K{r}", nf, CENTER, color=BLUE)
         cf_formula(ws, "K13", "K13>0", DANGER_BG, DANGER, True)
@@ -773,28 +828,31 @@ class Builder:
             ws[f"J{r}"].font = T.font(9)
             ws[f"K{r}"].fill = fill(cat_cols[i])
             ws[f"K{r}"].border = BOX
+        skin(ws, 11, 39, cards=[(2, 5, 8, 5), (2, 7, 8, 38), (10, 9, 11, 17), (10, 20, 11, 35)], hide_headers=True)
 
     # ================================================================ TAB 4 WEEKLY CALENDAR
     def build_wcal(self):
         ws, T = self.ws[S_WCAL], self.T
-        setup_sheet(ws, {"B": 13, **{L(i): 20 for i in range(3, 10)}, "J": 3, **{L(i): 4 for i in range(12, 19)}})
+        setup_sheet(ws, {"B": 15, **{L(i): 20 for i in range(3, 10)}, "J": 3, **{L(i): 4 for i in range(12, 19)}})
         title_bar(ws, T, "WEEKLY CALENDAR", "Type any date to jump to that week (blank = this week). Time blocks come from 'Task Schedule'; due dates from 'Variable Tasks'.", 9, demo=self.demo)
         ws["B5"] = "Show week of"
         ws["B5"].font = T.font(9, True, SECONDARY)
+        ws["B5"].alignment = Alignment(vertical="center", indent=1)
         ws["C5"] = None
         self.inp(S_WCAL, "C5", FMT_DATE, CENTER)
         add_dv(ws, "C5", "date", "greaterThan", "DATE(2000,1,1)", error="Enter a date, or leave blank for this week.")
         ws["B6"] = "Week starts"
         ws["B6"].font = T.font(9, True, SECONDARY)
+        ws["B6"].alignment = Alignment(vertical="center", indent=1)
         ws["C6"] = f'=IF(C5="",{TODAY},C5)-WEEKDAY(IF(C5="",{TODAY},C5),2)+1'
         self.calc(S_WCAL, "C6", FMT_DATE, CENTER)
         ws["B7"] = "Week #"
         ws["B7"].font = T.font(9, True, SECONDARY)
+        ws["B7"].alignment = Alignment(vertical="center", indent=1)
         ws["C7"] = "=WEEKNUM(C6,21)"
         self.calc(S_WCAL, "C7", "0", CENTER)
-        ws["K3"] = "Today"
-        ws["K4"] = f"={TODAY}"
-        ws["K4"].number_format = FMT_SDATE
+        ws["L4"] = f"={TODAY}"
+        ws["L4"].number_format = FMT_SDATE
         # stats strip
         stats = [
             ("SCHEDULED HOURS", f'=SUMIFS({TS("I")},{TS("B")},">="&C6,{TS("B")},"<="&(C6+6))', FMT_HRS, BLUE),
@@ -861,7 +919,7 @@ class Builder:
             cf_formula(ws, grid, f"L{r0}={v}", bg, fg)
         for c in range(12, 19):
             ws.column_dimensions[L(c)].hidden = True
-        cf_formula(ws, f"C9:I10", "C$10=$K$4", BLUE, WHITE, True)
+        cf_formula(ws, f"C9:I10", "C$10=$L$4", BLUE, WHITE, True)
         # due tasks
         rD = rN + 2
         section(ws, T, rD, 2, 9, "TASKS DUE", color=LAVENDER)
@@ -898,15 +956,19 @@ class Builder:
         ws.conditional_formatting.add(f"C{rW + 1}:I{rW + 1}", DataBarRule(start_type="num", start_value=0, end_type="num", end_value=8, color=BLUE, showValue=True))
         cf_databar(ws, f"C{rW + 5}:I{rW + 5}", TEAL)
         ws.freeze_panes = "C11"
+        for r, hgt in ((4, 12), (7, 22), (8, 12), (rD - 1, 12), (rW - 1, 12)):
+            ws.row_dimensions[r].height = hgt
+        skin(ws, 9, rW + 6, cards=[(2, 5, 3, 7), (2, 9, 9, rN), (2, rD, 9, rD + 4), (2, rW, 9, rW + 5)], hide_headers=True)
 
     # ================================================================ TAB 6 PROJECT MANAGER
     def build_pm(self):
         ws, T = self.ws[S_PM], self.T
-        setup_sheet(ws, {"B": 20, "C": 16, "D": 16, "E": 16, "F": 17, "G": 14, "H": 3, "I": 31, "J": 13, "K": 50, "L": 17, "M": 15,
+        setup_sheet(ws, {"B": 20, "C": 16, "D": 16, "E": 16, "F": 19, "G": 14, "H": 3, "I": 31, "J": 13, "K": 50, "L": 17, "M": 15,
                          "N": 13, "O": 22, "P": 3, "Q": 6, "R": 6})
         title_bar(ws, T, "PROJECT MANAGER  ·  Project detail view", "Select a project — the left panel updates instantly. Add objectives, milestones, risks… in the database on the right.", 15, demo=self.demo)
         ws["B5"] = "PROJECT ▸"
         ws["B5"].font = T.font(11, True, NAVY)
+        ws["B5"].alignment = Alignment(vertical="center", indent=1)
         ws.merge_cells("C5:E5")
         ws["C5"] = SD.PROJECTS[0][0] if self.demo else None
         self.inp(S_PM, "C5:E5", align=CENTER)
@@ -928,7 +990,7 @@ class Builder:
             r = 8 + i
             ws[f"B{r}"] = lab
             ws[f"B{r}"].font = T.font(10, True, SECONDARY)
-            ws[f"B{r}"].border = BOX
+            ws[f"B{r}"].alignment = Alignment(vertical="center", indent=1)
             ws.merge_cells(f"C{r}:D{r}")
             ws[f"C{r}"] = f'=IF($Q$5="","",IF(INDEX({POV(c_)},$Q$5)="","",INDEX({POV(c_)},$Q$5)))'
             self.calc(S_PM, f"C{r}:D{r}", nf)
@@ -954,14 +1016,14 @@ class Builder:
             r = 8 + i
             ws[f"F{r}"] = lab
             ws[f"F{r}"].font = T.font(10, True, SECONDARY)
-            ws[f"F{r}"].border = BOX
+            ws[f"F{r}"].alignment = Alignment(vertical="center", indent=1)
             ws[f"G{r}"] = fm
             self.calc(S_PM, f"G{r}", nf, RIGHT, color=BLUE)
         cf_databar(ws, "G8", TEAL)
         cf_formula(ws, "G11", "AND(ISNUMBER(G11),G11<0)", DANGER_BG, DANGER, True)
         cf_formula(ws, "G15", "AND(ISNUMBER(G15),G15>0)", DANGER_BG, DANGER, True)
         # timeline
-        section(ws, T, 19, 2, 7, "PROJECT TIMELINE", color=LAVENDER)
+        section(ws, T, 19, 2, 4, "PROJECT TIMELINE", color=LAVENDER)
         tl = [("Duration (days)", '=IF(OR(C14="",C15=""),"",C15-C14)', "0"),
               ("Days elapsed", '=IF(C14="","",MAX(0,MIN($G$5,C15)-C14))', "0"),
               ("Time elapsed %", '=IF(OR(N(C20)=0,C20=""),"",MIN(1,C21/C20))', FMT_PCT),
@@ -971,7 +1033,7 @@ class Builder:
             r = 20 + i
             ws[f"B{r}"] = lab
             ws[f"B{r}"].font = T.font(10, True, SECONDARY)
-            ws[f"B{r}"].border = BOX
+            ws[f"B{r}"].alignment = Alignment(vertical="center", indent=1)
             ws.merge_cells(f"C{r}:D{r}")
             ws[f"C{r}"] = fm
             self.calc(S_PM, f"C{r}:D{r}", nf)
@@ -997,13 +1059,13 @@ class Builder:
         ws.column_dimensions["Q"].hidden = True
         ws.column_dimensions["R"].hidden = True
         # details database (I..O)
-        section(ws, T, 5, 9, 15, "PROJECT DETAILS DATABASE  —  one row per objective, deliverable, milestone, dependency, risk or note")
+        section(ws, T, HDR - 1, 9, 15, "Project details database  —  one row per objective, deliverable, milestone, dependency, risk or note")
         header_row(ws, T, HDR, 9, ["Project", "Type", "Description", "Owner", "Target Date", "Status / Impact", "Key"])
         ws[f"O{HDR}"].fill = fill(MED_GRAY)
         pd_last = R1 + PD_N - 1
         self.inp(S_PM, f"I{R1}:N{pd_last}")
         paint(ws, f"M{R1}:M{pd_last}", numfmt=FMT_DATE)
-        self.fill_down(ws, "O", R1, pd_last, '=IF(OR(I{r}="",J{r}="",K{r}=""),"",I{r}&"|"&J{r}&"|"&COUNTIFS(I$7:I{r},I{r},J$7:J{r},J{r},K$7:K{r},"?*"))')
+        self.fill_down(ws, "O", R1, pd_last, '=IF(OR(I{r}="",J{r}="",K{r}=""),"",I{r}&"|"&J{r}&"|"&COUNTIFS(I$8:I{r},I{r},J$8:J{r},J{r},K$8:K{r},"?*"))')
         self.calc(S_PM, f"O{R1}:O{pd_last}")
         paint(ws, f"O{R1}:O{pd_last}", font=T.font(8, color=SECONDARY))
         add_list_dv(ws, f"I{R1}:I{pd_last}", POV("C"))
@@ -1023,11 +1085,7 @@ class Builder:
         colors = [BLUE, TEAL, LAVENDER, INFO, DANGER, MED_GRAY]
         r = 30
         for ti in range(6):
-            ws.merge_cells(f"B{r}:G{r}")
-            ws[f"B{r}"] = f'=SUBSTITUTE(UPPER({DTYPES[ti]})&"S","YS","IES")'
-            paint(ws, f"B{r}:G{r}", f=fill(colors[ti]))
-            ws[f"B{r}"].font = T.font(10, True, WHITE)
-            ws[f"B{r}"].alignment = Alignment(vertical="center", indent=1)
+            section(ws, T, r, 2, 7, f'=SUBSTITUTE({DTYPES[ti]}&"s","ys","ies")', color=colors[ti])
             for j, h in enumerate(["Item", None, None, "Owner", "Target date", "Status"]):
                 if h:
                     ws.cell(row=r + 1, column=2 + j, value=h)
@@ -1049,6 +1107,11 @@ class Builder:
             cf_formula(ws, f"B{r + 2}:D{r + 2}", f'LEFT(B{r + 2},1)="—"', None, MED_GRAY)
             r += 8
         ws.freeze_panes = "A7"
+        for r, hgt in ((4, 12), (6, 24)):
+            ws.row_dimensions[r].height = hgt
+        cards = [(2, 5, 7, 5), (2, 7, 4, 17), (6, 7, 7, 17), (2, 19, 4, 24), (6, 19, 7, 27), (9, HDR - 1, 15, pd_last)]
+        cards += [(2, r, 7, r + 6) for r in range(30, 30 + 6 * 8, 8)]
+        skin(ws, 15, pd_last, cards=cards, hide_headers=True)
 
     # ================================================================ TAB 11 TASK FILTER
     def build_tf(self):
@@ -1062,15 +1125,18 @@ class Builder:
             r = 6 + i
             ws[f"B{r}"] = lab
             ws[f"B{r}"].font = T.font(10, True)
-            ws[f"B{r}"].border = BOX
+            ws[f"B{r}"].border = _C.CELL_BOX
+            ws[f"B{r}"].alignment = Alignment(vertical="center", indent=1)
             self.inp(S_TF, f"C{r}", FMT_DATE if src == "date" else None)
             if src == "date":
                 add_dv(ws, f"C{r}", "date", "greaterThan", "DATE(2000,1,1)")
             elif src != "text":
                 add_list_dv(ws, f"C{r}", src)
         ws["C13"] = "Incomplete" if self.demo else None
-        note(ws, T, "B16", "Tip: select the blue filter cells and press Delete to clear them.")
-        section(ws, T, 5, 5, 8, "RESULTS SUMMARY", color=TEAL)
+        ws.merge_cells("B16:C16")
+        note(ws, T, "B16", "Tip: select filter cells and press Delete to reset.")
+        ws["B16"].alignment = Alignment(vertical="center", indent=1)
+        section(ws, T, 5, 5, 12, "RESULTS SUMMARY", color=TEAL)
         summ = [("Matching tasks", f"=MAX({VT('V')})", "0"),
                 ("…completed", f'=COUNTIFS({VT("V")},">0",{VT("K")},{DONE})', "0"),
                 ("…overdue", f'=COUNTIFS({VT("V")},">0",{VT("P")},"Overdue")', "0"),
@@ -1081,11 +1147,13 @@ class Builder:
             r = 6 + i
             ws[f"E{r}"] = lab
             ws[f"E{r}"].font = T.font(10, True)
-            ws[f"E{r}"].border = BOX
+            ws[f"E{r}"].border = _C.CELL_BOX
+            ws[f"E{r}"].alignment = Alignment(vertical="center", indent=1)
             ws[f"F{r}"] = fm
             self.calc(S_TF, f"F{r}", nf, CENTER, color=BLUE)
-        legend(ws, T, 13, 5)
+        legend(ws, T, 14, 5, compact=True)
         heads = ["#", "Task ID", "Task Name", "Project", "Category", "Assigned To", "Due Date", "Priority", "Status", "Progress", "Flag"]
+        section(ws, T, 17, 2, 12, "Matching tasks", color=BLUE)
         header_row(ws, T, 18, 2, heads)
         for k in range(1, 101):
             r = 18 + k
@@ -1110,19 +1178,24 @@ class Builder:
         cf_formula(ws, "L19:L118", 'L19="Due soon"', WARNING_BG, WARNING, True)
         cf_formula(ws, "B19:L118", 'AND($B19<>"",MOD($B19,2)=0)', BG)
         ws.freeze_panes = "A19"
+        for r, hgt in ((4, 12), (16, 22)):
+            ws.row_dimensions[r].height = hgt
+        skin(ws, 12, 118, cards=[(2, 5, 3, 16), (5, 5, 12, 15), (2, 17, 12, 118)], hide_headers=True)
 
     # ================================================================ TAB 12 DECISION MATRIX
     def build_dm(self):
         ws, T = self.ws[S_DM], self.T
         setup_sheet(ws, {"B": 30, "C": 11, **{L(i): 17 for i in range(4, 10)}, "J": 3, "K": 26, "L": 12})
         title_bar(ws, T, "DECISION MATRIX  ·  Weighted scoring", "Weight your criteria, score each option 1–10, and let the matrix recommend the winner.", 12, demo=self.demo)
-        legend(ws, T, 4, 2)
+        ws.row_dimensions[4].height = 12
         ws["B5"] = "Decision name"
         ws["B5"].font = T.font(11, True, NAVY)
+        ws["B5"].alignment = Alignment(vertical="center", indent=1)
         ws.merge_cells("C5:I5")
         self.inp(S_DM, "C5:I5")
         ws["B7"] = "Options ▸"
         ws["B7"].font = T.font(10, True, SECONDARY)
+        ws["B7"].alignment = Alignment(vertical="center", indent=1)
         for c in "DEF":
             self.inp(S_DM, f"{c}7", align=CENTER)
             ws[f"{c}7"].font = T.font(10, True, NAVY)
@@ -1166,21 +1239,22 @@ class Builder:
             r = 24 + i
             ws[f"B{r}"] = lab
             ws[f"B{r}"].font = T.font(10, True)
-            ws[f"B{r}"].border = BOX
+            ws[f"B{r}"].border = _C.CELL_BOX
+            ws[f"B{r}"].alignment = Alignment(vertical="center", indent=1)
             ws.merge_cells(f"C{r}:F{r}")
             ws[f"C{r}"] = fm
             self.calc(S_DM, f"C{r}:F{r}", "0.00" if i in (1, 2) else None, color=NAVY)
         ws["C24"].font = T.font(13, True, SUCCESS)
-        ws["K9"] = "Ranking"
-        ws["K9"].font = T.font(10, True, WHITE)
-        ws["K9"].fill = fill(NAVY)
-        ws["L9"].fill = fill(NAVY)
+        for c in "MNOP":
+            ws.column_dimensions[c].width = 9
+        section(ws, T, 9, 11, 16, "Ranking", color=LAVENDER)
         for i, (c, w) in enumerate(zip("DEF", "GHI")):
             r = 10 + i
             ws[f"K{r}"] = f'=IF({c}7="","Option "&CHAR(65+{i}),{c}7)'
             ws[f"L{r}"] = f"=N({w}20)"
-            self.calc(S_DM, f"K{r}:L{r}", None)
-            ws[f"L{r}"].number_format = "0.00"
+            self.calc(S_DM, f"K{r}", None)
+            ws.merge_cells(f"L{r}:M{r}")
+            self.calc(S_DM, f"L{r}:M{r}", "0.00", RIGHT)
         ch = BarChart()
         ch.type = "bar"
         ch.title = "Weighted total score"
@@ -1194,7 +1268,7 @@ class Builder:
         ch.y_axis.scaling.min = 0
         ch.y_axis.scaling.max = 10
         ch.width, ch.height = 12, 6
-        ws.add_chart(ch, "K14")
+        place_chart(ws, ch, 11, 14, 16, 29)
         if self.demo:
             ws["C5"] = SD.DECISION["name"]
             for c, o in zip("DEF", SD.DECISION["options"]):
@@ -1202,7 +1276,12 @@ class Builder:
             for i, (cr, w, a, b, cc) in enumerate(SD.DECISION["criteria"]):
                 r = 10 + i
                 ws[f"B{r}"], ws[f"C{r}"], ws[f"D{r}"], ws[f"E{r}"], ws[f"F{r}"] = cr, w, a, b, cc
+        ws.merge_cells("B29:I29")
         note(ws, T, "B29", "How it works: weighted score = score × (weight ÷ total weight). The highest total wins; ties go to the left-most option.")
+        ws["B29"].alignment = Alignment(vertical="center", indent=1)
+        for r, hgt in ((8, 12), (22, 12), (28, 8)):
+            ws.row_dimensions[r].height = hgt
+        skin(ws, 16, 30, cards=[(2, 5, 9, 7), (2, 9, 9, 21), (2, 23, 9, 29), (11, 9, 16, 29)], hide_headers=True)
 
     # ================================================================ TAB 13 KANBAN
     def build_kb(self):
@@ -1210,7 +1289,7 @@ class Builder:
         widths = {}
         for j in range(5):
             c = 2 + j * 3
-            widths[c], widths[c + 1], widths[c + 2] = 22, 12, 2
+            widths[c], widths[c + 1], widths[c + 2] = 22, 12, 2.5
         for c in range(18, 23):
             widths[c] = 5
         setup_sheet(ws, widths)
@@ -1225,8 +1304,11 @@ class Builder:
             dark, soft = col_colors[j]
             ws.merge_cells(f"{c}5:{c2}5")
             ws[f"{c}5"] = f"=UPPER({TSTAT[j]})"
-            paint(ws, f"{c}5:{c2}5", f=fill(dark))
-            ws[f"{c}5"].font = T.font(11, True, WHITE)
+            accent = Side(style="thick", color=dark)
+            for cc in (2 + j * 3, 3 + j * 3):
+                ws.cell(row=5, column=cc).fill = FILL_WHITE
+                ws.cell(row=5, column=cc).border = Border(top=accent)
+            ws[f"{c}5"].font = T.font(10, True, NAVY)
             ws[f"{c}5"].alignment = CENTER
             ws.merge_cells(f"{c}6:{c2}6")
             ws[f"{c}6"] = f'=COUNTIFS({VT("K")},{TSTAT[j]},{VT("C")},"?*")&" task(s)"&IF(COUNTIFS({VT("K")},{TSTAT[j]},{VT("C")},"?*")>{CARDS},"  ·  showing {CARDS}","")'
@@ -1254,12 +1336,16 @@ class Builder:
                 ws.row_dimensions[r1 + 2].height = 6
             rngc = f"{c}8:{c2}{8 + CARDS * 3 - 1}"
             cf_formula(ws, rngc, f"${hc}8<>\"\"", soft)
-            cf_formula(ws, f"{c2}8:{c2}{8 + CARDS * 3 - 1}", f'AND(ISNUMBER({c2}8),{c2}8<$R$4,{j}<4)', None, DANGER, True)
+            cf_formula(ws, f"{c2}8:{c2}{8 + CARDS * 3 - 1}", f'AND(ISNUMBER({c2}8),{c2}8<$Z$5,{j}<4)', None, DANGER, True)
             cf_formula(ws, f"{c}8:{c}{8 + CARDS * 3 - 1}", f'LEFT({c}8,1)="‼"', None, DANGER, True)
             cf_formula(ws, f"{c}8:{c}{8 + CARDS * 3 - 1}", f'LEFT({c}8,1)="▲"', None, "B7791F", True)
         for c in range(18, 23):
             ws.column_dimensions[L(c)].hidden = True
         ws.freeze_panes = "A7"
+        ws.row_dimensions[4].height = 12
+        ws.row_dimensions[5].height = 26
+        ws.row_dimensions[7].height = 8
+        skin(ws, 16, 54, cards=[(2 + j * 3, 5, 3 + j * 3, 8 + CARDS * 3 - 1) for j in range(5)], hide_headers=True)
 
     # ================================================================ TAB 14 GANTT
     def build_gc(self):
@@ -1268,55 +1354,53 @@ class Builder:
         TL0 = 12  # column L
         widths = {"B": 4, "C": 26, "D": 31, "E": 14, "F": 11, "G": 11, "H": 6, "I": 8, "J": 11, "K": 9}
         for i in range(NCOL):
-            widths[TL0 + i] = 3.3
+            widths[TL0 + i] = 3.7
         setup_sheet(ws, widths, zoom=90)
         last_tl = L(TL0 + NCOL - 1)
         helper = L(TL0 + NCOL + 1)
-        title_bar(ws, T, "GANTT CHART  ·  Timeline", "Bars draw themselves from task start/due dates. Darker shading = progress. ◆ = milestone (start = due). ▼ = today.", 11, demo=self.demo)
-        lab = [("B5", "Project"), ("E5", "Start"), ("G5", "View"), ("I5", "Hide done")]
-        for a, t in lab:
+        title_bar(ws, T, "GANTT CHART  ·  Timeline", "Bars draw themselves from task start/due dates. Darker shading = progress. ◆ = milestone (start = due). ▼ = today.", 11, demo=self.demo, hero_to=TL0 + NCOL - 1)
+        # controls: labels on row 5, inputs / read-outs on row 6
+        noalign = Alignment(horizontal="center", vertical="center")
+        for a, t in (("C5", "PROJECT  (blank = all)"), ("E5", "START DATE"), ("F5", "VIEW"), ("G5", "HIDE DONE"),
+                     ("H5", "FROM"), ("J5", "TODAY"), ("K5", "TASKS")):
             ws[a] = t
-            ws[a].font = T.font(9, True, SECONDARY)
-            ws[a].alignment = RIGHT
-        ws["C5"] = None
-        self.inp(S_GC, "C5:D5")
-        ws.merge_cells("C5:D5")
-        add_list_dv(ws, "C5", POV("C"), prompt="Blank = all projects")
-        self.inp(S_GC, "F5", FMT_DATE, CENTER)
-        add_dv(ws, "F5", "date", "greaterThan", "DATE(2000,1,1)", error="Enter a date, or leave blank for automatic.")
-        ws["H5"] = "Weekly" if self.demo else "Daily"
-        self.inp(S_GC, "H5", None, CENTER)
-        add_list_dv(ws, "H5", SS("M"))
-        ws["J5"] = "No"
-        self.inp(S_GC, "J5", None, CENTER)
-        add_list_dv(ws, "J5", SS("J"))
-        for a, t in (("B6", "From"), ("E6", "Today"), ("G6", "Step"), ("I6", "Tasks")):
-            ws[a] = t
-            ws[a].font = T.font(9, True, SECONDARY)
-            ws[a].alignment = RIGHT
+            ws[a].font = T.font(8, True, SECONDARY)
+            ws[a].alignment = Alignment(vertical="center", indent=1)
+        ws.merge_cells("H5:I5")
         ws.merge_cells("C6:D6")
-        ws["C6"] = f'=IF(F5<>"",F5-WEEKDAY(F5,2)+1,IF(COUNT(F10:F69)=0,{TODAY}-WEEKDAY({TODAY},2)+1,MIN(F10:F69)-WEEKDAY(MIN(F10:F69),2)+1))'
-        self.calc(S_GC, "C6:D6", FMT_DATE, CENTER)
-        ws["F6"] = f"={TODAY}"
-        self.calc(S_GC, "F6", FMT_DATE, CENTER)
-        ws["H6"] = '=IF(H5="Weekly",7,1)'
-        self.calc(S_GC, "H6", "0", CENTER)
-        ws["J6"] = f'=MAX({VT("W")})'
-        self.calc(S_GC, "J6", "0", CENTER)
+        self.inp(S_GC, "C6:D6")
+        add_list_dv(ws, "C6", POV("C"), prompt="Blank = all projects")
+        self.inp(S_GC, "E6", FMT_DATE, noalign)
+        add_dv(ws, "E6", "date", "greaterThan", "DATE(2000,1,1)", error="Enter a date, or leave blank for automatic.")
+        ws["F6"] = "Weekly" if self.demo else "Daily"
+        self.inp(S_GC, "F6", None, noalign)
+        add_list_dv(ws, "F6", SS("M"))
+        ws["G6"] = "No"
+        self.inp(S_GC, "G6", None, noalign)
+        add_list_dv(ws, "G6", SS("J"))
+        ws.merge_cells("H6:I6")
+        ws["H6"] = f'=IF(E6<>"",E6-WEEKDAY(E6,2)+1,IF(COUNT(F10:F69)=0,{TODAY}-WEEKDAY({TODAY},2)+1,MIN(F10:F69)-WEEKDAY(MIN(F10:F69),2)+1))'
+        self.calc(S_GC, "H6:I6", FMT_DATE, noalign)
+        ws["J6"] = f"={TODAY}"
+        self.calc(S_GC, "J6", FMT_SDATE, noalign)
+        ws["K6"] = f'=MAX({VT("W")})'
+        self.calc(S_GC, "K6", "0", noalign)
+        ws[f"{helper}6"] = '=IF(F6="Weekly",7,1)'
         header_row(ws, T, 9, 2, ["#", "Task", "Project", "Assigned", "Start", "End", "Days", "Progress", "Status", "Flag"], height=22)
         tl = L(TL0)
         for i in range(NCOL):
             c = L(TL0 + i)
             prev = L(TL0 + i - 1)
-            ws[f"{c}9"] = "=$C$6" if i == 0 else f"={prev}9+$H$6"
+            ws[f"{c}9"] = "=$H$6" if i == 0 else f"={prev}9+$BU$6"
             ws[f"{c}9"].number_format = "d"
             ws[f"{c}9"].font = T.font(8, True, WHITE)
             ws[f"{c}9"].fill = fill(NAVY)
             ws[f"{c}9"].alignment = Alignment(horizontal="center", vertical="center")
-            mlabel = f'CHOOSE(MONTH({c}9),"Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec")&" "&RIGHT(YEAR({c}9),2)'
+            mlabel = f'CHOOSE(MONTH({c}9),"Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec")'
             ws[f"{c}8"] = f"={mlabel}" if i == 0 else f'=IF(MONTH({c}9)<>MONTH({prev}9),{mlabel},"")'
-            ws[f"{c}8"].font = T.font(8, True, MIDNIGHT)
-            ws[f"{c}7"] = f'=IF(AND($F$6>={c}$9,$F$6<{c}$9+$H$6),"▼","")'
+            ws[f"{c}8"].font = T.font(7, True, MIDNIGHT)
+            ws[f"{c}8"].alignment = Alignment(horizontal="left", vertical="center")
+            ws[f"{c}7"] = f'=IF(AND($J$6>={c}$9,$J$6<{c}$9+$BU$6),"▼","")'
             ws[f"{c}7"].font = T.font(9, True, DANGER)
             ws[f"{c}7"].alignment = Alignment(horizontal="center")
         for k in range(1, 61):
@@ -1333,26 +1417,26 @@ class Builder:
             ws[f"K{r}"] = f'=IF({h}="","",INDEX({VT("P")},{h})&"")'
             for i in range(NCOL):
                 c = L(TL0 + i)
-                ws[f"{c}{r}"] = f'=IF(AND($B{r}<>"",$F{r}=$G{r},$F{r}>={c}$9,$F{r}<{c}$9+$H$6),"◆","")'
+                ws[f"{c}{r}"] = f'=IF(AND($B{r}<>"",$F{r}=$G{r},$F{r}>={c}$9,$F{r}<{c}$9+$BU$6),"◆","")'
             ws.row_dimensions[r].height = 18
         paint(ws, "B10:K69", f=FILL_WHITE, font=T.font(9), border=Border(bottom=Side(style="hair", color=BORDER)))
         paint(ws, "F10:G69", numfmt=FMT_SDATE, align=CENTER)
         paint(ws, "B10:B69", align=CENTER)
         paint(ws, "H10:H69", align=CENTER)
         paint(ws, "I10:I69", numfmt=FMT_PCT, align=CENTER)
-        ws["C10"] = f'=IF(${helper}10="","No tasks to show — add tasks with start and due dates.",INDEX({VT("C")},${helper}10)&"")'
+        ws["C10"] = f'=IF(${helper}10="","No tasks to show yet",INDEX({VT("C")},${helper}10)&"")'
         bars = f"{tl}10:{last_tl}69"
         paint(ws, bars, font=T.font(9, True, NAVY), align=Alignment(horizontal="center", vertical="center"),
               border=Border(left=Side(style="hair", color=LIGHT_GRAY)))
-        inbar = f"AND($B10<>\"\",{tl}$9+$H$6-1>=$F10,{tl}$9<=$G10)"
+        inbar = f"AND($B10<>\"\",{tl}$9+$BU$6-1>=$F10,{tl}$9<=$G10)"
         cf_formula(ws, bars, f'{tl}10="◆"', WARNING_BG, NAVY, True, stop=True)
         cf_formula(ws, bars, f'AND({inbar},$J10=$K$7)', TEAL, stop=True)
         cf_formula(ws, bars, f'AND({inbar},$K10="Overdue",{tl}$9<$F10+($G10-$F10+1)*$I10)', "B8424A", stop=True)
         cf_formula(ws, bars, f'AND({inbar},$K10="Overdue")', DANGER, stop=True)
         cf_formula(ws, bars, f'AND({inbar},{tl}$9<$F10+($G10-$F10+1)*$I10)', BLUE, stop=True)
         cf_formula(ws, bars, inbar, "B9CBF6", stop=True)
-        cf_formula(ws, bars, f"AND($F$6>={tl}$9,$F$6<{tl}$9+$H$6)", WARNING_BG)
-        cf_formula(ws, bars, f"AND($H$6=1,WEEKDAY({tl}$9,2)>5)", BG)
+        cf_formula(ws, bars, f"AND($J$6>={tl}$9,$J$6<{tl}$9+$BU$6)", WARNING_BG)
+        cf_formula(ws, bars, f"AND($BU$6=1,WEEKDAY({tl}$9,2)>5)", BG)
         ws["K7"] = f"={DONE}"
         ws["K7"].font = T.font(8, False, MED_GRAY)
         cf_databar(ws, "I10:I69", TEAL)
@@ -1360,14 +1444,25 @@ class Builder:
         cf_formula(ws, "K10:K69", 'K10="Due soon"', WARNING_BG, WARNING, True)
         ws.column_dimensions[helper].hidden = True
         # legend
-        leg = [(BLUE, "Progress"), ("B9CBF6", "Remaining"), (TEAL, "Completed"), (DANGER, "Overdue"), (WARNING_BG, "Today / ◆ milestone")]
+        leg = [(BLUE, "Progress"), ("B9CBF6", "Remaining"), (TEAL, "Completed"), (DANGER, "Overdue"), (WARNING_BG, "Today")]
         for i, (colr, t) in enumerate(leg):
             c = L(TL0 + i * 6)
-            ws[f"{c}5"].fill = fill(colr)
-            ws[f"{c}5"].border = BOX
-            ws[f"{L(TL0 + i * 6 + 1)}5"] = t
-            ws[f"{L(TL0 + i * 6 + 1)}5"].font = T.font(8, False, SECONDARY)
+            ws[f"{c}6"].fill = fill(colr)
+            ws[f"{c}6"].border = Border(top=Side(style="thick", color=BG), bottom=Side(style="thick", color=BG))
+            lab = f"{L(TL0 + i * 6 + 1)}6:{L(TL0 + i * 6 + 4)}6"
+            ws.merge_cells(lab)
+            ws[f"{L(TL0 + i * 6 + 1)}6"] = t
+            ws[f"{L(TL0 + i * 6 + 1)}6"].font = T.font(8, False, SECONDARY)
+            ws[f"{L(TL0 + i * 6 + 1)}6"].alignment = Alignment(vertical="center", indent=1)
+        ws.merge_cells(f"{L(TL0 + 30)}6:{L(TL0 + 40)}6")
+        ws[f"{L(TL0 + 30)}6"] = "◆ milestone  ·  ▼ today"
+        ws[f"{L(TL0 + 30)}6"].font = T.font(8, False, SECONDARY)
+        ws[f"{L(TL0 + 30)}6"].alignment = Alignment(vertical="center", indent=1)
         ws.freeze_panes = f"{tl}10"
+        ws.row_dimensions[4].height = 12
+        ws.row_dimensions[5].height = 22
+        ws.row_dimensions[6].height = 22
+        skin(ws, TL0 + NCOL - 1, 69, cards=[(2, 5, 11, 6), (2, 7, TL0 + NCOL - 1, 69)], hide_headers=True)
 
     # ================================================================ TAB 15 INSTRUCTIONS
     def build_ins(self):
@@ -1432,17 +1527,30 @@ class Builder:
             ]),
         ]
         r = 5
+        cards = []
+        ws.row_dimensions[4].height = 12
         for head, lines in blocks:
+            start = r
             section(ws, T, r, 2, 4, head)
             r += 1
             for ln in lines:
                 ws[f"C{r}"] = ln
+                ws.merge_cells(f"C{r}:D{r}")
                 ws[f"C{r}"].font = T.font(10)
                 ws[f"C{r}"].alignment = Alignment(wrap_text=True, vertical="center")
-                ws.row_dimensions[r].height = 30 if len(ln) > 120 else 18
+                ws.row_dimensions[r].height = 32 if len(ln) > 105 else 19
                 r += 1
-            r += 1
-        self.nav_links(ws, r, 3, 1, 1)
+            cards.append((2, start, 4, r))
+            ws.row_dimensions[r].height = 8
+            ws.row_dimensions[r + 1].height = 12
+            r += 2
+        section(ws, T, r, 2, 4, "Go to a tab")
+        start = r
+        self.nav_links(ws, r + 1, 3, 1, 2)
+        for i in range(len(ORDER)):
+            ws.row_dimensions[r + 1 + i].height = 20
+        cards.append((2, start, 4, r + len(ORDER)))
+        skin(ws, 4, r + len(ORDER) + 1, cards=cards, hide_headers=True)
 
     # ================================================================ finalize
     def protect(self):

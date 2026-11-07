@@ -127,66 +127,197 @@ def paint(ws, rng: str, f=None, font=None, border=None, align=None, numfmt=None)
                 c.number_format = numfmt
 
 
+TAB_ORDER: list[str] = []          # set by each product builder (used for "Next tab" links)
+HERO_SUB = "B9C6DA"
+CELL_EDGE = Side(style="thin", color="E3E8EE")
+CELL_BOX = Border(left=CELL_EDGE, right=CELL_EDGE, top=CELL_EDGE, bottom=CELL_EDGE)
+
+
+def col_px(ws, c: int) -> int:
+    w = ws.column_dimensions[get_column_letter(c)].width
+    return int((w or 8.43) * 7 + 5)
+
+
 def title_bar(ws, T: Theme, title: str, subtitle: str, last_col: int, home_link: str | None = "All-in-One Dashboard",
-              demo: bool = False):
-    """Row 2 navy bar with title; row 3 subtitle + home link."""
-    lc = get_column_letter(last_col)
+              demo: bool = False, hero_to: int | None = None):
+    """Navy hero header on rows 2-3 (same look as the dashboard).
+
+    Left: title (row 2) and subtitle (row 3). Right: "⌂ Dashboard" (row 2) and "Next tab ▸" (row 3) links in a block
+    of the right-most columns wide enough for the text. The navy band runs to `hero_to` (default last_col).
+    """
+    hero_to = hero_to or last_col
     ws.row_dimensions[1].height = 8
-    ws.row_dimensions[2].height = 38
+    ws.row_dimensions[2].height = 34
     ws.row_dimensions[3].height = 20
-    paint(ws, f"B2:{lc}2", f=FILL_NAVY)
+    for r in (2, 3):
+        for c in range(2, hero_to + 1):
+            ws.cell(row=r, column=c).fill = FILL_NAVY
+    # right block: grow leftwards until >= 110 px
+    rb, width = last_col, col_px(ws, last_col)
+    while width < 110 and rb > 3:
+        rb -= 1
+        width += col_px(ws, rb)
+    left_end = rb - 1
+    for r in (2, 3):
+        if left_end > 2:
+            ws.merge_cells(f"B{r}:{get_column_letter(left_end)}{r}")
+        if last_col > rb:
+            ws.merge_cells(f"{get_column_letter(rb)}{r}:{get_column_letter(last_col)}{r}")
     ws["B2"] = title
-    ws["B2"].font = T.font(20, True, WHITE)
+    ws["B2"].font = T.font(18, True, WHITE)
     ws["B2"].alignment = Alignment(vertical="center", indent=1)
-    ws["B3"] = subtitle
-    ws["B3"].font = T.font(10, False, SECONDARY, italic=True)
-    ws["B3"].alignment = Alignment(vertical="center", indent=1)
+    ws["B3"] = ("●  DEMO DATA   ·   " if demo else "") + subtitle
+    ws["B3"].font = T.font(9, False, HERO_SUB)
+    ws["B3"].alignment = Alignment(vertical="center", indent=1, shrink_to_fit=True)
+    right = Alignment(horizontal="right", vertical="center", indent=1)
     if home_link:
-        c = ws.cell(row=2, column=last_col)
+        c = ws.cell(row=2, column=rb)
         c.value = f'=HYPERLINK("#{quote(home_link)}!A1","⌂ Dashboard")'
-        c.font = T.font(10, True, WHITE, underline="single")
-        c.alignment = Alignment(horizontal="right", vertical="center", indent=1)
-    if demo:
-        c = ws.cell(row=3, column=last_col)
-        c.value = "DEMO DATA"
-        c.font = T.font(9, True, WARNING)
-        c.fill = fill(WARNING_BG)
-        c.alignment = CENTER
+        c.font = T.font(10, True, WHITE)
+        c.alignment = right
+    if TAB_ORDER and ws.title in TAB_ORDER:
+        nxt = TAB_ORDER[(TAB_ORDER.index(ws.title) + 1) % len(TAB_ORDER)]
+        c = ws.cell(row=3, column=rb)
+        c.value = f'=HYPERLINK("#{quote(nxt)}!A1","Next tab ▸")'
+        c.font = T.font(9, True, HERO_SUB)
+        c.alignment = right
 
 
-def section(ws, T: Theme, r: int, c1: int, c2: int, text: str, color=MIDNIGHT, height=22, size=11):
-    rng = f"{get_column_letter(c1)}{r}:{get_column_letter(c2)}{r}"
-    paint(ws, rng, f=fill(color))
+def section(ws, T: Theme, r: int, c1: int, c2: int, text: str, color=BLUE, height=24, size=10):
+    """Card title row: white, navy bold text, coloured accent line on top (dashboard style)."""
+    accent = Side(style="medium", color=color if color not in (NAVY, MIDNIGHT) else BLUE)
+    for c in range(c1, c2 + 1):
+        cell = ws.cell(row=r, column=c)
+        cell.fill = FILL_WHITE
+        cell.border = Border(top=accent, bottom=Side(style="thin", color="EDF0F4"),
+                             left=THIN if c == c1 else None, right=THIN if c == c2 else None)
+    if isinstance(text, str) and not text.startswith("=") and text.isupper():
+        text = text.capitalize()
+    if c2 > c1:
+        ws.merge_cells(f"{get_column_letter(c1)}{r}:{get_column_letter(c2)}{r}")
     cell = ws.cell(row=r, column=c1, value=text)
-    cell.font = T.font(size, True, WHITE)
+    cell.font = T.font(size, True, NAVY)
     cell.alignment = Alignment(vertical="center", indent=1)
     ws.row_dimensions[r].height = height
 
 
 def header_row(ws, T: Theme, r: int, c1: int, headers: list[str], color=NAVY, height=30):
+    """Modern table header: light fill, dark bold text, accent underline."""
+    accent = Side(style="medium", color=BLUE if color in (NAVY, MIDNIGHT) else color)
+    helper = color == MED_GRAY
     for i, h in enumerate(headers):
         cell = ws.cell(row=r, column=c1 + i, value=h)
-        cell.fill = fill(color)
-        cell.font = T.font(10, True, WHITE)
+        cell.fill = fill("F2F4F7" if helper else "EAF0F9")
+        cell.font = T.font(9, True, SECONDARY if helper else MIDNIGHT)
         cell.alignment = CENTER
-        cell.border = BOX
+        cell.border = Border(left=CELL_EDGE, right=CELL_EDGE, top=CELL_EDGE,
+                             bottom=Side(style="medium", color=MED_GRAY if helper else accent.color))
     ws.row_dimensions[r].height = height
 
 
+def mark_helper_headers(ws, r: int, c1: int, c2: int):
+    """Restyle header cells of calculated helper columns (grey, secondary text)."""
+    for c in range(c1, c2 + 1):
+        cell = ws.cell(row=r, column=c)
+        cell.fill = fill("F2F4F7")
+        cell.font = Font(name=cell.font.name, size=9, bold=True, color=SECONDARY)
+        cell.border = Border(left=CELL_EDGE, right=CELL_EDGE, top=CELL_EDGE, bottom=Side(style="medium", color=MED_GRAY))
+
+
 def legend(ws, T: Theme, r: int, c: int, compact=False):
-    """Six-entry cell-convention legend laid out horizontally from (r, c), each entry two cells wide."""
+    """Cell-convention legend laid out horizontally from (r, c): swatch + label pairs."""
     items = [
         (FILL_INPUT, "Input"), (FILL_WHITE, "Info"), (FILL_CALC, "Calculated"),
         (FILL_POS, "Positive"), (FILL_NEG, "Warning"), (FILL_OPT, "Optional"),
     ]
+    if compact:
+        items = [items[0], items[2], items[5]]
     lab = ws.cell(row=r, column=c, value="LEGEND")
     lab.font = T.font(8, True, SECONDARY)
+    lab.alignment = Alignment(vertical="center", indent=1)
     for i, (f, t) in enumerate(items):
         sw = ws.cell(row=r, column=c + 1 + i * 2)
         sw.fill = f
         sw.border = BOX
         tx = ws.cell(row=r, column=c + 2 + i * 2, value=t)
         tx.font = T.font(8, False, SECONDARY)
+        tx.alignment = Alignment(vertical="center", indent=1)
+
+
+def stat_strip(ws, T: Theme, r: int, items, start_col: int = 2, min_px: int = 130, end_col: int | None = None):
+    """Row of KPI tiles (label row r, value row r+1). items: (label, formula, numfmt, accent).
+
+    Each tile takes as many consecutive columns as needed to reach `min_px`. Returns the next free column.
+    """
+    ws.row_dimensions[r].height = 20
+    ws.row_dimensions[r + 1].height = 30
+    c = start_col
+    for label, formula, numfmt, accent in items:
+        c1, width = c, col_px(ws, c)
+        while width < min_px:
+            c += 1
+            width += col_px(ws, c)
+        c2 = c
+        if end_col and c2 > end_col:
+            break
+        top = Side(style="medium", color=accent)
+        for rr in (r, r + 1):
+            if c2 > c1:
+                ws.merge_cells(f"{get_column_letter(c1)}{rr}:{get_column_letter(c2)}{rr}")
+            for cc in range(c1, c2 + 1):
+                cell = ws.cell(row=rr, column=cc)
+                cell.fill = FILL_WHITE
+                cell.border = Border(top=top if rr == r else None, bottom=THIN if rr == r + 1 else None,
+                                     left=THIN if cc == c1 else None, right=THIN if cc == c2 else None)
+        lc = ws.cell(row=r, column=c1, value=label)
+        lc.font = T.font(8, True, SECONDARY)
+        lc.alignment = Alignment(vertical="bottom", indent=1)
+        vc = ws.cell(row=r + 1, column=c1, value=formula)
+        vc.font = T.font(16, True, DARK)
+        vc.alignment = Alignment(horizontal="left", vertical="center", indent=1)
+        if numfmt:
+            vc.number_format = numfmt
+        c += 2  # one gutter column between tiles
+    return c
+
+
+def card_box(ws, c1: int, r1: int, c2: int, r2: int):
+    """White card: fill unfilled cells white and draw the outer edge (keeps existing inner borders / accents)."""
+    for r in range(r1, r2 + 1):
+        for c in range(c1, c2 + 1):
+            cell = ws.cell(row=r, column=c)
+            if cell.fill is None or cell.fill.fill_type is None:
+                cell.fill = FILL_WHITE
+            b = cell.border
+            cell.border = Border(left=(b.left if b.left and b.left.style else THIN) if c == c1 else b.left,
+                                 right=(b.right if b.right and b.right.style else THIN) if c == c2 else b.right,
+                                 top=(b.top if b.top and b.top.style else THIN) if r == r1 else b.top,
+                                 bottom=(b.bottom if b.bottom and b.bottom.style else THIN) if r == r2 else b.bottom)
+
+
+def skin(ws, last_col: int, last_row: int, cards=(), hide_headers=False):
+    """Apply the app look: white cards on a light canvas. Any unfilled cell outside a card becomes canvas."""
+    for (c1, r1, c2, r2) in cards:
+        card_box(ws, c1, r1, c2, r2)
+    for r in range(1, last_row + 2):
+        for c in range(1, last_col + 2):
+            cell = ws.cell(row=r, column=c)
+            if cell.fill is None or cell.fill.fill_type is None:
+                cell.fill = FILL_BG
+    if hide_headers:
+        ws.sheet_view.showRowColHeaders = False
+
+
+def place_chart(ws, chart, c1: int, r1: int, c2: int, r2: int, pad: int = 6):
+    """Pin a chart inside the cell box (c1,r1)-(c2,r2) with `pad` px padding (two-cell anchor)."""
+    from openpyxl.drawing.spreadsheet_drawing import AnchorMarker, TwoCellAnchor
+    emu = 9525
+    a = TwoCellAnchor()
+    a._from = AnchorMarker(col=c1 - 1, colOff=pad * emu, row=r1 - 1, rowOff=pad * emu)
+    hpx = int((ws.row_dimensions[r2].height or 15) * 96 / 72)
+    a.to = AnchorMarker(col=c2 - 1, colOff=max(0, col_px(ws, c2) - pad) * emu, row=r2 - 1, rowOff=max(0, hpx - pad) * emu)
+    chart.anchor = a
+    ws.add_chart(chart)
 
 
 def add_list_dv(ws, rng: str, source: str, prompt: str | None = None, allow_blank=True, strict=True):
@@ -226,11 +357,11 @@ def cf_databar(ws, rng: str, color=BLUE):
 
 
 def style_input(ws, rng, T: Theme, numfmt=None, align=None):
-    paint(ws, rng, f=FILL_INPUT, font=T.font(10), border=BOX, numfmt=numfmt, align=align or LEFT)
+    paint(ws, rng, f=FILL_INPUT, font=T.font(10), border=CELL_BOX, numfmt=numfmt, align=align or LEFT)
 
 
 def style_calc(ws, rng, T: Theme, numfmt=None, align=None, color=DARK):
-    paint(ws, rng, f=FILL_CALC, font=T.font(10, color=color), border=BOX, numfmt=numfmt, align=align or LEFT)
+    paint(ws, rng, f=FILL_CALC, font=T.font(10, color=color), border=CELL_BOX, numfmt=numfmt, align=align or LEFT)
 
 
 def note(ws, T: Theme, cellref: str, text: str, size=9, color=SECONDARY, italic=True):

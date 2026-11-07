@@ -98,6 +98,10 @@ def render(v, fmt):
         f = (fmt or "").lower()
         if f in ("d",):
             return str(d.day)
+        if f == "dddd":
+            return DAYS[d.weekday()]
+        if f == "ddd":
+            return DAYS[d.weekday()][:3]
         if "mmmm" in f:
             s = f"{MONTHS[d.month - 1]} {d.day}" if "d" in f else MONTHS[d.month - 1]
         elif "mmm" in f:
@@ -178,6 +182,7 @@ def chart_boxes(path, sheet_titles):
 
 def lint(path, strict_sheets, charts_from=None):
     wb = load_workbook(path, data_only=True)
+    wbf = load_workbook(path)   # formulas: a cell holding a formula is never "empty" for overflow purposes
     _DIMS.clear()
     problems = []
     charts = chart_boxes(charts_from or path, wb.sheetnames)
@@ -246,7 +251,9 @@ def lint(path, strict_sheets, charts_from=None):
                     remaining = need + pad - width
                     while remaining > 0 and nxt < c2 + 30:
                         nb = ws.cell(row=r1, column=nxt)
-                        if (r1, nxt) in mm or (nb.value not in (None, "")):
+                        has_formula = isinstance(wbf[ws.title].cell(row=r1, column=nxt).value, str) and \
+                            str(wbf[ws.title].cell(row=r1, column=nxt).value).startswith("=")
+                        if (r1, nxt) in mm or (nb.value not in (None, "")) or has_formula:
                             problems.append(f"{where}: text clipped by neighbour {get_column_letter(nxt)}{r1}: {s[:50]!r}")
                             break
                         remaining -= col_px(ws, nxt)

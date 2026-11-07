@@ -168,7 +168,7 @@ def validate_demo(p: Path):
     # ---------------- project overview roll-ups
     P = wb[B.S_POV]
     for i, pr in enumerate(SD.PROJECTS):
-        r = 7 + i
+        r = B.R1 + i
         pt = [t for t in tasks if t["project"] == pr[0]]
         eff = [1.0 if t["status"] == done else (t["prog"] or 0) for t in pt]
         exp_prog = 1.0 if pr[7] == "Completed" else (sum(eff) / len(eff) if eff else 0)
@@ -184,7 +184,7 @@ def validate_demo(p: Path):
     R = wb[B.S_RT]
     steps = {f: (u, s) for f, u, s in B.FREQ}
     for i, (n, pr, cat, who, fq, cu, so, eo, pri, st, lc, cnt) in enumerate(SD.RECURRING):
-        r = 7 + i
+        r = B.R1 + i
         start = SD.d(so)
         end = SD.d(eo) if eo is not None else None
         base = max(today, SD.d(lc) + dt.timedelta(days=1))
@@ -240,7 +240,7 @@ def validate_demo(p: Path):
 
     # ---------------- monthly calendar (current month)
     M = wb[B.S_MCAL]
-    gs = as_date(M["K7"].value)
+    gs = as_date(M["Q7"].value)
     first_of = today.replace(day=1)
     exp_gs = first_of - dt.timedelta(days=first_of.weekday())  # Monday start
     check("Calendar grid start", gs, exp_gs)
@@ -273,7 +273,7 @@ def validate_demo(p: Path):
 
     # ---------------- gantt (all projects, show done)
     G = wb[B.S_GC]
-    check("Gantt tasks shown", G["J6"].value, sum(1 for t in tasks if t["start"] and t["due"]))
+    check("Gantt tasks shown", G["K6"].value, sum(1 for t in tasks if t["start"] and t["due"]))
     check("Gantt row1 task", G["C10"].value, tasks[0]["name"])
 
     # ---------------- task filter (demo default: Completion = Incomplete)
@@ -306,7 +306,7 @@ def validate_blank(p: Path):
     check("blank overdue message", D[M_["od_first"]].value, "No overdue tasks — great work!")
     check("blank perf message", D[M_["perf_first"]].value, "No projects yet — add one")
     check("blank TF message", wb[B.S_TF]["D19"].value, "No tasks match these filters.")
-    check("blank gantt message", wb[B.S_GC]["C10"].value, "No tasks to show — add tasks with start and due dates.")
+    check("blank gantt message", wb[B.S_GC]["C10"].value, "No tasks to show yet")
 
 
 def main():
