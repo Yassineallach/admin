@@ -1,0 +1,72 @@
+{
+  "name": "Ultimate Productivity Bundle — Design System",
+  "version": "1.0.0",
+  "color": {
+    "primary": {
+      "deep_navy": "#17243A",
+      "midnight_blue": "#223653",
+      "professional_blue": "#4169E1",
+      "soft_blue": "#EAF1FB"
+    },
+    "accent": {
+      "teal": "#24A89A",
+      "soft_teal": "#E2F4F0",
+      "lavender": "#8B7BE8",
+      "soft_lavender": "#F0EDFC"
+    },
+    "neutral": {
+      "background": "#F5F7FA",
+      "white": "#FFFFFF",
+      "light_gray": "#E9EDF2",
+      "medium_gray": "#9AA5B1",
+      "dark_text": "#263445",
+      "secondary_text": "#6B7785",
+      "border": "#DCE3EA"
+    },
+    "status": {
+      "success": "#279B70",
+      "success_bg": "#E5F5ED",
+      "warning": "#E9A23B",
+      "warning_bg": "#FFF3DC",
+      "danger": "#DC5B64",
+      "danger_bg": "#FCEAEC",
+      "info": "#4D8FD8",
+      "info_bg": "#EAF2FC"
+    },
+    "finance": {
+      "income": "#24A89A",
+      "expense": "#DC5B64",
+      "savings": "#4169E1",
+      "goals": "#8B7BE8"
+    }
+  },
+  "cell_conventions": {
+    "user_input": {"fill": "#EAF1FB", "meaning": "Light blue — type or pick a value here"},
+    "standard": {"fill": "#FFFFFF", "meaning": "White — standard information / labels"},
+    "calculated": {"fill": "#E9EDF2", "meaning": "Light gray — formula, do not overwrite"},
+    "positive": {"fill": "#E2F4F0", "meaning": "Light teal — positive result"},
+    "warning": {"fill": "#FCEAEC", "meaning": "Light red — warning or negative result"},
+    "optional": {"fill": "#F0EDFC", "meaning": "Lavender — optional / secondary information"}
+  },
+  "typography": {
+    "excel": "Aptos (falls back to Calibri/Arial on older Office)",
+    "google_sheets": "Arial",
+    "onenote": "Segoe UI / Aptos",
+    "sizes_pt": {"dashboard_title": 22, "sheet_title": 18, "section": 12, "kpi_value": 20, "kpi_label": 9, "table_header": 10, "body": 10, "note": 9}
+  },
+  "spacing": {
+    "gutter_column_width": 2.5,
+    "title_row_height": 36,
+    "section_row_height": 22,
+    "body_row_height": 18
+  },
+  "number_formats": {
+    "date": "mmm d, yyyy",
+    "short_date": "mmm d",
+    "currency": "#,##0.00",
+    "currency_whole": "#,##0",
+    "percent": "0%",
+    "hours": "0.0",
+    "time": "h:mm AM/PM"
+  }
+}
