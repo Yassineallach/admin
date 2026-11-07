@@ -34,7 +34,7 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
-    <!-- Table mouse (camera optical flow) and infrared TV remote -->
+    <!-- Air mouse hand tracking (camera) and infrared TV remote -->
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.TRANSMIT_IR" />
 

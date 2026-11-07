@@ -275,7 +275,7 @@ class PresenterController(
     }
 
     /**
-     * Relative pointer movement from a non-gyro source (touchpad, camera optical flow).
+     * Relative pointer movement from a non-gyro source (touchpad, table mouse).
      * Goes through the same coalescing/rate limiting as the air mouse.
      */
     fun moveBy(dx: Int, dy: Int) {
@@ -325,6 +325,9 @@ class PresenterController(
             if (active) key(KeyCodes.L, KeyCodes.MOD_LEFT_CTRL) else key(KeyCodes.A, KeyCodes.MOD_LEFT_CTRL)
         }
     }
+
+    /** Turn gyro pointing on/off from the mouse screens (no laser shortcut, no recenter). */
+    fun setTracking(active: Boolean) = setPointerActiveInternal(active, sendLaser = false)
 
     fun setPreview(enabled: Boolean) {
         previewEnabled = enabled

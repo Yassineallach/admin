@@ -13,8 +13,9 @@ android {
         // BluetoothHidDevice (HID peripheral role) was added in API 28 (Android 9).
         minSdk = 28
         targetSdk = 35
-        versionCode = 6
-        versionName = "2.0.0"
+        versionCode = 7
+        versionName = "2.1.0"
+        ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64") }
     }
 
     buildTypes {
@@ -34,6 +35,9 @@ android {
     }
     kotlinOptions {
         jvmTarget = "17"
+    }
+    androidResources {
+        noCompress += "task" // the hand model is memory-mapped by MediaPipe
     }
     buildFeatures {
         compose = true
@@ -59,11 +63,13 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
     // HTTP (VLC web interface) and WebSocket (Samsung / LG TVs)
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
-    // Camera optical flow for the table mouse
+    // Air mouse: camera + on-device hand landmark tracking (MediaPipe Hand Landmarker)
     val camerax = "1.4.1"
     implementation("androidx.camera:camera-core:$camerax")
     implementation("androidx.camera:camera-camera2:$camerax")
     implementation("androidx.camera:camera-lifecycle:$camerax")
+    implementation("androidx.camera:camera-view:$camerax")
+    implementation("com.google.mediapipe:tasks-vision:0.10.14")
     debugImplementation("androidx.compose.ui:ui-tooling")
 
     testImplementation("junit:junit:4.13.2")

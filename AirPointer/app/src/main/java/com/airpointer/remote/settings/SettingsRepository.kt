@@ -64,6 +64,8 @@ class SettingsRepository(context: Context) {
             hostWidth = prefs.getInt("hostWidth", d.hostWidth),
             hostHeight = prefs.getInt("hostHeight", d.hostHeight),
             scrollStepDp = prefs.getInt("scrollStepDp", d.scrollStepDp),
+            handSpeed = prefs.getFloat("handSpeed", d.handSpeed),
+            tableSpeed = prefs.getFloat("tableSpeed", d.tableSpeed),
             slideKeys = enumOr("slideKeys", d.slideKeys),
             volumeKeysEnabled = prefs.getBoolean("volumeKeys", d.volumeKeysEnabled),
             volumeUpAction = enumOr("volumeUpAction", d.volumeUpAction),
@@ -113,6 +115,8 @@ class SettingsRepository(context: Context) {
             .putInt("hostWidth", s.hostWidth)
             .putInt("hostHeight", s.hostHeight)
             .putInt("scrollStepDp", s.scrollStepDp)
+            .putFloat("handSpeed", s.handSpeed)
+            .putFloat("tableSpeed", s.tableSpeed)
             .putString("slideKeys", s.slideKeys.name)
             .putBoolean("volumeKeys", s.volumeKeysEnabled)
             .putString("volumeUpAction", s.volumeUpAction.name)

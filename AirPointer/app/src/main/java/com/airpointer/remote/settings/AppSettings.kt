@@ -21,6 +21,9 @@ data class AppSettings(
     val hostWidth: Int = 1920,
     val hostHeight: Int = 1080,
     val scrollStepDp: Int = 22,
+    /** Camera air mouse (hand tracking) cursor speed. */
+    val handSpeed: Float = 1f,
+    val tableSpeed: Float = 1f,
     // Presentation
     val slideKeys: SlideKeys = SlideKeys.ARROWS,
     val volumeKeysEnabled: Boolean = true,

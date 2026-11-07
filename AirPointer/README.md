@@ -23,7 +23,7 @@ Requirements: JDK 17+, Android SDK Platform 35 + Build-Tools 35 (Android Studio 
 ```bash
 cd AirPointer
 echo "sdk.dir=/path/to/Android/sdk" > local.properties
-./gradlew testDebugUnitTest   # 55 JVM tests; 2 of them need live players and skip otherwise (§8)
+./gradlew testDebugUnitTest   # 71 JVM tests; 2 of them need live players and skip otherwise (§8)
 ./gradlew assembleRelease     # app/build/outputs/apk/release/app-release.apk (R8, ~3 MB)
 ./gradlew lintDebug
 adb install -r app/build/outputs/apk/release/app-release.apk
@@ -42,7 +42,7 @@ GOOS=linux   GOARCH=amd64 go build -trimpath -ldflags "-s -w" -o ../dist/airpoin
 GOOS=linux   GOARCH=arm64 go build -trimpath -ldflags "-s -w" -o ../dist/airpointer-companion-linux-arm64 .
 ```
 
-Prebuilt files are in `dist/`: `AirPointer-2.0.0.apk` and the three companion binaries.
+Prebuilt files are in `dist/`: `AirPointer-2.1.0.apk` and the three companion binaries.
 
 ---
 
@@ -103,41 +103,63 @@ controls in the notification.
 
 ## 4. Preset 2 · PC Mouse
 
-### A. Air mouse
-The gyroscope pipeline from the presentation remote: gravity-compensated yaw/pitch, adaptive 1€
-smoothing, soft dead zone, acceleration curve, calibration and automatic drift compensation, with
-the cursor frozen around clicks.
-Controls: motion tracking on/off, sensitivity, acceleration, calibrate, left/right (press-and-hold
-works), **double click**, **drag lock** (holds the left button until you tap *Drop*: drag and
-drop), recenter, pause, scroll strip.
+### A. Air mouse: hand tracking with the camera
+The cursor follows your **index finger in the air**, and every click is a **finger gesture in the
+air**. Nothing is touched on the phone.
 
-### B. Table mouse: feasibility and what was built
-*Goal: slide the phone on the desk like an optical mouse.*
+* Tracking uses Google's **MediaPipe Hand Landmarker** (21 hand points per frame). It runs
+  entirely on the phone with the bundled `hand_landmarker.task` model, so no images leave the
+  phone. The screen draws only the hand skeleton.
+* `HandGestureMouse` (pure Kotlin, 9 unit tests) turns landmarks into mouse actions:
 
-* **Inertial sensors cannot do this.** Position from an accelerometer means integrating twice;
-  bias and noise make the estimate drift by tens of centimetres within a second or two. The
-  gyroscope measures rotation, not translation. So no IMU-only "positional tracking" was built,
-  as you asked.
-* **Camera optical flow can, under conditions.** An optical mouse compares successive images of
-  the surface and measures how far they shifted. The app does the same in
-  `OpticalFlowEstimator`: 320×240 frames from CameraX are reduced to an 80×60 grid and
-  normalised (so exposure changes don't count as motion), then matched coarse-to-fine on a
-  3-level pyramid with sub-pixel refinement. It tracks up to about ±27 % of the view per frame,
-  and unit tests confirm sub-pixel accuracy on synthetic textures.
-* **Which camera:**
-  * **Front camera, watching the ceiling (default).** Works when the ceiling has detail: lamps,
-    beams, edges, texture. A plain white ceiling in a dim room has nothing to track. Speed scales
-    with ceiling height, so there's a speed slider.
-  * **Back camera + torch, watching the desk.** Lying flat, the back lens sits about 1 mm above
-    the desk. Phone cameras can't focus closer than about 5–10 cm, so the image is mostly blur.
-    It only works on strongly patterned surfaces.
-* **Safety.** Each frame gets a confidence score (texture × match distinctness). Frames below the
-  threshold, frames taken while the gyroscope sees the phone tilting or lifting, and frames when
-  the phone isn't flat all produce **no movement**. The cursor stops instead of drifting. The
-  screen shows tracking quality and frame rate, and offers invert-X/Y in case a phone's camera
-  orientation differs.
-* **Verdict.** It's a real optical-flow mouse, but reliability depends on the room and the phone.
-  It hasn't been tested on a device. The touchpad below is the dependable alternative.
+  | Gesture in the air | Action |
+  |---|---|
+  | move your hand / index finger | cursor moves (smoothing, dead zone, acceleration) |
+  | pinch thumb + index | left click; two pinches = double click |
+  | pinch thumb + index and hold (≥ 0.4 s) | drag; open the pinch to drop |
+  | pinch thumb + middle | right click |
+  | raise index + middle (✌) and move up/down | scroll |
+  | fist | pause: reposition your hand without moving the cursor |
+
+* **Click accuracy:**
+  * The cursor follows the index finger's base knuckle by default. The knuckle stays still when
+    you pinch, so a click lands where you pointed. Fingertip mode is optional.
+  * The cursor is also frozen for the moment of a click.
+* **Reliability:** pinches use hand-size-relative distances, so they work at any distance. They
+  also use hysteresis, a 2-frame confirmation, and "the thumb must be clearly nearer to one
+  finger", which stops a middle-finger pinch registering as a left click.
+* **Setup:** prop the phone up facing you (or lay it flat with your hand above it), 30–60 cm
+  away, in decent light. Front or back camera; invert X/Y if needed.
+* The gyroscope air pointer is still used by the Presentation remote.
+
+### B. Table mouse: gyroscope + accelerometer
+The phone lies flat on the desk and is slid like a mouse; the screen is the mouse-button surface.
+
+* **Why this is harder than it sounds.** These sensors measure acceleration, not position.
+  Position needs integrating twice, and done naively it drifts away within a second.
+  `TableMotionProcessor` keeps it in check with **zero-velocity updates (ZUPT)**, the technique
+  inertial foot trackers use:
+  * the gyroscope keeps the rest vector (gravity + accelerometer bias) aligned while the phone
+    turns on the desk, and together with the accelerometer it detects rest;
+  * at rest, velocity is reset to exactly zero and the bias is re-learned, so each push is
+    integrated on its own and errors cannot build up;
+  * a small dead band and a velocity leak suppress noise mid-stroke.
+* Unit-tested (6 tests):
+  * a 2 cm push gives the expected cursor travel in the right direction;
+  * push-and-return ends near the start;
+  * 10 s at rest with sensor bias and noise doesn't drift;
+  * spinning the phone in place doesn't move the cursor;
+  * repeated pushes add up.
+* **Clicks on the screen:**
+  * tap = left click (double tap = double click);
+  * two-finger tap = right click;
+  * two-finger drag = scroll;
+  * tap then hold = drag.
+
+  Phone motion is ignored while a finger is down, because a tap shakes the phone, except during
+  a drag.
+* **Expect:** short, brisk pushes work well, like a low-DPI mouse you lift and reposition. Very
+  slow glides below the dead band register less. Keep the top of the phone pointing away from you.
 
 ### C. Touchpad
 A laptop-style touchpad on the screen:
@@ -240,14 +262,17 @@ app/src/main/java/com/airpointer/remote/
 ├── core/            pure Kotlin, unit-tested on the JVM
 │   ├── AirMouseProcessor, OneEuroFilter, TiltPointerProcessor, Vec3, MotionConfig
 │   ├── TouchpadGestureEngine      tap/2-finger tap/scroll/long-press drag
-│   └── OpticalFlowEstimator       camera block-matching (table mouse)
+│   ├── HandGestureMouse           hand landmarks → pointer, pinch clicks, drag, scroll (air mouse)
+│   ├── TableMotionProcessor       gyro + accelerometer with zero-velocity updates (table mouse)
+│   └── AirGestureEngine           screen gestures for the table mouse
 ├── transport/       ReportSink interface + TransportRouter (selected link)
 │   ├── WifiCompanionClient        TCP, HMAC PIN auth, ping, MPV relay
 │   └── CompanionDiscovery         UDP broadcast
 ├── hid/             Bluetooth HID Device: descriptor (keyboard 1, mouse 2, consumer 3), reports,
 │                    BluetoothHidController (implements ReportSink), pairing manager
 ├── presenter/       PresenterController: sensors → pointer → reports; keys, clicks, drag, media keys
-├── table/           TableMouseController (CameraX + IMU gating)
+├── hand/            HandTrackingController (CameraX + MediaPipe Hand Landmarker)
+├── table/           TableMouseController (gyroscope + accelerometer)
 ├── tv/              TvConnection implementations: AndroidTvRemote (+Protobuf), SamsungTv, LgWebOsTv,
 │                    IrRemote (+IrEncoders), BluetoothTvRemote, PinnedTrust, WakeOnLan,
 │                    TvDiscovery (mDNS + SSDP), TvRepository, TvManager
@@ -295,12 +320,11 @@ so nothing jumps afterwards.
 
 ## 8. Testing: what was verified and what wasn't
 
-**Automated (55 JVM tests + 6 Go tests, all passing; the 2 live-player tests skip without players):**
+**Automated (71 JVM tests + 6 Go tests, all passing; the 2 live-player tests skip without players):**
 * motion pipeline (14), 1€ filter, defaults smoke test;
 * HID descriptor parsing (exactly one mouse; report sizes match the encoders), report encoding, consumer reports;
 * touchpad gestures (5);
-* optical flow (6): integer and sub-pixel shifts, large shifts, exposure change, noise drift,
-  blank surface, row stride;
+* air hand gestures (9), table motion (6), table screen gestures (7);
 * TV protocols (11): protobuf, key inject bytes, Android TV pairing secret against the reference
   algorithm, NEC/Samsung32/SIRC timings, SSDP classification, Samsung/LG messages, Wake-on-LAN,
   certificate pinning with real certificates;
@@ -372,7 +396,9 @@ To rerun them: start the players, then
 ### Wi-Fi, TV and media
 14. **Same network.** Phone and PC/TV must be on the same LAN. Guest Wi-Fi or "AP isolation"
     blocks them from seeing each other; enter IP addresses manually if broadcasts are filtered.
-15. **Camera table mouse** depends on the environment (see §4B). It stops when unsure.
+15. **Hand-tracking air mouse** needs the hand in view and reasonable light; the frame rate
+    depends on the phone (MediaPipe on the CPU, typically 15–30 fps). The table mouse
+    under-registers very slow glides (see §4B).
 16. **IR** needs a phone with an IR blaster (common on Xiaomi/Redmi/POCO and some Huawei phones;
     rare elsewhere). The app detects it and disables the option otherwise.
 17. **Samsung TVs before 2016** (Orsay, port 55000) and **LG Netcast (pre-webOS)** are not supported.
