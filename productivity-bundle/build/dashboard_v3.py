@@ -148,6 +148,8 @@ class DashV3:
         return f"${L(E0 + col)}${row}"
 
     def panel(self, c1, r1, c2, r2):
+        if self.excel:
+            return   # the rounded shape is the card; leave the canvas underneath so no square corner can show
         edge = Side(style="thin", color=BORDER)
         for r in range(r1, r2 + 1):
             for c in range(c1, c2 + 1):
@@ -348,9 +350,10 @@ class DashV3:
             bg = fill("17A397") if hl else fill(WHITE)
             fg = WHITE if hl else NAVY
             self.panel(c1, 3, c2, 7)
-            for r in range(3, 8):
-                for cc in range(c1, c2 + 1):
-                    self.ws.cell(row=r, column=cc).fill = bg
+            if not self.excel:
+                for r in range(3, 8):
+                    for cc in range(c1, c2 + 1):
+                        self.ws.cell(row=r, column=cc).fill = bg
             self.put(c1, 7, c2, 7, label, self.F(9, True, fg), Alignment(horizontal="center", vertical="center"))
             self.put(c1, 4, c2, 5, val, self.F(22, True, fg), Alignment(horizontal="center", vertical="center"), nf)
             self.put(c1, 6, c2, 6, sub, self.F(8, False, "D9F2EE" if hl else SECONDARY), Alignment(horizontal="center", vertical="center"))
@@ -367,7 +370,8 @@ class DashV3:
         thick = Side(style="thick", color=BG)
         self.pills = []
         for (c1, c2), (fm, bg, fg, key) in zip(TILES, pills):
-            self.put(c1, 8, c2, 8, fm, self.F(9, True, fg), Alignment(horizontal="center", vertical="center"), None, fill(bg),
+            self.put(c1, 8, c2, 8, fm, self.F(9, True, fg), Alignment(horizontal="center", vertical="center"), None,
+                     None if self.excel else fill(bg),
                      Border(top=thick, bottom=thick))
             DASH[key] = f"{L(c1)}8"
             self.pills.append(((c1, c2), f"${L(c1)}$8", bg, fg))
@@ -625,6 +629,10 @@ class DashV3:
         lay = Layer(col_px_list(ws, NCOLS + 2), row_px_list(ws, LAST_ROW + 2), font=self.T.font_name)
         X, Y = lay.x, lay.y
         shadow = ("0F6E68", 16, 18, 4)
+        G = 3   # grow cards a little past their cell box
+
+        def card(x0, y0, x1, y1, **kw):
+            lay.shape(x0 - G, y0 - G, x1 + G, y1 + G, **kw)
         lay.shape(0, 0, X(4) - 6, Y(LAST_ROW + 1), radius=0.2, fill=None, grad=([(0, "0F6E68"), (100, "0B4F4C")], 90), name="Sidebar")
         for i, (tab, icon, _short) in enumerate(self.NAV):
             cy = 62 + i * 66
@@ -638,11 +646,11 @@ class DashV3:
         for ((c1, c2), v, sub, lab, hl, icon) in self.tile_cells:
             x0, x1, y0, y1 = X(c1), X(c2 + 1), Y(3), Y(8)
             if hl:
-                lay.shape(x0, y0 - 6, x1, y1 + 6, radius=0.16, fill=None, grad=([(0, "1EB5A6"), (100, "86DDD3")], 90),
+                card(x0, y0 - 6, x1, y1 + 6, radius=0.16, fill=None, grad=([(0, "1EB5A6"), (100, "86DDD3")], 90),
                           shadow=("17A397", 45, 26, 6), name="Highlight")
                 png = icons.donut(c="E1F3F0", size=96, accent="0B4F4C")
             else:
-                lay.shape(x0, y0, x1, y1, radius=0.14, fill=WHITE, shadow=shadow, name="Tile")
+                card(x0, y0, x1, y1, radius=0.14, fill=WHITE, shadow=shadow, name="Tile")
                 png = icons.ICONS[icon](c="0F6E68", size=96)
             fg = WHITE if hl else NAVY
             lay.picture(x0 + 16, y0 + 22, x0 + 60, y0 + 66, png)
@@ -657,14 +665,14 @@ class DashV3:
             lay.shape(x0, y0, x1, y1, radius=0.5, fill=bg, name="Pill")
             lay.text(x0 + 8, y0, x1 - 8, y1, textlink=link, size=10, bold=True, color=fg, align="c")
         # panels
-        lay.shape(X(LEFT[0]), Y(A_T), X(MID[1] + 1), Y(A_P + 1), radius=0.05, fill=WHITE, shadow=shadow, name="Panel")
-        lay.shape(X(RIGHT[0]), Y(A_T), X(RIGHT[1] + 1), Y(A_P + 1), radius=0.07, fill=WHITE, shadow=shadow, name="Panel")
-        lay.shape(X(LEFT[0]), Y(B_T), X(MID[1] + 1), Y(B_P + 1), radius=0.05, fill=WHITE, shadow=shadow, name="Panel")
+        card(X(LEFT[0]), Y(A_T), X(MID[1] + 1), Y(A_P + 1), radius=0.05, fill=WHITE, shadow=shadow, name="Panel")
+        card(X(RIGHT[0]), Y(A_T), X(RIGHT[1] + 1), Y(A_P + 1), radius=0.07, fill=WHITE, shadow=shadow, name="Panel")
+        card(X(LEFT[0]), Y(B_T), X(MID[1] + 1), Y(B_P + 1), radius=0.05, fill=WHITE, shadow=shadow, name="Panel")
         for (c1, c2) in (LEFT, MID, RIGHT):
-            lay.shape(X(c1), Y(C_T), X(c2 + 1), Y(C_P + 1), radius=0.07, fill=WHITE, shadow=shadow, name="Panel")
-            lay.shape(X(c1), Y(E_T), X(c2 + 1), Y(E_P + 1), radius=0.07, fill=WHITE, shadow=shadow, name="Panel")
-        lay.shape(X(WIDE[0]), Y(D_T), X(WIDE[1] + 1), Y(D_P + 1), radius=0.05, fill=WHITE, shadow=shadow, name="Panel")
-        lay.shape(X(RIGHT[0]), Y(D_T), X(RIGHT[1] + 1), Y(D_P + 1), radius=0.07, fill=WHITE, shadow=shadow, name="Panel")
+            card(X(c1), Y(C_T), X(c2 + 1), Y(C_P + 1), radius=0.07, fill=WHITE, shadow=shadow, name="Panel")
+            card(X(c1), Y(E_T), X(c2 + 1), Y(E_P + 1), radius=0.07, fill=WHITE, shadow=shadow, name="Panel")
+        card(X(WIDE[0]), Y(D_T), X(WIDE[1] + 1), Y(D_P + 1), radius=0.05, fill=WHITE, shadow=shadow, name="Panel")
+        card(X(RIGHT[0]), Y(D_T), X(RIGHT[1] + 1), Y(D_P + 1), radius=0.07, fill=WHITE, shadow=shadow, name="Panel")
         # titles, headers, list rows
         for (c1, c2, r, text, align) in self.titles:
             if align == "center":
