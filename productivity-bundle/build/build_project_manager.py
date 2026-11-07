@@ -211,7 +211,7 @@ class Builder:
     # ================================================================ TAB 1 SETUP
     def build_setup(self):
         ws, T = self.ws[S_SETUP], self.T
-        setup_sheet(ws, {"B": 26, "C": 26, **{L(i): 18 for i in range(4, 17)}})
+        setup_sheet(ws, {"B": 26, "C": 26, **{L(i): 20 for i in range(4, 17)}})
         title_bar(ws, T, "SETUP  ·  Workspace Configuration", "Start here — every dropdown and calculation in the workbook reads from this tab.", 15, demo=self.demo)
         self.merge_style(ws, "B5:O8", border=None, f=fill(SOFT_BLUE),
                          value=("WELCOME TO THE ULTIMATE PROJECT MANAGER.   1) Fill in your workspace details below.   "
@@ -318,16 +318,16 @@ class Builder:
         ws, T = self.ws[S_POV], self.T
         heads = ["Project ID", "Project Name", "Description", "Category", "Project Manager", "Start Date", "Due Date", "Priority",
                  "Status", "Progress", "Budget", "Actual Cost", "Remaining Budget", "Days Remaining",
-                 "Tasks", "Done Tasks", "Overdue Tasks", "Health", "Deadline Key", "Row No"]
-        widths = [10, 28, 34, 22, 18, 15, 15, 11, 13, 11, 13, 13, 14, 12, 8, 9, 10, 13, 12, 8]
+                 "Tasks", "Done Tasks", "Overdue Tasks", "Health", "Deadline Key", "Row No", "Due Rank"]
+        widths = [10, 31, 54, 25, 18, 15, 15, 11, 13, 11, 13, 13, 14, 12, 9, 9, 10, 13, 12, 8, 12]
         setup_sheet(ws, {i + 2: w for i, w in enumerate(widths)})
-        title_bar(ws, T, "PROJECT OVERVIEW  ·  Portfolio", "One row per project. Progress, budget and task counts are calculated automatically.", 21, demo=self.demo)
+        title_bar(ws, T, "PROJECT OVERVIEW  ·  Portfolio", "One row per project. Progress, budget and task counts are calculated automatically.", 22, demo=self.demo)
         legend(ws, T, 4, 2)
         ws["P4"] = "Currency:"
         ws["Q4"] = "=CurrencySymbol"
         ws["P4"].font = ws["Q4"].font = T.font(9, True, SECONDARY)
         header_row(ws, T, HDR, 2, heads)
-        for c in "PQRSTU":
+        for c in "PQRSTUV":
             ws[f"{c}{HDR}"].fill = fill(MED_GRAY)
         ws[f"P{HDR - 1}"] = "AUTOMATION HELPERS (calculated)"
         ws[f"P{HDR - 1}"].font = T.font(8, True, SECONDARY)
@@ -353,7 +353,9 @@ class Builder:
                        f'IF(R{{r}}>0,"At risk","On track"))))))')
         self.fill_down(ws, "T", R1, last, '=IF(OR(C{r}="",H{r}=""),"",INT(H{r})&"|"&COUNTIFS(H$7:H{r},H{r},C$7:C{r},"?*"))')
         self.fill_down(ws, "U", R1, last, '=IF(C{r}="","",COUNTIF(C$7:C{r},"?*"))')
-        self.calc(S_POV, f"K{R1}:U{last}")
+        self.fill_down(ws, "V", R1, last, '=IF(OR(C{r}="",H{r}=""),"",H{r}+ROW()/100000)')
+        self.calc(S_POV, f"K{R1}:V{last}")
+        paint(ws, f"V{R1}:V{last}", numfmt="0.00")
         paint(ws, f"K{R1}:K{last}", numfmt=FMT_PCT)
         paint(ws, f"L{R1}:N{last}", numfmt=FMT_CUR)
         paint(ws, f"O{R1}:R{last}", numfmt="0", align=CENTER)
@@ -370,7 +372,7 @@ class Builder:
                             ("At risk", WARNING_BG, WARNING), ("On track", INFO_BG, INFO), ("Cancelled", LIGHT_GRAY, SECONDARY)):
             cf_formula(ws, f"S{R1}:S{last}", f'S{R1}="{txt}"', bg, fg, True)
         ws.freeze_panes = f"D{R1}"
-        self.table(ws, "tblProjects", f"B{HDR}:U{last}")
+        self.table(ws, "tblProjects", f"B{HDR}:V{last}")
         if self.demo:
             for i, p in enumerate(SD.PROJECTS):
                 r = R1 + i
@@ -384,7 +386,7 @@ class Builder:
                  "Status", "Estimated Hours", "Actual Hours", "Progress", "Notes",
                  "Deadline Flag", "Days Left", "Due Key", "Status Key", "Upcoming Rank", "Overdue Rank", "Filter No",
                  "Gantt No", "Done", "Recent Rank", "Effective Progress"]
-        widths = [9, 28, 28, 22, 13, 16, 15, 15, 10, 12, 10, 10, 10, 24, 11, 9, 11, 13, 11, 11, 8, 8, 6, 11, 10]
+        widths = [9, 28, 54, 31, 14, 17, 15, 15, 10, 12, 10, 10, 10, 26, 11, 9, 11, 17, 12, 12, 8, 8, 6, 12, 10]
         setup_sheet(ws, {i + 2: w for i, w in enumerate(widths)})
         title_bar(ws, T, "VARIABLE TASKS  ·  One-time task database", "Add one task per row. Everything else in the workbook reads from this table.", 26, demo=self.demo)
         legend(ws, T, 4, 2)
@@ -426,8 +428,8 @@ class Builder:
             self.fill_down(ws, c, R1, last, tpl)
         self.calc(S_VT, f"P{R1}:Z{last}")
         paint(ws, f"Z{R1}:Z{last}", numfmt=FMT_PCT)
-        paint(ws, f"T{R1}:U{last}", numfmt="0.00000")
-        paint(ws, f"Y{R1}:Y{last}", numfmt="0.00000")
+        paint(ws, f"T{R1}:U{last}", numfmt="0.00")
+        paint(ws, f"Y{R1}:Y{last}", numfmt="0.00")
         add_list_dv(ws, f"E{R1}:E{last}", POV("C"))
         add_list_dv(ws, f"F{R1}:F{last}", SL("C"))
         add_list_dv(ws, f"G{R1}:G{last}", SL("G"))
@@ -458,7 +460,7 @@ class Builder:
         ws, T = self.ws[S_PB], self.T
         heads = ["Project ID", "Project Name", "Budget Category", "Planned Budget", "Actual Expenses", "Remaining Budget",
                  "Budget Utilization", "Expense Date", "Vendor", "Description", "Budget Alert"]
-        widths = [11, 26, 16, 14, 14, 15, 12, 15, 18, 30, 14, 3, 20, 14, 14, 14, 12]
+        widths = [11, 31, 16, 14, 14, 15, 12, 15, 20, 32, 14, 3, 20, 14, 14, 14, 12]
         setup_sheet(ws, {i + 2: w for i, w in enumerate(widths)})
         title_bar(ws, T, "PROJECT BUDGET  ·  Planned vs actual", "One row per budget line or expense. Totals roll up to Project Overview and the Dashboard.", 18, demo=self.demo)
         legend(ws, T, 4, 2)
@@ -531,7 +533,7 @@ class Builder:
         heads = ["Task ID", "Task Name", "Project", "Category", "Assigned To", "Frequency", "Custom Interval (days)", "Start Date",
                  "End Date", "Priority", "Status", "Last Completed", "Next Occurrence", "Days Until", "Occurrences This Month",
                  "Times Completed", "Notes", "Unit", "Step", "Base Date", "Month Steps", "Raw Next"]
-        widths = [9, 26, 22, 13, 16, 12, 11, 15, 15, 10, 10, 15, 15, 9, 12, 11, 22, 6, 6, 14, 8, 14]
+        widths = [9, 26, 27, 14, 17, 12, 11, 15, 15, 10, 10, 15, 15, 9, 12, 11, 24, 6, 6, 14, 8, 14]
         setup_sheet(ws, {i + 2: w for i, w in enumerate(widths)})
         title_bar(ws, T, "RECURRING TASKS  ·  Repeating work", "Daily, weekly, biweekly, monthly, quarterly, annual or custom (every N days). Next dates calculate automatically.", 23, demo=self.demo)
         legend(ws, T, 4, 2)
@@ -640,257 +642,9 @@ class Builder:
 
     # ================================================================ TAB 2 DASHBOARD
     def build_dash(self):
-        ws, T = self.ws[S_DASH], self.T
-        setup_sheet(ws, {**{L(i): 9.5 for i in range(2, 16)}, "P": 3, "Q": 22, "R": 11, "S": 11, "T": 3, "U": 13, "V": 11, "W": 11, "X": 3,
-                         "Y": 24, "Z": 12, "AA": 12, "AB": 10, "AC": 10})
-        title_bar(ws, T, "ALL-IN-ONE DASHBOARD", "", 15, home_link=None, demo=False)
-        ws["B3"] = f'="Workspace: "&IF({SC("C", 12)}="","—",{SC("C", 12)})&"   ·   Owner: "&IF({SC("C", 11)}="","—",{SC("C", 11)})'
-        ws["K2"] = f"={TODAY}"
-        ws["K2"].number_format = "dddd, mmm d, yyyy"
-        ws.merge_cells("K2:O2")
-        ws["K2"].font = T.font(11, True, WHITE)
-        ws["K2"].alignment = Alignment(horizontal="right", vertical="center", indent=1)
-        ws["L3"] = "Chart year"
-        ws["L3"].font = T.font(9, True, SECONDARY)
-        ws["L3"].alignment = RIGHT
-        ws["M3"] = f"={SC('C', 18)}"
-        self.inp(S_DASH, "M3", align=CENTER)
-        add_list_dv(ws, "M3", SS("H"))
-        if self.demo:
-            ws["N3"] = "DEMO DATA"
-            ws["N3"].font = T.font(9, True, WARNING)
-            ws["N3"].fill = fill(WARNING_BG)
-            ws["N3"].alignment = CENTER
-        self.nav_links(ws, 4, 2, 7, 2, skip=S_DASH)
-        ws.row_dimensions[4].height = ws.row_dimensions[5].height = 18
-        # helper: start of current week
-        ws["Q2"] = "Week start"
-        ws["R2"] = f"={TODAY}-WEEKDAY({TODAY},2)+1"
-        ws["R2"].number_format = FMT_SDATE
-        ws["Q2"].font = ws["R2"].font = T.font(8, False, SECONDARY)
-        ws["Q3"] = "Due-soon days"
-        ws["R3"] = "=DueSoonDays"
-        ws["Q3"].font = ws["R3"].font = T.font(8, False, SECONDARY)
-
-        pc, pj = POV("C"), POV("J")
-        k1 = [
-            ("TOTAL PROJECTS", f'=COUNTIF({pc},"?*")', "#,##0", NAVY, "in portfolio"),
-            ("ACTIVE PROJECTS", f'=COUNTIF({pj},{PSTAT[1]})+COUNTIF({pj},{PSTAT[2]})', "#,##0", BLUE, "planning + in progress"),
-            ("COMPLETED PROJECTS", f'=COUNTIF({pj},{P_DONE})', "#,##0", SUCCESS, "delivered"),
-            ("OVERDUE PROJECTS", f'=COUNTIF({POV("S")},"Overdue")', "#,##0", DANGER, "past due date"),
-            ("TOTAL TASKS", f'=COUNTIF({VT("C")},"?*")', "#,##0", NAVY, "one-time tasks"),
-            ("COMPLETED TASKS", f'=COUNTIFS({VT("C")},"?*",{VT("K")},{DONE})', "#,##0", SUCCESS, "marked done"),
-            ("PENDING TASKS", "=J8-L8", "#,##0", WARNING, "still open"),
-        ]
-        # cards: 7 per row, 2 columns each -> B..O
-        for i, (lab, fm, nf, colr, sub) in enumerate(k1):
-            self.kpi(ws, 7, 2 + i * 2, lab, fm, nf, colr, sub)
-        k2 = [
-            ("COMPLETION RATE", '=IF(J8=0,0,L8/J8)', FMT_PCT, TEAL, "of all tasks"),
-            ('="TOTAL BUDGET ("&CurrencySymbol&")"', f"=SUM({PB('E')})", FMT_CUR0, BLUE, "planned"),
-            ('="ACTUAL SPENDING ("&CurrencySymbol&")"', f"=SUM({PB('F')})", FMT_CUR0, LAVENDER, "spent to date"),
-            ('="REMAINING BUDGET ("&CurrencySymbol&")"', "=D12-F12", FMT_CUR0, TEAL, "planned − actual"),
-            ("BUDGET USED", '=IF(D12=0,0,F12/D12)', FMT_PCT, MIDNIGHT, "of total plan"),
-            ("DUE THIS WEEK", f'=COUNTIFS({VT("C")},"?*",{VT("I")},">="&R2,{VT("I")},"<="&(R2+6),{VT("K")},"<>"&{DONE})', "#,##0", WARNING, "open tasks"),
-            ("OVERDUE TASKS", f'=COUNTIF({VT("P")},"Overdue")', "#,##0", DANGER, "need attention"),
-        ]
-        for i, (lab, fm, nf, colr, sub) in enumerate(k2):
-            self.kpi(ws, 11, 2 + i * 2, lab, fm, nf, colr, sub)
-        cf_formula(ws, "H12", "H12<0", None, DANGER)
-        cf_formula(ws, "J12", "J12>1", None, DANGER)
-        ws.row_dimensions[8].height = ws.row_dimensions[12].height = 30
-
-        # ---------------- chart data (Q..AC)
-        section(ws, T, 15, 17, 29, "CHART DATA  (calculated automatically — do not edit)", color=MED_GRAY, size=9, height=18)
-        header_row(ws, T, 16, 17, ["Project status", "Projects"], color=MIDNIGHT, height=20)
-        for i in range(6):
-            r = 17 + i
-            ws[f"Q{r}"] = f"={PSTAT[i]}&\"\""
-            ws[f"R{r}"] = f'=IF(Q{r}="",0,COUNTIF({pj},Q{r}))'
-        header_row(ws, T, 16, 21, ["Month", "Tasks due", "Completed"], color=MIDNIGHT, height=20)
-        for m in range(12):
-            r = 17 + m
-            ws[f"U{r}"] = f"=DATE($M$3,{m + 1},1)"
-            ws[f"U{r}"].number_format = "mmm"
-            ws[f"V{r}"] = f'=COUNTIFS({VT("C")},"?*",{VT("I")},">="&U{r},{VT("I")},"<"&EDATE(U{r},1))'
-            ws[f"W{r}"] = f'=COUNTIFS({VT("C")},"?*",{VT("I")},">="&U{r},{VT("I")},"<"&EDATE(U{r},1),{VT("K")},{DONE})'
-        header_row(ws, T, 16, 25, ["Project", "Budget", "Actual", "Done", "Open"], color=MIDNIGHT, height=20)
-        for i in range(10):
-            r = 17 + i
-            idx = f'MATCH({i + 1},{POV("U")},0)'
-            ws[f"Y{r}"] = f'=IFERROR(INDEX({pc},{idx}),"")'
-            ws[f"Z{r}"] = f'=IFERROR(INDEX({POV("L")},{idx}),0)'
-            ws[f"AA{r}"] = f'=IFERROR(INDEX({POV("M")},{idx}),0)'
-            ws[f"AB{r}"] = f'=IFERROR(INDEX({POV("Q")},{idx}),0)'
-            ws[f"AC{r}"] = f'=IFERROR(INDEX({POV("P")},{idx})-AB{r},0)'
-        paint(ws, "Q17:AC28", font=T.font(9, color=SECONDARY))
-        paint(ws, "Z17:AA26", numfmt=FMT_CUR0)
-
-        # ---------------- charts
-        def style_axes(ch):
-            ch.x_axis.delete = False
-            ch.y_axis.delete = False
-            ch.y_axis.majorGridlines = None
-            ch.legend.position = "b"
-
-        ch = DoughnutChart(holeSize=58)
-        ch.title = "Projects by status"
-        ch.add_data(Reference(ws, min_col=18, min_row=16, max_row=22), titles_from_data=True)
-        ch.set_categories(Reference(ws, min_col=17, min_row=17, max_row=22))
-        s = ch.series[0]
-        for i, colr in enumerate([MED_GRAY, LAVENDER, BLUE, WARNING, TEAL, DANGER]):
-            pt = DataPoint(idx=i)
-            pt.graphicalProperties.solidFill = colr
-            pt.graphicalProperties.line.solidFill = WHITE
-            s.dPt.append(pt)
-        ch.legend.position = "r"
-        ch.width, ch.height = 12.6, 7.2
-        ws.add_chart(ch, "B16")
-
-        ch = BarChart()
-        ch.type = "bar"
-        ch.grouping = "stacked"
-        ch.overlap = 100
-        ch.title = "Task completion by project"
-        ch.add_data(Reference(ws, min_col=28, max_col=29, min_row=16, max_row=26), titles_from_data=True)
-        ch.set_categories(Reference(ws, min_col=25, min_row=17, max_row=26))
-        ch.series[0].graphicalProperties.solidFill = TEAL
-        ch.series[1].graphicalProperties.solidFill = "C9C0F5"
-        for sr in ch.series:
-            sr.graphicalProperties.line.noFill = True
-        ch.x_axis.scaling.orientation = "maxMin"
-        ch.x_axis.tickLblSkip = 1
-        style_axes(ch)
-        ch.width, ch.height = 12.6, 7.2
-        ws.add_chart(ch, "I16")
-
-        ch = BarChart()
-        ch.type = "col"
-        ch.title = "Monthly productivity"
-        ch.add_data(Reference(ws, min_col=22, max_col=23, min_row=16, max_row=28), titles_from_data=True)
-        ch.set_categories(Reference(ws, min_col=21, min_row=17, max_row=28))
-        ch.series[0].graphicalProperties.solidFill = "B9CBF6"
-        ch.series[1].graphicalProperties.solidFill = BLUE
-        for sr in ch.series:
-            sr.graphicalProperties.line.noFill = True
-        ch.gapWidth = 60
-        style_axes(ch)
-        ch.width, ch.height = 12.6, 7.2
-        ws.add_chart(ch, "B31")
-
-        ch = BarChart()
-        ch.type = "col"
-        ch.title = "Project budget vs actual"
-        ch.add_data(Reference(ws, min_col=26, max_col=27, min_row=16, max_row=26), titles_from_data=True)
-        ch.set_categories(Reference(ws, min_col=25, min_row=17, max_row=26))
-        ch.series[0].graphicalProperties.solidFill = BLUE
-        ch.series[1].graphicalProperties.solidFill = LAVENDER
-        for sr in ch.series:
-            sr.graphicalProperties.line.noFill = True
-        ch.gapWidth = 60
-        style_axes(ch)
-        ch.width, ch.height = 12.6, 7.2
-        ws.add_chart(ch, "I31")
-
-        # ---------------- lists
-        def list_block(r0, c0, title, color, heads_spans, rows, row_fn):
-            last_c = c0 + sum(s for _, s in heads_spans) - 1
-            section(ws, T, r0, c0, last_c, title, color=color)
-            cc = c0
-            for h, sp in heads_spans:
-                a = f"{L(cc)}{r0 + 1}:{L(cc + sp - 1)}{r0 + 1}"
-                self.merge_style(ws, a, h, T.font(9, True, SECONDARY), fill(LIGHT_GRAY), CENTER)
-                cc += sp
-            for k in range(1, rows + 1):
-                r = r0 + 1 + k
-                cc = c0
-                for j, (fm, nf, al) in enumerate(row_fn(k, r)):
-                    sp = heads_spans[j][1]
-                    a = f"{L(cc)}{r}:{L(cc + sp - 1)}{r}"
-                    self.merge_style(ws, a, fm, T.font(9), FILL_WHITE, al, nf, border=Border(bottom=THIN))
-                    cc += sp
-
-        def pick(helper_col, k, fn):
-            return f'IFERROR(MATCH({fn}({VT(helper_col)},{k}),{VT(helper_col)},0),"")'
-
-        R0 = 46
-        # upcoming deadlines  (hidden index in column Q)
-        ws[f"Q{R0}"] = "idx: upcoming"
-        ws[f"R{R0}"] = "idx: overdue"
-        ws[f"S{R0}"] = "idx: recent"
-        for k in range(1, 9):
-            r = R0 + 1 + k
-            ws[f"Q{r}"] = "=" + pick("T", k, "SMALL")
-            ws[f"R{r}"] = "=" + pick("U", k, "SMALL")
-            ws[f"S{r}"] = "=" + pick("Y", k, "LARGE")
-        paint(ws, f"Q{R0}:S{R0 + 9}", font=T.font(8, color=MED_GRAY))
-
-        def ix(col_, src, r, blank_zero=False):
-            return f'=IF(${col_}{r}="","",INDEX({VT(src)},${col_}{r})&"")'
-
-        list_block(R0, 2, "UPCOMING DEADLINES", BLUE, [("Task", 3), ("Project", 2), ("Assigned", 1), ("Due", 1)], 8,
-                   lambda k, r: [(ix("Q", "C", r), None, LEFT), (ix("Q", "E", r), None, LEFT), (f'=IF($Q{r}="","",LEFT(INDEX({VT("G")},$Q{r})&"",FIND(" ",INDEX({VT("G")},$Q{r})&" ")-1))', None, LEFT),
-                                 (f'=IF($Q{r}="","",INDEX({VT("I")},$Q{r}))', FMT_SDATE, CENTER)])
-        list_block(R0, 9, "OVERDUE TASKS", DANGER, [("Task", 3), ("Assigned", 2), ("Due", 1), ("Days late", 1)], 8,
-                   lambda k, r: [(ix("R", "C", r), None, LEFT), (ix("R", "G", r), None, LEFT),
-                                 (f'=IF($R{r}="","",INDEX({VT("I")},$R{r}))', FMT_SDATE, CENTER),
-                                 (f'=IF($R{r}="","",-INDEX({VT("Q")},$R{r}))', "0", CENTER)])
-        ws[f"B{R0 + 2}"].value = f'=IF($Q{R0 + 2}="","No upcoming deadlines — nice!",INDEX({VT("C")},$Q{R0 + 2})&"")'
-        ws[f"I{R0 + 2}"].value = f'=IF($R{R0 + 2}="","No overdue tasks — great work!",INDEX({VT("C")},$R{R0 + 2})&"")'
-        cf_formula(ws, f"H{R0 + 2}:H{R0 + 9}", f'AND(ISNUMBER(H{R0 + 2}),H{R0 + 2}-$K$2<=$R$3)', WARNING_BG, WARNING, True)
-        cf_formula(ws, f"O{R0 + 2}:O{R0 + 9}", f'ISNUMBER(O{R0 + 2})', DANGER_BG, DANGER, True)
-
-        R2_ = 57
-        list_block(R2_, 2, "RECENT ACTIVITY  (latest task starts)", LAVENDER, [("Task", 3), ("Project", 2), ("Status", 1), ("Progress", 1)], 8,
-                   lambda k, r: [(ix("S", "C", R0 + 1 + k), None, LEFT), (ix("S", "E", R0 + 1 + k), None, LEFT),
-                                 (ix("S", "K", R0 + 1 + k), None, CENTER),
-                                 (f'=IF($S{R0 + 1 + k}="","",INDEX({VT("Z")},$S{R0 + 1 + k}))', FMT_PCT, CENTER)])
-        cf_databar(ws, f"H{R2_ + 2}:H{R2_ + 9}", TEAL)
-        # team workload
-        tl = SL("G")
-
-        def team(k, r):
-            nm = f"INDEX({tl},{k})"
-            return [(f'=IF({nm}="","",{nm})', None, LEFT),
-                    (f'=IF(I{r}="","",COUNTIFS({VT("G")},I{r},{VT("C")},"?*",{VT("K")},"<>"&{DONE}))', "0", CENTER),
-                    (f'=IF(I{r}="","",COUNTIFS({VT("G")},I{r},{VT("P")},"Overdue"))', "0", CENTER),
-                    (f'=IF(I{r}="","",SUMIFS({VT("L")},{VT("G")},I{r},{VT("K")},"<>"&{DONE}))', FMT_HRS, CENTER),
-                    (f'=IF(I{r}="","",COUNTIFS({VT("G")},I{r},{VT("K")},{DONE}))', "0", CENTER)]
-        list_block(R2_, 9, "TEAM WORKLOAD", TEAL, [("Team member", 3), ("Open", 1), ("Overdue", 1), ("Open hrs", 1), ("Done", 1)], 8, team)
-        cf_formula(ws, f"M{R2_ + 2}:M{R2_ + 9}", f'AND(ISNUMBER(M{R2_ + 2}),M{R2_ + 2}>0)', DANGER_BG, DANGER, True)
-
-        # project performance overview
-        R3 = 68
-        section(ws, T, R3, 2, 15, "PROJECT PERFORMANCE OVERVIEW")
-        heads = [("Project", 3), ("Manager", 2), ("Status", 1), ("Progress", 1), ("Budget", 1), ("Actual", 1), ("Variance", 1),
-                 ("Tasks", 1), ("Overdue", 1), ("Due", 1), ("Health", 1)]
-        cc = 2
-        for h, sp in heads:
-            self.merge_style(ws, f"{L(cc)}{R3 + 1}:{L(cc + sp - 1)}{R3 + 1}", h, T.font(9, True, SECONDARY), fill(LIGHT_GRAY), CENTER)
-            cc += sp
-        for k in range(1, 11):
-            r = R3 + 1 + k
-            ws[f"Q{r}"] = f'=IFERROR(MATCH({k},{POV("U")},0),"")'
-            ws[f"Q{r}"].font = T.font(8, color=MED_GRAY)
-
-            def pv(c_, rr=r):
-                return f'IF($Q{rr}="","",INDEX({POV(c_)},$Q{rr}))'
-            cells = [(f"={pv('C')}&\"\"", None, LEFT, 3), (f"={pv('F')}&\"\"", None, LEFT, 2), (f"={pv('J')}&\"\"", None, CENTER, 1),
-                     (f"={pv('K')}", FMT_PCT, CENTER, 1), (f"={pv('L')}", FMT_CUR0, RIGHT, 1), (f"={pv('M')}", FMT_CUR0, RIGHT, 1),
-                     (f"={pv('N')}", FMT_CUR0, RIGHT, 1), (f'=IF($Q{r}="","",INDEX({POV("Q")},$Q{r})&" / "&INDEX({POV("P")},$Q{r}))', None, CENTER, 1),
-                     (f"={pv('R')}", "0", CENTER, 1), (f"={pv('H')}", FMT_SDATE, CENTER, 1), (f"={pv('S')}&\"\"", None, CENTER, 1)]
-            cc = 2
-            for fm, nf, al, sp in cells:
-                self.merge_style(ws, f"{L(cc)}{r}:{L(cc + sp - 1)}{r}", fm, T.font(9), FILL_WHITE, al, nf, border=Border(bottom=THIN))
-                cc += sp
-        ws[f"B{R3 + 2}"].value = f'=IF($Q{R3 + 2}="","Add projects on the Project Overview tab to see them here.",INDEX({POV("C")},$Q{R3 + 2})&"")'
-        cf_databar(ws, f"H{R3 + 2}:H{R3 + 11}", TEAL)
-        cf_formula(ws, f"K{R3 + 2}:K{R3 + 11}", f'AND(ISNUMBER(K{R3 + 2}),K{R3 + 2}<0)', DANGER_BG, DANGER, True)
-        cf_formula(ws, f"M{R3 + 2}:M{R3 + 11}", f'AND(ISNUMBER(M{R3 + 2}),M{R3 + 2}>0)', DANGER_BG, DANGER, True)
-        for txt, bg, fg in (("Completed", SUCCESS_BG, SUCCESS), ("Overdue", DANGER_BG, DANGER), ("Over budget", DANGER_BG, DANGER),
-                            ("At risk", WARNING_BG, WARNING), ("On track", INFO_BG, INFO)):
-            cf_formula(ws, f"O{R3 + 2}:O{R3 + 11}", f'O{R3 + 2}="{txt}"', bg, fg, True)
-        ws.freeze_panes = "A6"
+        import dashboard_pm as DP
+        S = {"DASH": S_DASH}
+        DP.Dash(self, S, VT, POV, PB, TS, SL, SS, SC, PSTAT, PRI, TODAY, DONE, P_DONE, TSTAT, ORDER, quote).build()
 
     # ================================================================ TAB 3 MONTHLY CALENDAR
     def build_mcal(self):
@@ -1148,7 +902,7 @@ class Builder:
     # ================================================================ TAB 6 PROJECT MANAGER
     def build_pm(self):
         ws, T = self.ws[S_PM], self.T
-        setup_sheet(ws, {"B": 20, "C": 16, "D": 16, "E": 16, "F": 16, "G": 14, "H": 3, "I": 20, "J": 13, "K": 40, "L": 16, "M": 13,
+        setup_sheet(ws, {"B": 20, "C": 16, "D": 16, "E": 16, "F": 17, "G": 14, "H": 3, "I": 31, "J": 13, "K": 50, "L": 17, "M": 15,
                          "N": 13, "O": 22, "P": 3, "Q": 6, "R": 6})
         title_bar(ws, T, "PROJECT MANAGER  ·  Project detail view", "Select a project — the left panel updates instantly. Add objectives, milestones, risks… in the database on the right.", 15, demo=self.demo)
         ws["B5"] = "PROJECT ▸"
@@ -1299,7 +1053,7 @@ class Builder:
     # ================================================================ TAB 11 TASK FILTER
     def build_tf(self):
         ws, T = self.ws[S_TF], self.T
-        setup_sheet(ws, {"B": 18, "C": 24, "D": 28, "E": 20, "F": 13, "G": 16, "H": 12, "I": 10, "J": 12, "K": 9, "L": 10, "M": 5, "N": 5})
+        setup_sheet(ws, {"B": 18, "C": 24, "D": 28, "E": 27, "F": 13, "G": 16, "H": 12, "I": 10, "J": 12, "K": 9, "L": 10, "M": 5, "N": 5})
         title_bar(ws, T, "TASK FILTER  ·  Search & filter", "Set any combination of filters (blank = all). Matching tasks appear below instantly.", 12, demo=self.demo)
         section(ws, T, 5, 2, 3, "FILTERS")
         crit = [("Project", POV("C")), ("Priority", SL("D")), ("Status", SL("E")), ("Category", SL("C")), ("Assigned person", SL("G")),
@@ -1360,7 +1114,7 @@ class Builder:
     # ================================================================ TAB 12 DECISION MATRIX
     def build_dm(self):
         ws, T = self.ws[S_DM], self.T
-        setup_sheet(ws, {"B": 30, "C": 11, **{L(i): 17 for i in range(4, 10)}, "J": 3, "K": 20, "L": 12})
+        setup_sheet(ws, {"B": 30, "C": 11, **{L(i): 17 for i in range(4, 10)}, "J": 3, "K": 26, "L": 12})
         title_bar(ws, T, "DECISION MATRIX  ·  Weighted scoring", "Weight your criteria, score each option 1–10, and let the matrix recommend the winner.", 12, demo=self.demo)
         legend(ws, T, 4, 2)
         ws["B5"] = "Decision name"
@@ -1461,9 +1215,8 @@ class Builder:
             widths[c] = 5
         setup_sheet(ws, widths)
         title_bar(ws, T, "KANBAN BOARD", "Cards move automatically when you change a task's Status on 'Variable Tasks'.  ‼ = Critical   ▲ = High priority", 16, demo=self.demo)
-        ws["P4"] = f"={TODAY}"
-        ws["P4"].number_format = FMT_SDATE
-        ws["P4"].font = T.font(8, False, MED_GRAY)
+        ws["R4"] = f"={TODAY}"
+        ws["R4"].number_format = FMT_SDATE
         col_colors = [(MED_GRAY, LIGHT_GRAY), (LAVENDER, SOFT_LAV), (BLUE, SOFT_BLUE), (WARNING, WARNING_BG), (TEAL, SOFT_TEAL)]
         CARDS = 15
         for j in range(5):
@@ -1501,7 +1254,7 @@ class Builder:
                 ws.row_dimensions[r1 + 2].height = 6
             rngc = f"{c}8:{c2}{8 + CARDS * 3 - 1}"
             cf_formula(ws, rngc, f"${hc}8<>\"\"", soft)
-            cf_formula(ws, f"{c2}8:{c2}{8 + CARDS * 3 - 1}", f'AND(ISNUMBER({c2}8),{c2}8<$P$4,{j}<4)', None, DANGER, True)
+            cf_formula(ws, f"{c2}8:{c2}{8 + CARDS * 3 - 1}", f'AND(ISNUMBER({c2}8),{c2}8<$R$4,{j}<4)', None, DANGER, True)
             cf_formula(ws, f"{c}8:{c}{8 + CARDS * 3 - 1}", f'LEFT({c}8,1)="‼"', None, DANGER, True)
             cf_formula(ws, f"{c}8:{c}{8 + CARDS * 3 - 1}", f'LEFT({c}8,1)="▲"', None, "B7791F", True)
         for c in range(18, 23):
@@ -1513,7 +1266,7 @@ class Builder:
         ws, T = self.ws[S_GC], self.T
         NCOL = 60
         TL0 = 12  # column L
-        widths = {"B": 4, "C": 26, "D": 18, "E": 14, "F": 11, "G": 11, "H": 6, "I": 8, "J": 11, "K": 9}
+        widths = {"B": 4, "C": 26, "D": 31, "E": 14, "F": 11, "G": 11, "H": 6, "I": 8, "J": 11, "K": 9}
         for i in range(NCOL):
             widths[TL0 + i] = 3.3
         setup_sheet(ws, widths, zoom=90)
@@ -1560,8 +1313,8 @@ class Builder:
             ws[f"{c}9"].font = T.font(8, True, WHITE)
             ws[f"{c}9"].fill = fill(NAVY)
             ws[f"{c}9"].alignment = Alignment(horizontal="center", vertical="center")
-            ws[f"{c}8"] = f"={c}9" if i == 0 else f'=IF(MONTH({c}9)<>MONTH({prev}9),{c}9,"")'
-            ws[f"{c}8"].number_format = "mmm yy"
+            mlabel = f'CHOOSE(MONTH({c}9),"Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec")&" "&RIGHT(YEAR({c}9),2)'
+            ws[f"{c}8"] = f"={mlabel}" if i == 0 else f'=IF(MONTH({c}9)<>MONTH({prev}9),{mlabel},"")'
             ws[f"{c}8"].font = T.font(8, True, MIDNIGHT)
             ws[f"{c}7"] = f'=IF(AND($F$6>={c}$9,$F$6<{c}$9+$H$6),"▼","")'
             ws[f"{c}7"].font = T.font(9, True, DANGER)
@@ -1714,7 +1467,7 @@ class Builder:
         ws.protection.formatRows = False
 
     def page_setup(self):
-        areas = {S_DASH: "A1:O80", S_MCAL: "A1:K39", S_WCAL: "A1:I41", S_KB: "A1:P53", S_GC: "A1:BS69", S_PM: "A1:G77",
+        areas = {S_DASH: "A1:Y93", S_MCAL: "A1:K39", S_WCAL: "A1:I41", S_KB: "A1:P53", S_GC: "A1:BS69", S_PM: "A1:G77",
                  S_DM: "A1:Q30", S_TF: "A1:L118", S_INS: "A1:D90", S_SETUP: "A1:O70"}
         for n in ORDER:
             ws = self.ws[n]
@@ -1767,6 +1520,7 @@ def main():
             p = out / folder / f"Ultimate_Project_Manager_{suffix}_{'DEMO' if demo else 'BLANK'}.xlsx"
             p.parent.mkdir(parents=True, exist_ok=True)
             wb.save(p)
+            solidify_databars(p)
             files.append(p)
             print("wrote", p)
     return files

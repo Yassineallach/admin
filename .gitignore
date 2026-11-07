@@ -1,2 +1,6 @@
 __pycache__/
 *.pyc
+# generated deliverables are sent directly, not stored in the repo
+productivity-bundle/dist/**/*.xlsx
+productivity-bundle/dist/**/*.pdf
+productivity-bundle/dist/**/*.zip

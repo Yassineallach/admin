@@ -220,7 +220,8 @@ def cf_formula(ws, rng: str, formula: str, fill_color=None, font_color=None, bol
 
 def cf_databar(ws, rng: str, color=BLUE):
     ws.conditional_formatting.add(
-        rng, DataBarRule(start_type="num", start_value=0, end_type="num", end_value=1, color=color, showValue=True)
+        rng, DataBarRule(start_type="num", start_value=0, end_type="num", end_value=1, color=color, showValue=True,
+                          minLength=0, maxLength=100)
     )
 
 
@@ -236,3 +237,71 @@ def note(ws, T: Theme, cellref: str, text: str, size=9, color=SECONDARY, italic=
     ws[cellref] = text
     ws[cellref].font = T.font(size, False, color, italic=italic)
     ws[cellref].alignment = Alignment(vertical="center", wrap_text=False)
+
+
+# ---------------------------------------------------------------- solid data bars (Excel 2010+ x14 extension)
+X14_CF_URI = "{78C0D931-6437-407d-A8EE-F0AAD7539E65}"
+X14_ID_URI = "{B025F937-C7B1-47D3-B67F-A62EFF666E3E}"
+NS_X14 = "http://schemas.microsoft.com/office/spreadsheetml/2009/9/main"
+NS_XM = "http://schemas.microsoft.com/office/excel/2006/main"
+
+
+def solidify_databars(path):
+    """Make every data bar solid in Excel 2010+ (no gradient, no border, full 0-100% length).
+
+    openpyxl writes only the 2007 <dataBar>, which Excel renders as a faded gradient. This adds the standard
+    x14 extension (the same XML Excel itself writes). LibreOffice and Google Sheets read the file as before.
+    """
+    import re
+    import shutil
+    import tempfile
+    import uuid
+    import zipfile
+
+    fd, tmp = tempfile.mkstemp(suffix=".xlsx")
+    import os
+    os.close(fd)
+    with zipfile.ZipFile(path) as zin, zipfile.ZipFile(tmp, "w", zipfile.ZIP_DEFLATED) as zout:
+        for item in zin.infolist():
+            data = zin.read(item.filename)
+            if item.filename.startswith("xl/worksheets/sheet") and b"dataBar" in data:
+                xml = data.decode("utf-8")
+                ext_rules = []
+
+                def fix_block(m):
+                    sqref, body = m.group(1), m.group(2)
+
+                    def fix_rule(rm):
+                        rule = rm.group(0)
+                        if 'type="dataBar"' not in rule:
+                            return rule
+                        gid = "{" + str(uuid.uuid4()).upper() + "}"
+                        vals = re.findall(r'<cfvo type="(\w+)"(?: val="([^"]*)")?\s*/>', rule)
+                        ext_rules.append((gid, sqref, vals))
+                        ext = f'<extLst><ext uri="{X14_ID_URI}" xmlns:x14="{NS_X14}"><x14:id>{gid}</x14:id></ext></extLst>'
+                        return rule.replace("</cfRule>", ext + "</cfRule>")
+
+                    body = re.sub(r"<cfRule\b.*?</cfRule>", fix_rule, body, flags=re.S)
+                    return f'<conditionalFormatting sqref="{sqref}">{body}</conditionalFormatting>'
+
+                xml = re.sub(r'<conditionalFormatting sqref="([^"]+)">(.*?)</conditionalFormatting>', fix_block, xml, flags=re.S)
+                if ext_rules:
+                    parts = []
+                    for gid, sqref, vals in ext_rules:
+                        cfvos = ""
+                        for t, v in vals:
+                            if t in ("num", "percent", "formula", "percentile"):
+                                cfvos += f'<x14:cfvo type="{t}"><xm:f>{v}</xm:f></x14:cfvo>'
+                            else:
+                                cfvos += f'<x14:cfvo type="{"autoMin" if t == "min" else "autoMax"}"/>'
+                        parts.append(
+                            f'<x14:conditionalFormatting xmlns:xm="{NS_XM}"><x14:cfRule type="dataBar" id="{gid}">'
+                            f'<x14:dataBar minLength="0" maxLength="100" gradient="0">{cfvos}'
+                            f'<x14:negativeFillColor rgb="FFDC5B64"/><x14:axisColor rgb="FF9AA5B1"/></x14:dataBar>'
+                            f"</x14:cfRule><xm:sqref>{sqref}</xm:sqref></x14:conditionalFormatting>")
+                    ext = (f'<extLst><ext uri="{X14_CF_URI}" xmlns:x14="{NS_X14}"><x14:conditionalFormattings>'
+                           + "".join(parts) + "</x14:conditionalFormattings></ext></extLst>")
+                    xml = xml.replace("</worksheet>", ext + "</worksheet>")
+                data = xml.encode("utf-8")
+            zout.writestr(item, data)
+    shutil.move(tmp, path)
