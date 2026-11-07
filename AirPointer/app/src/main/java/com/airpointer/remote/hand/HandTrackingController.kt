@@ -72,9 +72,10 @@ class HandTrackingController(
                 .setErrorListener { e -> _status.value = _status.value.copy(error = "Hand tracking error: ${e.message}") }
                 .build())
         } catch (e: Throwable) { // UnsatisfiedLinkError on processors MediaPipe has no native code for (x86_64)
+            val chain = generateSequence(e) { it.cause }.take(5).joinToString(" ← ") { "${it.javaClass.simpleName}: ${it.message}" }
             _status.value = Status(error = if (e is UnsatisfiedLinkError) "Hand tracking is not available on this processor (MediaPipe supports ARM phones)."
-                else "Hand tracking unavailable on this phone: ${e.message}")
-            log.e(TAG, "HandLandmarker: ${e.message}")
+                else "Hand tracking could not start. Please send this to support: $chain")
+            log.e(TAG, "HandLandmarker: $chain")
             return
         }
         val future = ProcessCameraProvider.getInstance(context)

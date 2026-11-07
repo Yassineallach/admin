@@ -11,3 +11,8 @@
 # AutoValue (pulled in by MediaPipe) references compile-time-only annotation-processing APIs.
 -dontwarn javax.lang.model.**
 -dontwarn autovalue.shaded.**
+
+# Flogger (used by MediaPipe's Graph) finds its backend with Class.forName("…DefaultPlatform").
+# If R8 renames it, MediaPipe fails to initialise ("No logging platforms found").
+-keep class com.google.common.flogger.** { *; }
+-dontwarn com.google.common.flogger.**

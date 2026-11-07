@@ -42,7 +42,7 @@ GOOS=linux   GOARCH=amd64 go build -trimpath -ldflags "-s -w" -o ../dist/airpoin
 GOOS=linux   GOARCH=arm64 go build -trimpath -ldflags "-s -w" -o ../dist/airpointer-companion-linux-arm64 .
 ```
 
-Prebuilt files are in `dist/`: `AirPointer-2.1.0.apk` and the three companion binaries.
+Prebuilt files are in `dist/`: `AirPointer-2.1.1.apk` and the three companion binaries.
 
 ---
 
