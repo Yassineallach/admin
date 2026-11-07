@@ -1,0 +1,100 @@
+{
+  "name": "Ultimate Productivity Bundle \u2014 Design System",
+  "version": "2.0.0 (teal)",
+  "color": {
+    "primary": {
+      "deep_navy": "#0B4F4C",
+      "midnight_blue": "#0F6E68",
+      "professional_blue": "#14958B",
+      "soft_blue": "#E1F3F0"
+    },
+    "accent": {
+      "teal": "#1FA99C",
+      "soft_teal": "#DDF3EF",
+      "lavender": "#9B7BE0",
+      "soft_lavender": "#F1ECFB"
+    },
+    "neutral": {
+      "background": "#EDF5F4",
+      "white": "#FFFFFF",
+      "light_gray": "#E7EFEE",
+      "medium_gray": "#9AAAA9",
+      "dark_text": "#1F3533",
+      "secondary_text": "#5F7472",
+      "border": "#D5E5E2"
+    },
+    "status": {
+      "success": "#1E9E75",
+      "success_bg": "#E2F5EE",
+      "warning": "#EE8A3A",
+      "warning_bg": "#FEF0E3",
+      "danger": "#CF3A43",
+      "danger_bg": "#FBE8E9",
+      "info": "#2F6FAA",
+      "info_bg": "#E6EFF8"
+    },
+    "finance": {
+      "income": "#1FA99C",
+      "expense": "#CF3A43",
+      "savings": "#2F6FAA",
+      "goals": "#9B7BE0"
+    }
+  },
+  "cell_conventions": {
+    "user_input": {
+      "fill": "#E1F3F0",
+      "meaning": "Light mint \u2014 type or pick a value here"
+    },
+    "standard": {
+      "fill": "#FFFFFF",
+      "meaning": "White \u2014 standard information / labels"
+    },
+    "calculated": {
+      "fill": "#E7EFEE",
+      "meaning": "Light grey \u2014 formula, do not overwrite"
+    },
+    "positive": {
+      "fill": "#E2F4F0",
+      "meaning": "Light teal \u2014 positive result"
+    },
+    "warning": {
+      "fill": "#FCEAEC",
+      "meaning": "Light red \u2014 warning or negative result"
+    },
+    "optional": {
+      "fill": "#F0EDFC",
+      "meaning": "Lavender \u2014 optional / secondary information"
+    }
+  },
+  "typography": {
+    "excel": "Aptos (falls back to Calibri/Arial on older Office)",
+    "google_sheets": "Arial",
+    "onenote": "Segoe UI / Aptos",
+    "sizes_pt": {
+      "dashboard_title": 22,
+      "sheet_title": 18,
+      "section": 12,
+      "kpi_value": 20,
+      "kpi_label": 9,
+      "table_header": 10,
+      "body": 10,
+      "note": 9
+    }
+  },
+  "spacing": {
+    "gutter_column_width": 2.5,
+    "title_row_height": 36,
+    "section_row_height": 22,
+    "body_row_height": 18
+  },
+  "number_formats": {
+    "date": "mmm d, yyyy",
+    "short_date": "mmm d",
+    "currency": "#,##0.00",
+    "currency_whole": "#,##0",
+    "percent": "0%",
+    "hours": "0.0",
+    "time": "h:mm AM/PM"
+  },
+  "note": "Roles keep their original key names (deep_navy = darkest brand colour, professional_blue = primary accent) so every product picks the theme up automatically."
+}
