@@ -4,3 +4,8 @@ __pycache__/
 productivity-bundle/dist/**/*.xlsx
 productivity-bundle/dist/**/*.pdf
 productivity-bundle/dist/**/*.zip
+# generated Etsy listing assets (sent directly, rebuilt by the build scripts)
+productivity-bundle/listings/**/screens/
+productivity-bundle/listings/**/screens_sheets/
+productivity-bundle/listings/**/images/
+productivity-bundle/listings/**/etsy_upload/
