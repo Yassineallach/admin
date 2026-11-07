@@ -128,8 +128,8 @@ def paint(ws, rng: str, f=None, font=None, border=None, align=None, numfmt=None)
 
 
 TAB_ORDER: list[str] = []          # set by each product builder (used for "Next tab" links)
-HERO_SUB = "B9C6DA"
-CELL_EDGE = Side(style="thin", color="E3E8EE")
+HERO_SUB = "A9D8D1"
+CELL_EDGE = Side(style="thin", color="DFEAE8")
 CELL_BOX = Border(left=CELL_EDGE, right=CELL_EDGE, top=CELL_EDGE, bottom=CELL_EDGE)
 
 
@@ -189,7 +189,7 @@ def section(ws, T: Theme, r: int, c1: int, c2: int, text: str, color=BLUE, heigh
     for c in range(c1, c2 + 1):
         cell = ws.cell(row=r, column=c)
         cell.fill = FILL_WHITE
-        cell.border = Border(top=accent, bottom=Side(style="thin", color="EDF0F4"),
+        cell.border = Border(top=accent, bottom=Side(style="thin", color="E8F0EE"),
                              left=THIN if c == c1 else None, right=THIN if c == c2 else None)
     if isinstance(text, str) and not text.startswith("=") and text.isupper():
         text = text.capitalize()
@@ -207,7 +207,7 @@ def header_row(ws, T: Theme, r: int, c1: int, headers: list[str], color=NAVY, he
     helper = color == MED_GRAY
     for i, h in enumerate(headers):
         cell = ws.cell(row=r, column=c1 + i, value=h)
-        cell.fill = fill("F2F4F7" if helper else "EAF0F9")
+        cell.fill = fill("F1F5F4" if helper else "E2F2EF")
         cell.font = T.font(9, True, SECONDARY if helper else MIDNIGHT)
         cell.alignment = CENTER
         cell.border = Border(left=CELL_EDGE, right=CELL_EDGE, top=CELL_EDGE,
@@ -219,7 +219,7 @@ def mark_helper_headers(ws, r: int, c1: int, c2: int):
     """Restyle header cells of calculated helper columns (grey, secondary text)."""
     for c in range(c1, c2 + 1):
         cell = ws.cell(row=r, column=c)
-        cell.fill = fill("F2F4F7")
+        cell.fill = fill("F1F5F4")
         cell.font = Font(name=cell.font.name, size=9, bold=True, color=SECONDARY)
         cell.border = Border(left=CELL_EDGE, right=CELL_EDGE, top=CELL_EDGE, bottom=Side(style="medium", color=MED_GRAY))
 

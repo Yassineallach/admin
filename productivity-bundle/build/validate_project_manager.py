@@ -26,7 +26,7 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 import sample_data_pm as SD  # noqa: E402
 import build_project_manager as B  # noqa: E402
-import dashboard_pm as DP  # noqa: E402
+import dashboard_v2 as DP  # noqa: E402
 B.Builder('excel', True).build()  # populates DP.DASH (cell map)
 
 DIST = HERE.parent / "dist" / "01_Ultimate_Project_Manager"
@@ -67,103 +67,87 @@ def validate_demo(p: Path):
     print("  effective today in workbook:", today)
     tasks = SD.build_tasks()
     done = "Completed"
-    # ---------------- dashboard (cell map published by dashboard_pm.DASH)
+    # ---------------- dashboard v2 (cell map published by dashboard_v2.DASH)
     Dm = wb[B.S_DASH]
     M_ = DP.DASH
     g = lambda k: Dm[M_[k]].value
-    n_proj = len(SD.PROJECTS)
-    check("KPI total projects", g("total_projects"), n_proj)
-    check("KPI active projects", g("active_projects"), sum(p[7] in ("Planning", "In Progress") for p in SD.PROJECTS))
-    check("KPI completed projects", g("completed_projects"), sum(p[7] == "Completed" for p in SD.PROJECTS))
-    check("KPI overdue projects", g("overdue_projects"), sum(p[7] not in ("Completed", "Cancelled") and p[5] < today for p in SD.PROJECTS))
-    check("KPI total tasks", g("total_tasks"), len(tasks))
-    n_done = sum(t["status"] == done for t in tasks)
-    check("KPI completed tasks", g("completed_tasks"), n_done)
-    check("KPI pending", g("pending_tasks"), len(tasks) - n_done)
-    check("KPI completion rate", g("completion_rate"), n_done / len(tasks))
+    from openpyxl.utils import column_index_from_string as _ci, get_column_letter as _gl
+    import re as _re
+
+    def cr(a):
+        m = _re.match(r"([A-Z]+)(\d+)", a)
+        return _ci(m.group(1)), int(m.group(2))
+
+    def at(a, dc=0, dr=0):
+        c, r = cr(a)
+        return Dm.cell(row=r + dr, column=c + dc).value
+    # default period: first month of the current quarter .. current month, current year
+    yr = g("year")
+    mf, mt = g("from_"), g("to")
+    months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
+    check("Period default year", yr, today.year)
+    check("Period default from", mf, months[((today.month - 1) // 3) * 3])
+    check("Period default to", mt, months[today.month - 1])
+    lo, hi = sorted((months.index(mf) + 1, months.index(mt) + 1))
+    p_start = dt.date(yr, lo, 1)
+    p_end = dt.date(yr + (hi // 12), hi % 12 + 1, 1)
+    check("Period start", as_date(g("start")), p_start)
+    check("Period end", as_date(g("end")), p_end)
+    in_p = [t for t in tasks if p_start <= t["due"] < p_end]
+    done_p = sum(t["status"] == done for t in in_p)
+    check("Tasks due in period", g("tasks_p"), len(in_p))
+    check("Done in period", g("done_p"), done_p)
+    check("Completion in period", g("compl_p"), done_p / len(in_p) if in_p else 0)
+    check("Active projects", g("active_proj"), sum(p[7] in ("Planning", "In Progress") for p in SD.PROJECTS))
+    spent = sum(b[3] for b in SD.BUDGET if p_start <= SD.d(b[4]) < p_end)
+    check("Spent in period", g("spent_p"), spent)
     plan = sum(b[2] for b in SD.BUDGET)
     act = sum(b[3] for b in SD.BUDGET)
-    check("KPI budget", g("budget_num"), plan)
-    check("KPI actual", g("actual_num"), act)
-    check("KPI remaining", g("remaining_num"), plan - act)
-    check("KPI budget used", g("used_num"), act / plan)
-    def compact(x):
-        return f"{x / 1e6:.1f}M" if abs(x) >= 1e6 else (f"{x / 1e3:.1f}K" if abs(x) >= 1e3 else f"{x:.0f}")
-    check("KPI budget card text", g("total_budget"), compact(plan))
-    check("KPI remaining card text", g("remaining_budget"), compact(plan - act))
-    ws_ = today - dt.timedelta(days=today.weekday())
-    week_open = sum(ws_ <= t["due"] <= ws_ + dt.timedelta(days=6) and t["status"] != done for t in tasks)
-    check("Right card this week", g("this_week"), f"{week_open} open task(s) due")
-    due_today = [t for t in tasks if t["due"] == today]
-    exp_tp = "Nothing due today" if not due_today else f"{sum(t['status'] == done for t in due_today)} of {len(due_today)} done"
-    check("Right card today's progress", g("today_progress"), exp_tp)
-    check("Right card today", as_date(g("today")), today)
-
-    def col_row(a):
-        import re as _re
-        m = _re.match(r"([A-Z]+)(\d+)", a)
-        return m.group(1), int(m.group(2))
-    uc, ur = col_row(M_["up_first"])
-    dc, _ = col_row(M_["up_due_first"])
-    up = sorted([(t["due"], i) for i, t in enumerate(tasks) if t["status"] != done and t["due"] >= today])[:8]
-    for k, (due, i) in enumerate(up):
-        check(f"Upcoming #{k + 1} name", Dm[f"{uc}{ur + k}"].value, tasks[i]["name"])
-        check(f"Upcoming #{k + 1} due", as_date(Dm[f"{dc}{ur + k}"].value), due)
-    oc, orow = col_row(M_["od_first"])
-    lc, _ = col_row(M_["od_late_first"])
-    od = sorted([(t["due"], i) for i, t in enumerate(tasks) if t["status"] != done and t["due"] < today])[:8]
-    for k, (due, i) in enumerate(od):
-        check(f"Overdue #{k + 1} name", Dm[f"{oc}{orow + k}"].value, tasks[i]["name"])
-        check(f"Overdue #{k + 1} days late", Dm[f"{lc}{orow + k}"].value, f"{(today - due).days} d")
-    tc, tr = col_row(M_["today_first"])
-    if due_today:
-        for k, t in enumerate(due_today[:8]):
-            check(f"Due today #{k + 1}", Dm[f"{tc}{tr + k}"].value, t["name"])
-    else:
-        check("Due today empty", Dm[f"{tc}{tr}"].value, "Nothing due today")
-    # monthly chart data for calendar year
-    yr = Dm[M_["cal_year"]].value
-    mc, mr = col_row(M_["monthly_first"])
-    from openpyxl.utils import column_index_from_string as _ci, get_column_letter as _gl
+    check("Planned (all)", g("planned"), plan)
+    check("Actual (all)", g("actual"), act)
+    check("Budget used", g("used"), act / plan)
+    overdue = [t for t in tasks if t["status"] != done and t["due"] < today]
+    check("Overdue (all)", g("overdue"), len(overdue))
+    check("Tile tasks", g("tile_tasks"), len(in_p))
+    check("Tile spent text", g("tile_spent"), f"${spent:,.0f}")
+    check("Tile completion", g("tile_completion"), done_p / len(in_p) if in_p else 0)
+    check("Tile budget used", g("tile_budget"), act / plan)
+    # monthly series for the selected year
     for m in range(1, 13):
         due_m = [t for t in tasks if t["due"].year == yr and t["due"].month == m]
-        check(f"Chart month {m} due", Dm[f"{_gl(_ci(mc) + 1)}{mr + m - 1}"].value, len(due_m))
-        check(f"Chart month {m} done", Dm[f"{_gl(_ci(mc) + 2)}{mr + m - 1}"].value, sum(t["status"] == done for t in due_m))
-    dcl, drw = col_row(M_["donut_first"])
-    for i, st in enumerate(B.LISTS["F"][1]):
-        check(f"Donut {st}", Dm[f"{dcl}{drw + i}"].value, sum(p[7] == st for p in SD.PROJECTS))
-    pc_, pr_ = col_row(M_["priority_first"])
-    for k, pname in enumerate(B.LISTS["D"][1]):
-        check(f"Priority {pname} open", Dm[f"{pc_}{pr_ + k}"].value,
-              sum(t["pri"] == pname and t["status"] != done for t in tasks))
-    sc_, sr_ = col_row(M_["status_first"])
-    for k, st in enumerate(B.LISTS["E"][1]):
-        check(f"Status {st} count", Dm[f"{sc_}{sr_ + k}"].value, sum(t["status"] == st for t in tasks))
-    # mini calendar: day cells with open tasks due in the past are flagged, grid start correct
-    fc, fr = col_row(M_["cal_first_day"])
-    first_of = today.replace(day=1)
-    check("Mini calendar grid start", as_date(Dm[f"{fc}{fr}"].value), first_of - dt.timedelta(days=first_of.weekday()))
-    nxt = (first_of.replace(day=28) + dt.timedelta(days=4)).replace(day=1)
-    in_m = [t for t in tasks if first_of <= t["due"] < nxt]
-    exp = (f"This month:  {len(in_m)} due  ·  {sum(t['status'] == done for t in in_m)} done  ·  "
-           f"{sum(t['status'] != done and t['due'] < today for t in in_m)} overdue")
-    check("Mini calendar month stats", Dm[M_["cal_stats"]].value, exp)
-    # project deadlines this month
-    dlc, dlr = col_row(M_["deadline_first"])
-    dls = sorted([(p[5], p[0]) for p in SD.PROJECTS if first_of <= p[5] < nxt])
-    for k, (dd, nm) in enumerate(dls[:8]):
-        check(f"Deadline #{k + 1}", Dm[f"{dlc}{dlr + k}"].value, nm)
-    if not dls:
-        check("Deadline empty", Dm[f"{dlc}{dlr}"].value, "No project deadlines this month")
-    # performance + team
-    pfc, pfr = col_row(M_["perf_first"])
-    for i, pr in enumerate(SD.PROJECTS):
-        check(f"Perf row {i + 1}", Dm[f"{pfc}{pfr + i}"].value, pr[0])
-    tmc, tmr = col_row(M_["team_first"])
+        inr = lo <= m <= hi
+        check(f"Month {m} in-period bar", at(M_["month_first"], 1, m - 1), len(due_m) if inr else 0)
+        check(f"Month {m} other bar", at(M_["month_first"], 2, m - 1), 0 if inr else len(due_m))
+        check(f"Month {m} completed line", at(M_["month_first"], 3, m - 1), sum(t["status"] == done for t in due_m))
+        pm = sum(b[2] for b in SD.BUDGET if SD.d(b[4]).year == yr and SD.d(b[4]).month == m)
+        am = sum(b[3] for b in SD.BUDGET if SD.d(b[4]).year == yr and SD.d(b[4]).month == m)
+        check(f"Month {m} planned", at(M_["month_first"], 4, m - 1), pm)
+        check(f"Month {m} actual", at(M_["month_first"], 5, m - 1), am)
+    check("Donut done", at(M_["donut_first"]), done_p)
+    check("Donut open", at(M_["donut_first"], 0, 1), (len(in_p) - done_p) if in_p else 1)
+    # project progress bars (drawn top-down: project 1 at the top -> stored in reverse)
+    for i in range(5):
+        pr = SD.PROJECTS[4 - i]
+        pt = [t for t in tasks if t["project"] == pr[0]]
+        eff = [1.0 if t["status"] == done else (t["prog"] or 0) for t in pt]
+        exp_prog = 1.0 if pr[7] == "Completed" else (sum(eff) / len(eff) if eff else 0)
+        check(f"Progress bar {i} name", at(M_["proj_first"], 0, i), pr[0])
+        check(f"Progress bar {i} value", at(M_["proj_first"], 2, i), exp_prog)
+    for i, cat in enumerate(SD.TASK_CATS):
+        check(f"Radar {cat} open", at(M_["radar_first"], 1, i), sum(t["cat"] == cat and t["status"] != done for t in tasks))
+        check(f"Radar {cat} done", at(M_["radar_first"], 2, i), sum(t["cat"] == cat and t["status"] == done for t in tasks))
     for i, (nm, _, _) in enumerate(SD.TEAM):
-        check(f"Team row {i + 1}", Dm[f"{tmc}{tmr + i}"].value, nm)
-        open_n = sum(t["who"] == nm and t["status"] != done for t in tasks)
-        check(f"Team {nm} open", Dm[f"{_gl(_ci(tmc) + 3)}{tmr + i}"].value, open_n)
+        check(f"Team {nm} open", at(M_["team_first"], 1, i), sum(t["who"] == nm and t["status"] != done for t in tasks))
+        check(f"Team {nm} overdue", at(M_["team_first"], 2, i), sum(t["who"] == nm and t in overdue for t in tasks))
+    up = sorted([(t["due"], i) for i, t in enumerate(tasks) if t["status"] != done and t["due"] >= today])[:8]
+    mon = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+    for k, (due, i) in enumerate(up):
+        check(f"Upcoming #{k + 1} name", at(M_["up_first"], 0, k), tasks[i]["name"])
+        check(f"Upcoming #{k + 1} due", at(M_["up_due_first"], 0, k), f"{mon[due.month - 1]} {due.day}")
+    od = sorted([(t["due"], i) for i, t in enumerate(tasks) if t["status"] != done and t["due"] < today])[:8]
+    for k, (due, i) in enumerate(od):
+        check(f"Overdue #{k + 1} name", at(M_["od_first"], 0, k), tasks[i]["name"])
+        check(f"Overdue #{k + 1} late", at(M_["od_late_first"], 0, k), f"{(today - due).days} d")
 
     # ---------------- project overview roll-ups
     P = wb[B.S_POV]
@@ -298,13 +282,11 @@ def validate_blank(p: Path):
     wb = load_workbook(p, data_only=True)
     D = wb[B.S_DASH]
     M_ = DP.DASH
-    for k in ("total_projects", "active_projects", "total_tasks", "completed_tasks", "pending_tasks", "completion_rate",
-              "budget_num", "remaining_num", "used_num"):
-        check(f"blank KPI {k}", D[M_[k]].value, 0)
-    check("blank budget text", D[M_["total_budget"]].value, "0")
-    check("blank upcoming message", D[M_["up_first"]].value, "No upcoming deadlines — nice!")
-    check("blank overdue message", D[M_["od_first"]].value, "No overdue tasks — great work!")
-    check("blank perf message", D[M_["perf_first"]].value, "No projects yet — add one")
+    for k in ("tasks_p", "done_p", "compl_p", "active_proj", "spent_p", "planned", "actual", "used", "overdue"):
+        check(f"blank {k}", D[M_[k]].value, 0)
+    check("blank spent text", D[M_["tile_spent"]].value, "$0")
+    check("blank upcoming message", D[M_["up_first"]].value, "No upcoming deadlines")
+    check("blank overdue message", D[M_["od_first"]].value, "No overdue tasks")
     check("blank TF message", wb[B.S_TF]["D19"].value, "No tasks match these filters.")
     check("blank gantt message", wb[B.S_GC]["C10"].value, "No tasks to show yet")
 

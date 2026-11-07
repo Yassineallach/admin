@@ -1,58 +1,85 @@
 {
-  "name": "Ultimate Productivity Bundle — Design System",
-  "version": "1.0.0",
+  "name": "Ultimate Productivity Bundle \u2014 Design System",
+  "version": "2.0.0 (teal)",
   "color": {
     "primary": {
-      "deep_navy": "#17243A",
-      "midnight_blue": "#223653",
-      "professional_blue": "#4169E1",
-      "soft_blue": "#EAF1FB"
+      "deep_navy": "#0B4F4C",
+      "midnight_blue": "#0F6E68",
+      "professional_blue": "#14958B",
+      "soft_blue": "#E1F3F0"
     },
     "accent": {
-      "teal": "#24A89A",
-      "soft_teal": "#E2F4F0",
-      "lavender": "#8B7BE8",
-      "soft_lavender": "#F0EDFC"
+      "teal": "#1FA99C",
+      "soft_teal": "#DDF3EF",
+      "lavender": "#9B7BE0",
+      "soft_lavender": "#F1ECFB"
     },
     "neutral": {
-      "background": "#F5F7FA",
+      "background": "#EDF5F4",
       "white": "#FFFFFF",
-      "light_gray": "#E9EDF2",
-      "medium_gray": "#9AA5B1",
-      "dark_text": "#263445",
-      "secondary_text": "#6B7785",
-      "border": "#DCE3EA"
+      "light_gray": "#E7EFEE",
+      "medium_gray": "#9AAAA9",
+      "dark_text": "#1F3533",
+      "secondary_text": "#5F7472",
+      "border": "#D5E5E2"
     },
     "status": {
-      "success": "#279B70",
-      "success_bg": "#E5F5ED",
-      "warning": "#E9A23B",
-      "warning_bg": "#FFF3DC",
-      "danger": "#DC5B64",
-      "danger_bg": "#FCEAEC",
-      "info": "#4D8FD8",
-      "info_bg": "#EAF2FC"
+      "success": "#1E9E75",
+      "success_bg": "#E2F5EE",
+      "warning": "#EE8A3A",
+      "warning_bg": "#FEF0E3",
+      "danger": "#CF3A43",
+      "danger_bg": "#FBE8E9",
+      "info": "#2F6FAA",
+      "info_bg": "#E6EFF8"
     },
     "finance": {
-      "income": "#24A89A",
-      "expense": "#DC5B64",
-      "savings": "#4169E1",
-      "goals": "#8B7BE8"
+      "income": "#1FA99C",
+      "expense": "#CF3A43",
+      "savings": "#2F6FAA",
+      "goals": "#9B7BE0"
     }
   },
   "cell_conventions": {
-    "user_input": {"fill": "#EAF1FB", "meaning": "Light blue — type or pick a value here"},
-    "standard": {"fill": "#FFFFFF", "meaning": "White — standard information / labels"},
-    "calculated": {"fill": "#E9EDF2", "meaning": "Light gray — formula, do not overwrite"},
-    "positive": {"fill": "#E2F4F0", "meaning": "Light teal — positive result"},
-    "warning": {"fill": "#FCEAEC", "meaning": "Light red — warning or negative result"},
-    "optional": {"fill": "#F0EDFC", "meaning": "Lavender — optional / secondary information"}
+    "user_input": {
+      "fill": "#E1F3F0",
+      "meaning": "Light mint \u2014 type or pick a value here"
+    },
+    "standard": {
+      "fill": "#FFFFFF",
+      "meaning": "White \u2014 standard information / labels"
+    },
+    "calculated": {
+      "fill": "#E7EFEE",
+      "meaning": "Light grey \u2014 formula, do not overwrite"
+    },
+    "positive": {
+      "fill": "#E2F4F0",
+      "meaning": "Light teal \u2014 positive result"
+    },
+    "warning": {
+      "fill": "#FCEAEC",
+      "meaning": "Light red \u2014 warning or negative result"
+    },
+    "optional": {
+      "fill": "#F0EDFC",
+      "meaning": "Lavender \u2014 optional / secondary information"
+    }
   },
   "typography": {
     "excel": "Aptos (falls back to Calibri/Arial on older Office)",
     "google_sheets": "Arial",
     "onenote": "Segoe UI / Aptos",
-    "sizes_pt": {"dashboard_title": 22, "sheet_title": 18, "section": 12, "kpi_value": 20, "kpi_label": 9, "table_header": 10, "body": 10, "note": 9}
+    "sizes_pt": {
+      "dashboard_title": 22,
+      "sheet_title": 18,
+      "section": 12,
+      "kpi_value": 20,
+      "kpi_label": 9,
+      "table_header": 10,
+      "body": 10,
+      "note": 9
+    }
   },
   "spacing": {
     "gutter_column_width": 2.5,
@@ -68,5 +95,6 @@
     "percent": "0%",
     "hours": "0.0",
     "time": "h:mm AM/PM"
-  }
+  },
+  "note": "Roles keep their original key names (deep_navy = darkest brand colour, professional_blue = primary accent) so every product picks the theme up automatically."
 }

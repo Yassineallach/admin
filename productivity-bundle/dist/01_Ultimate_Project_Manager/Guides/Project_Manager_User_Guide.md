@@ -11,6 +11,8 @@
 | Google_Sheets/Ultimate_Project_Manager_GoogleSheets_DEMO.xlsx | Import into Google Sheets (demo data) |
 | Google_Sheets/Ultimate_Project_Manager_GoogleSheets_BLANK.xlsx | Import into Google Sheets (blank) |
 
+The Excel edition's dashboard uses real Excel shapes (rounded cards, shadows, gradient tile, clickable sidebar icons) with numbers linked live to cells. Google Sheets doesn't import Excel shapes, so its dashboard shows the same layout and live numbers flat, with text links in the sidebar.
+
 The Google Sheets edition is built from the same generator, adapted for Google Sheets: Arial font, plain ranges with filters (Google Sheets doesn't import Excel Table objects cleanly), no sheet protection (use Data › Protect sheets and ranges instead), and conditional formatting that only refers to its own sheet.
 
 ## Installation / import
@@ -29,7 +31,7 @@ The Google Sheets edition is built from the same generator, adapted for Google S
 | # | Tab | Section | Purpose |
 |---|---|---|---|
 | 1 | Setup | Setup | Workspace details, currency, week start, every dropdown list |
-| 2 | All-in-One Dashboard | Dashboards | 14 KPI cards, 4 charts, upcoming and overdue lists, recent activity, team workload, project performance |
+| 2 | All-in-One Dashboard | Dashboards | 4 KPI tiles for a period you choose, 6 charts (tasks by month, completion donut, project progress, budget by month, category radar, team workload), upcoming and overdue lists, icon sidebar to every tab |
 | 3 | Monthly Calendar | Dashboards | Pick a year and month. Shows tasks due (coloured by category), project deadlines and scheduled blocks |
 | 4 | Weekly Calendar | Dashboards | Monday–Sunday, 7 AM–8 PM time grid, tasks due, daily workload and weekly statistics |
 | 5 | Project Overview | Projects | Portfolio table: progress, budget, actual, remaining and health are calculated |
@@ -51,13 +53,13 @@ The Google Sheets edition is built from the same generator, adapted for Google S
 3. **Project Budget:** pick the Project ID, choose a category, and enter the Planned Budget. Add the Actual Expenses as money is spent.
 4. **Variable Tasks:** add tasks and link each one to a project with the dropdown. Keep Status and Progress up to date.
 5. Optionally, add **Recurring Tasks** and **Task Schedule** blocks.
-6. Open the **All-in-One Dashboard**.
+6. Open the **All-in-One Dashboard**. Choose a **Year**, **From** and **To** month with the ▾ cells in the Period card; the tiles, donut and highlighted months follow that period.
 
 ### Cell colours
 
 | Colour | Meaning |
 |---|---|
-| Light blue | Input: type a value or choose one from the dropdown |
+| Light mint | Input: type a value or choose one from the dropdown |
 | Light grey | Formula: don't overwrite |
 | White | Information |
 | Light teal | Positive result |
@@ -89,7 +91,7 @@ The Google Sheets edition is built from the same generator, adapted for Google S
 
 Rows marked **DEMO DATA** belong to a fictional company, "Northwind Studio". The demo has 8 projects, 60 tasks, 18 budget lines, 10 recurring tasks, 22 schedule blocks, 25 project details and 1 decision.
 
-**Remove it:** the easiest way is to start from the BLANK file. To clear the demo file by hand, select the light-blue cells that contain data on Project Overview, Project Budget, Variable Tasks, Recurring Tasks, Task Schedule, the Project Manager database and Decision Matrix, then press Delete. Never delete whole rows or the grey helper columns.
+**Remove it:** the easiest way is to start from the BLANK file. To clear the demo file by hand, select the light-mint cells that contain data on Project Overview, Project Budget, Variable Tasks, Recurring Tasks, Task Schedule, the Project Manager database and Decision Matrix, then press Delete. Never delete whole rows or the grey helper columns.
 
 ## Capacity
 
@@ -104,13 +106,14 @@ The workbook has room for 100 projects, 500 tasks, 500 budget lines, 200 recurri
 | A dropdown is empty | Its source list on Setup is empty |
 | "+N more" appears on the calendar | More than 2 tasks are due that day. Use Task Filter with a date range to see them all |
 | A date shows as a number | Format the cell as a Date |
+| The period buttons don't react to clicks | They show the selection; choose Year / From / To with the ▾ cells above them (no macros needed) |
 | You can't type on a dashboard tab (Excel) | Display tabs are protected against accidental edits. Use Review › Unprotect Sheet (there's no password) |
 | A chart looks slightly different in Google Sheets | Click the chart › Edit chart. The data ranges are kept |
 
 ## Quality assurance performed
 
-- Every workbook (2 editions × demo/blank) was recalculated headlessly in LibreOffice: 19,685 formulas each, **0 errors**.
-- An independent Python script (`build/validate_project_manager.py`) re-calculates the expected results from the demo data and compares them with the spreadsheet's values. It covers 530 checks across all four files:
+- Every workbook (2 editions × demo/blank) was recalculated headlessly in LibreOffice: 19,642 formulas each, **0 errors**.
+- An independent Python script (`build/validate_project_manager.py`) re-calculates the expected results from the demo data and compares them with the spreadsheet's values. It covers 688 checks across all four files:
   - KPIs and sorted lists
   - Project roll-ups
   - Recurring next dates and occurrences this month

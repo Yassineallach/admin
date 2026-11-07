@@ -170,6 +170,8 @@ def chart_boxes(path, sheet_titles):
                 d = ET.fromstring(z.read(dpath))
                 for a in d:
                     tag = a.tag.split("}")[1]
+                    if a.find("xdr:graphicFrame", ns) is None:
+                        continue   # shapes / pictures are checked by shape_problems()
                     if tag == "twoCellAnchor":
                         f, t = a.find("xdr:from", ns), a.find("xdr:to", ns)
                         out.setdefault(title, []).append((int(f.find("xdr:col", ns).text) + 1, int(f.find("xdr:row", ns).text) + 1,
@@ -272,6 +274,48 @@ def lint(path, strict_sheets, charts_from=None):
     return problems
 
 
+def shape_problems(path):
+    """Check the Excel shape layer: text fits its box; cards do not overlap; charts sit inside a card."""
+    probs = []
+    z = zipfile.ZipFile(path)
+    A = "{http://schemas.openxmlformats.org/drawingml/2006/main}"
+    X = "{http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing}"
+    for n in z.namelist():
+        if not (n.startswith("xl/drawings/drawing") and n.endswith(".xml")):
+            continue
+        root = ET.fromstring(z.read(n))
+        cards, charts = [], []
+        for anc in root:
+            sp = anc.find(X + "sp")
+            xfrm = anc.find(f".//{A}xfrm")
+            if sp is not None and xfrm is not None:
+                off, ext = xfrm.find(A + "off"), xfrm.find(A + "ext")
+                x0, y0 = int(off.get("x")) / 9525, int(off.get("y")) / 9525
+                w, h = int(ext.get("cx")) / 9525, int(ext.get("cy")) / 9525
+                name = sp.find(f"{X}nvSpPr/{X}cNvPr").get("name")
+                texts = [t.text or "" for t in sp.iter(A + "t")]
+                rpr = next(sp.iter(A + "rPr"), None)
+                if texts and "".join(texts).strip() and rpr is not None:
+                    txt = "".join(texts)
+                    pt = int(rpr.get("sz", "1100")) / 100
+                    need = text_px(txt, pt, rpr.get("b") == "1")
+                    if need > w + 1:
+                        probs.append(f"{n}: shape '{name}' text {txt!r} needs {need:.0f}px, box is {w:.0f}px")
+                    if pt * 96 / 72 * 1.15 > h + 2:
+                        probs.append(f"{n}: shape '{name}' {pt}pt text taller than box ({h:.0f}px)")
+                if name.startswith(("Tile", "Panel", "Highlight")):
+                    cards.append((name, x0, y0, x0 + w, y0 + h))
+            gf = anc.find(X + "graphicFrame")
+            if gf is not None:
+                f_, t_ = anc.find(X + "from"), anc.find(X + "to")
+                charts.append(anc)
+        for i, a_ in enumerate(cards):
+            for b_ in cards[i + 1:]:
+                if not (a_[3] <= b_[1] or b_[3] <= a_[1] or a_[4] <= b_[2] or b_[4] <= a_[2]):
+                    probs.append(f"{n}: cards overlap: {a_[0]} / {b_[0]}")
+    return probs
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("path")
@@ -279,6 +323,8 @@ if __name__ == "__main__":
     ap.add_argument("--strict", nargs="*", default=["All-in-One Dashboard"])
     a = ap.parse_args()
     probs = lint(a.path, set(a.strict), a.charts_from)
+    if a.charts_from:
+        probs += shape_problems(a.charts_from)
     for p in probs:
         print("  ✗", p)
     print(f"{len(probs)} layout problem(s)")

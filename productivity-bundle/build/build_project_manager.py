@@ -220,7 +220,7 @@ class Builder:
                          value=("WELCOME TO THE ULTIMATE PROJECT MANAGER.   1) Fill in your workspace details below.   "
                                 "2) Edit the dropdown lists (team members, categories…).   3) Add projects on 'Project Overview', "
                                 "tasks on 'Variable Tasks' and 'Recurring Tasks'.   Dashboards, calendars, Kanban and Gantt update automatically.   "
-                                "Light-blue cells are inputs; grey cells are formulas — don't type over them. "
+                                "Light-mint cells are inputs; grey cells are formulas — don't type over them. "
                                 + ("This copy contains DEMO DATA: see Instructions › 'Removing demo data'." if self.demo else "")),
                          font=T.font(10, False, MIDNIGHT), align=LEFT_WRAP)
         for rr in range(5, 9):
@@ -693,9 +693,11 @@ class Builder:
 
     # ================================================================ TAB 2 DASHBOARD
     def build_dash(self):
-        import dashboard_pm as DP
-        S = {"DASH": S_DASH}
-        DP.Dash(self, S, VT, POV, PB, TS, SL, SS, SC, PSTAT, PRI, TODAY, DONE, P_DONE, TSTAT, ORDER, quote).build()
+        import dashboard_v2 as DV
+        ctx = dict(S_DASH=S_DASH, VT=VT, POV=POV, PB=PB, TS=TS, SL=SL, SS=SS, SC=SC, PSTAT=PSTAT, PRI=PRI, TODAY=TODAY,
+                   DONE=DONE, P_DONE=P_DONE, TSTAT=TSTAT, ORDER=ORDER, quote=quote)
+        self.dash = DV.DashV2(self, ctx)
+        self.dash.build()
 
     # ================================================================ TAB 3 MONTHLY CALENDAR
     def build_mcal(self):
@@ -786,7 +788,7 @@ class Builder:
         cf_formula(ws, grid, "AND(ROW(B9)>=9,MOD(ROW(B9)-9,5)=0,B9=$G$5)", BLUE, WHITE, True, stop=True)
         cf_formula(ws, grid, "AND(MOD(ROW(B9)-9,5)=0,MONTH(B9)<>$Q$5)", BG, MED_GRAY, stop=True)
         cf_formula(ws, grid, "P9=-1", DANGER_BG, DANGER, True, stop=True)
-        cat_cols = [SOFT_BLUE, SOFT_TEAL, SOFT_LAV, WARNING_BG, INFO_BG, "E8F6F3", "FDF0E6", "EEF0F4"]
+        cat_cols = [SOFT_BLUE, SOFT_TEAL, SOFT_LAV, WARNING_BG, INFO_BG, "E8F6F3", "FDF0E6", "EEF3F2"]
         for i, colr in enumerate(cat_cols):
             cf_formula(ws, grid, f'AND(ISNUMBER(P9),P9>0,MOD(P9-1,8)={i})', colr)
         for c in range(16, 23):
@@ -914,7 +916,7 @@ class Builder:
                 cell.border = Border(left=THIN, right=THIN, bottom=Side(style="hair", color=BORDER))
         rN = r0 + len(HOURS) - 1
         grid = f"C{r0}:I{rN}"
-        for v, bg, fg in ((1, DANGER_BG, DANGER), (2, WARNING_BG, "9A6512"), (3, INFO_BG, MIDNIGHT), (4, SOFT_TEAL, SUCCESS),
+        for v, bg, fg in ((1, DANGER_BG, DANGER), (2, WARNING_BG, "A2581C"), (3, INFO_BG, MIDNIGHT), (4, SOFT_TEAL, SUCCESS),
                           (5, SOFT_LAV, MIDNIGHT), (9, LIGHT_GRAY, SECONDARY)):
             cf_formula(ws, grid, f"L{r0}={v}", bg, fg)
         for c in range(12, 19):
@@ -1338,7 +1340,7 @@ class Builder:
             cf_formula(ws, rngc, f"${hc}8<>\"\"", soft)
             cf_formula(ws, f"{c2}8:{c2}{8 + CARDS * 3 - 1}", f'AND(ISNUMBER({c2}8),{c2}8<$Z$5,{j}<4)', None, DANGER, True)
             cf_formula(ws, f"{c}8:{c}{8 + CARDS * 3 - 1}", f'LEFT({c}8,1)="‼"', None, DANGER, True)
-            cf_formula(ws, f"{c}8:{c}{8 + CARDS * 3 - 1}", f'LEFT({c}8,1)="▲"', None, "B7791F", True)
+            cf_formula(ws, f"{c}8:{c}{8 + CARDS * 3 - 1}", f'LEFT({c}8,1)="▲"', None, "C66A22", True)
         for c in range(18, 23):
             ws.column_dimensions[L(c)].hidden = True
         ws.freeze_panes = "A7"
@@ -1431,10 +1433,10 @@ class Builder:
         inbar = f"AND($B10<>\"\",{tl}$9+$BU$6-1>=$F10,{tl}$9<=$G10)"
         cf_formula(ws, bars, f'{tl}10="◆"', WARNING_BG, NAVY, True, stop=True)
         cf_formula(ws, bars, f'AND({inbar},$J10=$K$7)', TEAL, stop=True)
-        cf_formula(ws, bars, f'AND({inbar},$K10="Overdue",{tl}$9<$F10+($G10-$F10+1)*$I10)', "B8424A", stop=True)
+        cf_formula(ws, bars, f'AND({inbar},$K10="Overdue",{tl}$9<$F10+($G10-$F10+1)*$I10)', "A92E36", stop=True)
         cf_formula(ws, bars, f'AND({inbar},$K10="Overdue")', DANGER, stop=True)
         cf_formula(ws, bars, f'AND({inbar},{tl}$9<$F10+($G10-$F10+1)*$I10)', BLUE, stop=True)
-        cf_formula(ws, bars, inbar, "B9CBF6", stop=True)
+        cf_formula(ws, bars, inbar, "A6DCD5", stop=True)
         cf_formula(ws, bars, f"AND($J$6>={tl}$9,$J$6<{tl}$9+$BU$6)", WARNING_BG)
         cf_formula(ws, bars, f"AND($BU$6=1,WEEKDAY({tl}$9,2)>5)", BG)
         ws["K7"] = f"={DONE}"
@@ -1444,7 +1446,7 @@ class Builder:
         cf_formula(ws, "K10:K69", 'K10="Due soon"', WARNING_BG, WARNING, True)
         ws.column_dimensions[helper].hidden = True
         # legend
-        leg = [(BLUE, "Progress"), ("B9CBF6", "Remaining"), (TEAL, "Completed"), (DANGER, "Overdue"), (WARNING_BG, "Today")]
+        leg = [(BLUE, "Progress"), ("A6DCD5", "Remaining"), (TEAL, "Completed"), (DANGER, "Overdue"), (WARNING_BG, "Today")]
         for i, (colr, t) in enumerate(leg):
             c = L(TL0 + i * 6)
             ws[f"{c}6"].fill = fill(colr)
@@ -1479,7 +1481,7 @@ class Builder:
                 "6. Open the All-in-One Dashboard — every number, chart and list updates automatically.",
             ]),
             ("CELL COLOURS", [
-                "Light blue = input (type or choose from a dropdown).  Light grey = formula (don't type over it).  White = information.",
+                "Light mint = input (type or choose from a dropdown).  Light grey = formula (don't type over it).  White = information.",
                 "Light teal = positive result.  Light red = warning / negative.  Lavender = optional or system list.",
                 "Columns headed in grey ('AUTOMATION HELPERS') power the dashboards. Leave them in place; you may hide them (right-click › Hide).",
             ]),
@@ -1513,7 +1515,7 @@ class Builder:
             ]),
             ("REMOVING DEMO DATA", [
                 "Fastest: use the BLANK edition file supplied alongside this one — identical workbook, no demo rows.",
-                "Manual: on Project Overview, Project Budget, Variable Tasks, Recurring Tasks, Task Schedule, the Project Manager database and Decision Matrix, select the light-blue input cells that contain data and press Delete. Never delete whole rows or grey columns.",
+                "Manual: on Project Overview, Project Budget, Variable Tasks, Recurring Tasks, Task Schedule, the Project Manager database and Decision Matrix, select the light-mint input cells that contain data and press Delete. Never delete whole rows or grey columns.",
                 "Then edit Setup › Team Members and the workspace details. Clear Setup › Today's date override if you set one.",
             ]),
             ("TROUBLESHOOTING", [
@@ -1556,6 +1558,7 @@ class Builder:
     def protect(self):
         if self.ed != "excel":
             return
+        self.ws[S_DASH].protection.objects = True
         for name in (S_DASH, S_MCAL, S_WCAL, S_TF, S_KB, S_GC, S_DM, S_INS):
             ws = self.ws[name]
             for rng_ in self.unlocked[name]:
@@ -1575,7 +1578,7 @@ class Builder:
         ws.protection.formatRows = False
 
     def page_setup(self):
-        areas = {S_DASH: "A1:Y93", S_MCAL: "A1:K39", S_WCAL: "A1:I41", S_KB: "A1:P53", S_GC: "A1:BS69", S_PM: "A1:G77",
+        areas = {S_DASH: "A1:BL50", S_MCAL: "A1:K39", S_WCAL: "A1:I41", S_KB: "A1:P53", S_GC: "A1:BS69", S_PM: "A1:G77",
                  S_DM: "A1:Q30", S_TF: "A1:L118", S_INS: "A1:D90", S_SETUP: "A1:O70"}
         for n in ORDER:
             ws = self.ws[n]
@@ -1589,6 +1592,8 @@ class Builder:
             ws.page_margins.top = ws.page_margins.bottom = 0.5
             if n in areas:
                 ws.print_area = areas[n]
+            if n == S_DASH:
+                ws.page_setup.fitToHeight = 1
             else:
                 ws.print_title_rows = f"{HDR}:{HDR}"
 
@@ -1616,6 +1621,43 @@ class Builder:
         return self.wb
 
 
+def cached_text(path, sheet, layer):
+    """Recalculate a copy with LibreOffice (if available) and return the displayed text of every text-linked cell,
+    so shapes show correct values even before Excel recalculates. Excel refreshes them live anyway."""
+    import glob
+    import json
+    import shutil
+    import subprocess
+    import sys
+    import tempfile
+    from openpyxl import load_workbook
+    rc = (glob.glob("/root/.claude/skills/synced/*/xlsx/scripts/recalc.py") or [None])[0]
+    if not rc or not shutil.which("soffice"):
+        return {}
+    tmp = Path(tempfile.mkdtemp()) / "c.xlsx"
+    shutil.copy(path, tmp)
+    out = subprocess.run([sys.executable, rc, str(tmp), "300"], capture_output=True, text=True)
+    try:
+        if json.loads(out.stdout).get("status") != "success":
+            return {}
+    except Exception:
+        return {}
+    ws = load_workbook(tmp, data_only=True)[sheet]
+    vals = {}
+    for it in layer.text_items():
+        if it.textlink:
+            cell = ws[it.textlink.replace("$", "")]
+            v = cell.value
+            if isinstance(v, float) and "%" in (cell.number_format or ""):
+                v = f"{v * 100:.0f}%"
+            elif isinstance(v, (int, float)) and "#,##0" in (cell.number_format or ""):
+                v = f"{v:,.0f}"
+            elif isinstance(v, float):
+                v = f"{v:g}"
+            vals[it.textlink] = "" if v is None else v
+    return vals
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", default=str(Path(__file__).resolve().parent.parent / "dist" / "01_Ultimate_Project_Manager"))
@@ -1624,11 +1666,15 @@ def main():
     files = []
     for ed, folder, suffix in (("excel", "Excel", "Excel"), ("gsheets", "Google_Sheets", "GoogleSheets")):
         for demo in (True, False):
-            wb = Builder(ed, demo).build()
+            builder = Builder(ed, demo)
+            wb = builder.build()
             p = out / folder / f"Ultimate_Project_Manager_{suffix}_{'DEMO' if demo else 'BLANK'}.xlsx"
             p.parent.mkdir(parents=True, exist_ok=True)
             wb.save(p)
             solidify_databars(p)
+            layer = getattr(builder.dash, "layer", None)
+            if layer is not None:
+                layer.inject(p, S_DASH, cached_values=cached_text(p, S_DASH, layer))
             files.append(p)
             print("wrote", p)
     return files
