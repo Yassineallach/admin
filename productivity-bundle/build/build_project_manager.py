@@ -112,6 +112,18 @@ SYSTEM = {
     "O": ("Score (1-10)", list(range(1, 11))),
 }
 CUSTOM_FREQ = SC("D", SR1 + 6)
+RT_OCC0 = 28            # Recurring Tasks: first occurrence-helper column (AB)
+
+
+def rt_month_col(w, d):     # helper column for Monthly Calendar grid day (week w, weekday d)
+    return L(RT_OCC0 + w * 7 + d)
+
+
+def rt_week_col(d):         # helper column for Weekly Calendar day d (0 = first day shown)
+    return L(RT_OCC0 + 42 + d)
+
+
+RT_TODAY_COL = L(RT_OCC0 + 49)   # helper column: occurs today
 PAUSED = SC("N", SR1 + 1)
 PRI = {p: SC("D", LR1 + i) for i, p in enumerate(LISTS["D"][1])}
 TSTAT = [SC("E", LR1 + i) for i in range(6)]
@@ -232,17 +244,17 @@ class Builder:
         prefs = [
             ("Your name", "Alex Morgan" if self.demo else None, None, "Shown on dashboards"),
             ("Workspace / company", "Northwind Studio (demo)" if self.demo else None, None, ""),
-            ("Role / title", "Operations Director" if self.demo else None, None, ""),
-            ("Email", "alex@example.com" if self.demo else None, None, ""),
+            ("Dashboard title", "Project Command Center", None, "Shown at the top of the dashboard"),
+            ("Working hours per day", 8, "int", "Scale for the Weekly Calendar workload bar"),
             ("Currency", "USD", "cur", "Pick from list"),
             ("Currency symbol", f'=IFERROR(INDEX({SS("C")},MATCH(C15,{SS("B")},0)),"$")', "calc", "Automatic"),
             ("Week starts on", "Monday", "week", "Used by Monthly Calendar"),
             ("Default year", "=YEAR(C20)", "year", "Current year by default — pick to override"),
-            ("Today's date override", None, "date", "Leave blank to use the real date"),
+            ("Today's date override", SD.ANCHOR if self.demo else None, "date",
+             "DEMO date — clear it to use today" if self.demo else "Leave blank to use the real date"),
             ("Effective today", '=IF(C19="",TODAY(),C19)', "calc", "Drives every 'today' calculation"),
             ("Due-soon window (days)", 7, "int", "Tasks due within N days turn amber"),
             ("Budget alert threshold", 0.9, "pct", "Spend ≥ this % of plan = alert"),
-            ("Date display format", "mmm d, yyyy", "info", "Change via Format Cells if needed"),
         ]
         for i, (lab, val, kind, hint) in enumerate(prefs):
             r = 11 + i
@@ -265,6 +277,7 @@ class Builder:
         add_list_dv(ws, "C18", SS("H"))
         add_dv(ws, "C19", "date", "greaterThan", "DATE(2000,1,1)", error="Enter a valid date, or leave blank.")
         add_dv(ws, "C21", "whole", "between", "0", "60")
+        add_dv(ws, "C14", "decimal", "between", "1", "24", error="Hours per day: 1 to 24.")
         add_dv(ws, "C22", "decimal", "between", "0", "2")
 
         # status logic reference box
@@ -324,10 +337,11 @@ class Builder:
         ws, T = self.ws[S_POV], self.T
         heads = ["Project ID", "Project Name", "Description", "Category", "Project Manager", "Start Date", "Due Date", "Priority",
                  "Status", "Progress", "Budget", "Actual Cost", "Remaining Budget", "Days Remaining",
-                 "Tasks", "Done Tasks", "Overdue Tasks", "Health", "Deadline Key", "Row No", "Due Rank"]
-        widths = [10, 31, 54, 25, 18, 15, 15, 11, 13, 11, 13, 13, 14, 12, 9, 9, 10, 13, 12, 8, 12]
+                 "Tasks", "Done Tasks", "Overdue Tasks", "Health", "Deadline Key", "Row No", "Due Rank",
+                 "Revenue", "Profit", "Margin"]
+        widths = [10, 31, 54, 25, 18, 15, 15, 11, 13, 11, 13, 13, 14, 12, 9, 9, 10, 13, 12, 8, 12, 14, 14, 10]
         setup_sheet(ws, {i + 2: w for i, w in enumerate(widths)})
-        title_bar(ws, T, "PROJECT OVERVIEW  ·  Portfolio", "One row per project. Progress, budget and task counts are calculated automatically.", 22, demo=self.demo)
+        title_bar(ws, T, "PROJECT OVERVIEW  ·  Portfolio", "One row per project. Progress, budget and task counts are calculated automatically.", 25, demo=self.demo)
         rr = lambda c: f"{c}{R1}:{c}{POV_LAST}"
         nxt = stat_strip(ws, T, 4, [
             ("PROJECTS", f'=COUNTIF({rr("C")},"?*")', "0", NAVY),
@@ -335,6 +349,7 @@ class Builder:
             ("OVERDUE", f'=COUNTIF({rr("S")},"Overdue")', "0", DANGER),
             ("AVG PROGRESS", f'=IFERROR(AVERAGEIF({rr("C")},"?*",{rr("K")}),0)', FMT_PCT, TEAL),
             ("TOTAL BUDGET", f'=SUM({rr("L")})', "#,##0", LAVENDER),
+            ("REVENUE", f'=SUM({rr("W")})', "#,##0", TEAL),
             ("CURRENCY", "=TRIM(CurrencySymbol)", None, MED_GRAY)])
         if nxt + 6 <= ws.max_column:
             legend(ws, T, 5, nxt, compact=True)
@@ -364,6 +379,15 @@ class Builder:
         self.fill_down(ws, "T", R1, last, '=IF(OR(C{r}="",H{r}=""),"",INT(H{r})&"|"&COUNTIFS(H$8:H{r},H{r},C$8:C{r},"?*"))')
         self.fill_down(ws, "U", R1, last, '=IF(C{r}="","",COUNTIF(C$8:C{r},"?*"))')
         self.fill_down(ws, "V", R1, last, '=IF(OR(C{r}="",H{r}=""),"",H{r}+ROW()/100000)')
+        self.fill_down(ws, "X", R1, last, '=IF(OR(C{r}="",W{r}=""),"",W{r}-N(M{r}))')
+        self.fill_down(ws, "Y", R1, last, '=IF(OR(C{r}="",N(W{r})=0),"",X{r}/W{r})')
+        self.inp(S_POV, f"W{R1}:W{last}")
+        paint(ws, f"W{R1}:W{last}", numfmt=FMT_CUR)
+        add_dv(ws, f"W{R1}:W{last}", "decimal", "greaterThanOrEqual", "0", error="Revenue must be zero or more.")
+        self.calc(S_POV, f"X{R1}:Y{last}")
+        paint(ws, f"X{R1}:X{last}", numfmt=FMT_CUR)
+        paint(ws, f"Y{R1}:Y{last}", numfmt=FMT_PCT, align=CENTER)
+        cf_formula(ws, f"X{R1}:X{last}", f'AND(ISNUMBER(X{R1}),X{R1}<0)', DANGER_BG, DANGER, True)
         self.calc(S_POV, f"K{R1}:V{last}")
         paint(ws, f"V{R1}:V{last}", numfmt="0.00")
         paint(ws, f"K{R1}:K{last}", numfmt=FMT_PCT)
@@ -382,13 +406,15 @@ class Builder:
                             ("At risk", WARNING_BG, WARNING), ("On track", INFO_BG, INFO), ("Cancelled", LIGHT_GRAY, SECONDARY)):
             cf_formula(ws, f"S{R1}:S{last}", f'S{R1}="{txt}"', bg, fg, True)
         ws.freeze_panes = f"D{R1}"
-        self.table(ws, "tblProjects", f"B{HDR}:V{last}")
-        skin(ws, 22, last)
+        self.table(ws, "tblProjects", f"B{HDR}:Y{last}")
+        skin(ws, 25, last)
+        ws.column_dimensions.group("T", "V", hidden=True, outline_level=1)
         if self.demo:
             for i, p in enumerate(SD.PROJECTS):
                 r = R1 + i
                 for c, v in zip("CDEFGHIJ", p):
                     ws[f"{c}{r}"] = v
+                ws[f"W{r}"] = SD.REVENUE[i]
 
     # ================================================================ TAB 8 VARIABLE TASKS
     def build_vt(self):
@@ -396,10 +422,12 @@ class Builder:
         heads = ["Task ID", "Task Name", "Description", "Project", "Category", "Assigned To", "Start Date", "Due Date", "Priority",
                  "Status", "Estimated Hours", "Actual Hours", "Progress", "Notes",
                  "Deadline Flag", "Days Left", "Due Key", "Status Key", "Upcoming Rank", "Overdue Rank", "Filter No",
-                 "Gantt No", "Done", "Recent Rank", "Effective Progress"]
-        widths = [9, 28, 54, 31, 14, 17, 15, 15, 10, 12, 10, 10, 10, 26, 11, 9, 11, 17, 12, 12, 8, 8, 6, 12, 10]
+                 "Gantt No", "Done", "Recent Rank", "Effective Progress",
+                 "Completed On", "Urgent?", "Important?", "Quadrant", "Quadrant Key", "Completion Date"]
+        widths = [9, 28, 54, 31, 14, 17, 15, 15, 10, 12, 10, 10, 10, 26, 11, 9, 11, 17, 12, 12, 8, 8, 6, 12, 10,
+                  15, 10, 11, 12, 14, 15]
         setup_sheet(ws, {i + 2: w for i, w in enumerate(widths)})
-        title_bar(ws, T, "VARIABLE TASKS  ·  One-time task database", "Add one task per row. Everything else in the workbook reads from this table.", 26, demo=self.demo)
+        title_bar(ws, T, "VARIABLE TASKS  ·  One-time task database", "Add one task per row. Everything else in the workbook reads from this table.", 32, demo=self.demo)
         last = VT_LAST
         rr = lambda c: f"{c}{R1}:{c}{last}"
         nxt = stat_strip(ws, T, 4, [
@@ -414,6 +442,7 @@ class Builder:
         ws.row_dimensions[6].height = 10
         header_row(ws, T, HDR, 2, heads)
         mark_helper_headers(ws, HDR, 16, 26)
+        mark_helper_headers(ws, HDR, 30, 32)
         for i in range(VT_N):
             ws[f"B{R1 + i}"] = f"T-{i + 1:03d}"
         self.calc(S_VT, f"B{R1}:B{last}", align=CENTER, color=SECONDARY)
@@ -442,8 +471,23 @@ class Builder:
             "Y": f'=IF(AND(C{{r}}<>"",H{{r}}<>""),IF(H{{r}}<={TODAY},H{{r}}+ROW()/100000,""),"")',
             "Z": f'=IF(C{{r}}="","",IF(K{{r}}={DONE},1,IF(N{{r}}="",0,N{{r}})))',
         }
+        f_["AD"] = (f'=IF(OR(C{{r}}="",K{{r}}={DONE},AND(AB{{r}}="",AC{{r}}="")),"",IF(AB{{r}}="Yes",'
+                    f'IF(AC{{r}}="Yes","Do first","Delegate"),IF(AC{{r}}="Yes","Schedule","Eliminate")))')
+        f_["AE"] = '=IF(AD{r}="","",AD{r}&"|"&COUNTIF(AD$8:AD{r},AD{r}))'
+        f_["AF"] = f'=IF(OR(C{{r}}="",K{{r}}<>{DONE}),"",IF(AA{{r}}<>"",AA{{r}},IF(I{{r}}<>"",I{{r}},"")))'
         for c, tpl in f_.items():
             self.fill_down(ws, c, R1, last, tpl)
+        self.inp(S_VT, f"AA{R1}:AC{last}")
+        paint(ws, f"AA{R1}:AA{last}", numfmt=FMT_DATE)
+        paint(ws, f"AB{R1}:AC{last}", align=CENTER)
+        self.calc(S_VT, f"AD{R1}:AF{last}")
+        paint(ws, f"AF{R1}:AF{last}", numfmt=FMT_DATE)
+        add_dv(ws, f"AA{R1}:AA{last}", "date", "greaterThan", "DATE(2000,1,1)", error="Enter the date the task was finished.")
+        add_list_dv(ws, f"AB{R1}:AC{last}", SS("J"))
+        cf_formula(ws, f"AA{R1}:AA{last}", f'AND($X{R1}=1,AA{R1}="")', WARNING_BG, WARNING)
+        for q, (bg, fg) in (("Do first", (DANGER_BG, DANGER)), ("Schedule", (INFO_BG, INFO)), ("Delegate", (WARNING_BG, WARNING)),
+                            ("Eliminate", (LIGHT_GRAY, SECONDARY))):
+            cf_formula(ws, f"AD{R1}:AD{last}", f'AD{R1}="{q}"', bg, fg, True)
         self.calc(S_VT, f"P{R1}:Z{last}")
         paint(ws, f"Z{R1}:Z{last}", numfmt=FMT_PCT)
         paint(ws, f"T{R1}:U{last}", numfmt="0.00")
@@ -464,8 +508,11 @@ class Builder:
         for p, (bg, fg) in zip(LISTS["D"][1], ((DANGER_BG, DANGER), (WARNING_BG, WARNING), (INFO_BG, INFO), (SOFT_TEAL, SUCCESS))):
             cf_formula(ws, f"J{R1}:J{last}", f'J{R1}="{p}"', bg, fg, True)
         ws.freeze_panes = f"D{R1}"
-        self.table(ws, "tblTasks", f"B{HDR}:Z{last}")
-        skin(ws, 26, last)
+        self.table(ws, "tblTasks", f"B{HDR}:AF{last}")
+        skin(ws, 32, last)
+        ws.column_dimensions.group("P", "Z", hidden=True, outline_level=1)
+        ws.column_dimensions.group("AE", "AF", hidden=True, outline_level=1)
+        ws.sheet_properties.outlinePr.summaryRight = False
         if self.demo:
             for i, t in enumerate(SD.build_tasks()):
                 r = R1 + i
@@ -473,6 +520,7 @@ class Builder:
                         t["est"], t["act"], t["prog"], t["notes"]]
                 for c, v in zip("CDEFGHIJKLMNO", vals):
                     ws[f"{c}{r}"] = v
+                ws[f"AA{r}"], ws[f"AB{r}"], ws[f"AC{r}"] = t["completed_on"], t["urgent"], t["important"]
 
     # ================================================================ TAB 7 PROJECT BUDGET
     def build_pb(self):
@@ -632,7 +680,32 @@ class Builder:
         cf_formula(ws, f"N{R1}:N{last}", f'N{R1}="Check setup"', DANGER_BG, DANGER, True)
         ws.freeze_panes = f"D{R1}"
         self.table(ws, "tblRecurring", f"B{HDR}:W{last}")
+        ws[f"X{HDR}"] = "Week rank"
+        self.fill_down(ws, "X", R1, last, '=IF(AND(ISNUMBER(N{r}),ISNUMBER(O{r})),IF(O{r}<=6,N{r}+ROW()/100000,""),"")')
+        paint(ws, f"X{R1}:X{last}", numfmt="0.00", font=T.font(8, color=SECONDARY))
+        # ---- occurrence helpers: one column per calendar day shown elsewhere; running number when the task occurs
+        MC, WC = quote(S_MCAL), quote(S_WCAL)
+        days = []
+        for w in range(6):
+            for d in range(7):
+                days.append((rt_month_col(w, d), f"{MC}!${L(2 + d)}${9 + w * 5}", f"M{w * 7 + d + 1}"))
+        for d in range(7):
+            days.append((rt_week_col(d), f"{WC}!${L(3 + d)}$10", f"W{d + 1}"))
+        days.append((L(RT_OCC0 + 49), TODAY, "Today"))
+        for col_, dexpr, lab in days:
+            ws[f"{col_}{HDR}"] = lab
+            ws.column_dimensions[col_].width = 6
+            D = dexpr
+            tpl = ('=IF(IFERROR(AND($C{r}<>"",$L{r}<>' + PAUSED + ',$I{r}<>"",$T{r}<>"",' + D + '>=$I{r},OR($J{r}="",' + D + '<=$J{r}),'
+                   'IF($S{r}="M",AND(MOD((YEAR(' + D + ')-YEAR($I{r}))*12+MONTH(' + D + ')-MONTH($I{r}),$T{r})=0,'
+                   'EDATE($I{r},(YEAR(' + D + ')-YEAR($I{r}))*12+MONTH(' + D + ')-MONTH($I{r}))=' + D + '),'
+                   'MOD(' + D + '-$I{r},$T{r})=0)),FALSE),MAX(' + col_ + '$' + str(HDR) + ':' + col_ + '{p})+1,"")')
+            self.fill_down(ws, col_, R1, last, tpl)
+        self.calc(S_RT, f"{L(RT_OCC0)}{R1}:{L(RT_OCC0 + 49)}{last}")
+        paint(ws, f"{L(RT_OCC0)}{R1}:{L(RT_OCC0 + 49)}{last}", font=T.font(8, color=SECONDARY))
+        mark_helper_headers(ws, HDR, RT_OCC0, RT_OCC0 + 49)
         skin(ws, 26, last)
+        ws.column_dimensions.group("S", L(RT_OCC0 + 49), hidden=True, outline_level=1)
         if self.demo:
             for i, (n, pr, cat, who, fq, cu, so, eo, pri, st, lc, cnt) in enumerate(SD.RECURRING):
                 r = R1 + i
@@ -693,10 +766,10 @@ class Builder:
 
     # ================================================================ TAB 2 DASHBOARD
     def build_dash(self):
-        import dashboard_v2 as DV
-        ctx = dict(S_DASH=S_DASH, VT=VT, POV=POV, PB=PB, TS=TS, SL=SL, SS=SS, SC=SC, PSTAT=PSTAT, PRI=PRI, TODAY=TODAY,
-                   DONE=DONE, P_DONE=P_DONE, TSTAT=TSTAT, ORDER=ORDER, quote=quote)
-        self.dash = DV.DashV2(self, ctx)
+        import dashboard_v3 as DV
+        ctx = dict(S_DASH=S_DASH, VT=VT, POV=POV, PB=PB, TS=TS, RT=RT, SL=SL, SS=SS, SC=SC, PSTAT=PSTAT, PRI=PRI, TODAY=TODAY,
+                   DONE=DONE, P_DONE=P_DONE, TSTAT=TSTAT, ORDER=ORDER, quote=quote, RT_TODAY_COL=RT_TODAY_COL)
+        self.dash = DV.DashV3(self, ctx)
         self.dash.build()
 
     # ================================================================ TAB 3 MONTHLY CALENDAR
@@ -760,17 +833,21 @@ class Builder:
                 ws[date_ref].font = T.font(11, True, DARK)
                 ws[date_ref].alignment = Alignment(horizontal="right", vertical="top", indent=1)
                 inm = f"MONTH({date_ref})=$Q$5"
+                cnt_t = f'COUNTIFS({VT("I")},{date_ref},{VT("C")},"?*")'
+                occ = RT(rt_month_col(w, d))
                 for k in (1, 2):
                     rr = base + k
-                    ws[f"{c}{rr}"] = f'=IF({inm},IFERROR(INDEX({VT("C")},MATCH(INT({date_ref})&"|{k}",{VT("R")},0)),""),"")'
-                    ws[f"{hc}{rr}"] = (f'=IF({c}{rr}="","",IF(AND({date_ref}<$G$5,INDEX({VT("K")},MATCH(INT({date_ref})&"|{k}",{VT("R")},0))<>{DONE}),-1,'
-                                       f'IFERROR(MATCH(INDEX({VT("F")},MATCH(INT({date_ref})&"|{k}",{VT("R")},0)),{SL("C")},0),0)))')
+                    task_k = f'INDEX({VT("C")},MATCH(INT({date_ref})&"|{k}",{VT("R")},0))'
+                    rec_k = f'"↻ "&INDEX({RT("C")},MATCH({k}-{cnt_t},{occ},0))'
+                    ws[f"{c}{rr}"] = f'=IF({inm},IFERROR(IF({k}<={cnt_t},{task_k},{rec_k}),""),"")'
+                    ws[f"{hc}{rr}"] = (f'=IF({c}{rr}="","",IF(LEFT({c}{rr},1)="↻",99,IF(AND({date_ref}<$G$5,INDEX({VT("K")},MATCH(INT({date_ref})&"|{k}",{VT("R")},0))<>{DONE}),-1,'
+                                       f'IFERROR(MATCH(INDEX({VT("F")},MATCH(INT({date_ref})&"|{k}",{VT("R")},0)),{SL("C")},0),0))))')
                 rr = base + 3
                 ws[f"{c}{rr}"] = f'=IF({inm},IFERROR("▲ "&INDEX({POV("C")},MATCH(INT({date_ref})&"|1",{POV("T")},0)),""),"")'
                 rr = base + 4
-                cnt_t = f'COUNTIFS({VT("I")},{date_ref},{VT("C")},"?*")'
                 cnt_s = f'COUNTIF({TS("B")},{date_ref})'
-                ws[f"{c}{rr}"] = (f'=IF({inm},TRIM(IF({cnt_t}>2,"+"&({cnt_t}-2)&" more  ","")&IF({cnt_s}>0,"⏱ "&{cnt_s}&" scheduled","")),"")')
+                cnt_all = f'({cnt_t}+COUNT({occ}))'
+                ws[f"{c}{rr}"] = (f'=IF({inm},TRIM(IF({cnt_all}>2,"+"&({cnt_all}-2)&" more  ","")&IF({cnt_s}>0,"⏱ "&{cnt_s}&" scheduled","")),"")')
                 for k in range(1, 5):
                     cell = ws[f"{c}{base + k}"]
                     cell.font = T.font(8 if k == 4 else 9, k == 3, SECONDARY if k == 4 else DARK)
@@ -789,8 +866,9 @@ class Builder:
         cf_formula(ws, grid, "AND(MOD(ROW(B9)-9,5)=0,MONTH(B9)<>$Q$5)", BG, MED_GRAY, stop=True)
         cf_formula(ws, grid, "P9=-1", DANGER_BG, DANGER, True, stop=True)
         cat_cols = [SOFT_BLUE, SOFT_TEAL, SOFT_LAV, WARNING_BG, INFO_BG, "E8F6F3", "FDF0E6", "EEF3F2"]
+        cf_formula(ws, grid, "P9=99", SOFT_LAV, "5B3FA8", stop=True)
         for i, colr in enumerate(cat_cols):
-            cf_formula(ws, grid, f'AND(ISNUMBER(P9),P9>0,MOD(P9-1,8)={i})', colr)
+            cf_formula(ws, grid, f'AND(ISNUMBER(P9),P9>0,P9<99,MOD(P9-1,8)={i})', colr)
         for c in range(16, 23):
             ws.column_dimensions[L(c)].hidden = True
         # side panel stats
@@ -815,7 +893,8 @@ class Builder:
             self.calc(S_MCAL, f"K{r}", nf, CENTER, color=BLUE)
         cf_formula(ws, "K13", "K13>0", DANGER_BG, DANGER, True)
         section(ws, T, 20, 10, 11, "LEGEND", color=LAVENDER)
-        leg = [(BLUE, "Today"), (DANGER_BG, "Overdue task"), (BG, "Other month"), ("FFFFFF", "▲ Project deadline")]
+        leg = [(BLUE, "Today"), (DANGER_BG, "Overdue task"), (BG, "Other month"), ("FFFFFF", "▲ Project deadline"),
+               (SOFT_LAV, "↻ Recurring task")]
         for i, (colr, t) in enumerate(leg):
             r = 21 + i
             ws[f"K{r}"].fill = fill(colr)
@@ -924,7 +1003,7 @@ class Builder:
         cf_formula(ws, f"C9:I10", "C$10=$L$4", BLUE, WHITE, True)
         # due tasks
         rD = rN + 2
-        section(ws, T, rD, 2, 9, "TASKS DUE", color=LAVENDER)
+        section(ws, T, rD, 2, 9, "Tasks due  ·  ↻ recurring", color=LAVENDER)
         for k in range(1, 5):
             r = rD + k
             ws[f"B{r}"] = f"#{k}" if k < 4 else "more"
@@ -932,14 +1011,19 @@ class Builder:
             ws[f"B{r}"].alignment = RIGHT
             for d in range(7):
                 c = L(3 + d)
+                cnt_t = f'COUNTIFS({VT("I")},{c}$10,{VT("C")},"?*")'
+                occ = RT(rt_week_col(d))
                 if k < 4:
-                    ws[f"{c}{r}"] = f'=IFERROR(INDEX({VT("C")},MATCH(INT({c}$10)&"|{k}",{VT("R")},0)),"")'
+                    task_k = f'INDEX({VT("C")},MATCH(INT({c}$10)&"|{k}",{VT("R")},0))'
+                    rec_k = f'"↻ "&INDEX({RT("C")},MATCH({k}-{cnt_t},{occ},0))'
+                    ws[f"{c}{r}"] = f'=IFERROR(IF({k}<={cnt_t},{task_k},{rec_k}),"")'
                 else:
-                    cnt = f'COUNTIFS({VT("I")},{c}$10,{VT("C")},"?*")'
+                    cnt = f"({cnt_t}+COUNT({occ}))"
                     ws[f"{c}{r}"] = f'=IF({cnt}>3,"+"&({cnt}-3)&" more","")'
                 ws[f"{c}{r}"].font = T.font(9)
                 ws[f"{c}{r}"].alignment = Alignment(horizontal="left", vertical="center", indent=1, shrink_to_fit=True)
                 ws[f"{c}{r}"].border = Border(left=THIN, right=THIN, bottom=Side(style="hair", color=BORDER))
+        cf_formula(ws, f"C{rD + 1}:I{rD + 3}", f'LEFT(C{rD + 1},1)="↻"', SOFT_LAV, "5B3FA8")
         rW = rD + 6
         section(ws, T, rW, 2, 9, "DAILY WORKLOAD", color=TEAL)
         rows = [("Sched. hrs", lambda c: f'=SUMIFS({TS("I")},{TS("B")},{c}$10)', FMT_HRS),
@@ -955,7 +1039,10 @@ class Builder:
                 c = L(3 + d)
                 ws[f"{c}{r}"] = fn(c)
                 self.calc(S_WCAL, f"{c}{r}", nf, CENTER)
-        ws.conditional_formatting.add(f"C{rW + 1}:I{rW + 1}", DataBarRule(start_type="num", start_value=0, end_type="num", end_value=8, color=BLUE, showValue=True))
+        ws["L5"] = f"=MAX(1,N({SC('C', 14)}))"   # working hours per day (hidden helper column)
+        ws.conditional_formatting.add(f"C{rW + 1}:I{rW + 1}", DataBarRule(start_type="num", start_value=0, end_type="formula",
+                                                                         end_value="$L$5", color=BLUE, showValue=True,
+                                                                         minLength=0, maxLength=100))
         cf_databar(ws, f"C{rW + 5}:I{rW + 5}", TEAL)
         ws.freeze_panes = "C11"
         for r, hgt in ((4, 12), (7, 22), (8, 12), (rD - 1, 12), (rW - 1, 12)):
@@ -1008,12 +1095,12 @@ class Builder:
                ('="Budget ("&CurrencySymbol&")"', f'=IF($Q$5="","",INDEX({POV("L")},$Q$5))', FMT_CUR),
                ('="Actual ("&CurrencySymbol&")"', f'=IF($Q$5="","",INDEX({POV("M")},$Q$5))', FMT_CUR),
                ('="Remaining ("&CurrencySymbol&")"', f'=IF($Q$5="","",INDEX({POV("N")},$Q$5))', FMT_CUR),
-               ("Budget left %", f'=IF(OR($Q$5="",N(G9)=0),"",G11/G9)', FMT_PCT),
+               ('="Revenue ("&CurrencySymbol&")"', f'=IF($Q$5="","",IF(INDEX({POV("W")},$Q$5)="","—",INDEX({POV("W")},$Q$5)))', FMT_CUR),
+               ("Profit margin", f'=IF($Q$5="","",IF(INDEX({POV("Y")},$Q$5)="","—",INDEX({POV("Y")},$Q$5)))', FMT_PCT),
                ("Tasks (total)", f'=IF($Q$5="","",INDEX({POV("P")},$Q$5))', "0"),
                ("Tasks done", f'=IF($Q$5="","",INDEX({POV("Q")},$Q$5))', "0"),
                ("Tasks overdue", f'=IF($Q$5="","",INDEX({POV("R")},$Q$5))', "0"),
-               ("Estimated hours", f'=IF($C$5="","",SUMIFS({VT("L")},{VT("E")},$C$5))', FMT_HRS),
-               ("Actual hours", f'=IF($C$5="","",SUMIFS({VT("M")},{VT("E")},$C$5))', FMT_HRS)]
+               ("Hours est./act.", f'=IF($C$5="","",TEXT(SUMIFS({VT("L")},{VT("E")},$C$5),"0.0")&" / "&TEXT(SUMIFS({VT("M")},{VT("E")},$C$5),"0.0"))', None)]
         for i, (lab, fm, nf) in enumerate(met):
             r = 8 + i
             ws[f"F{r}"] = lab
@@ -1023,7 +1110,8 @@ class Builder:
             self.calc(S_PM, f"G{r}", nf, RIGHT, color=BLUE)
         cf_databar(ws, "G8", TEAL)
         cf_formula(ws, "G11", "AND(ISNUMBER(G11),G11<0)", DANGER_BG, DANGER, True)
-        cf_formula(ws, "G15", "AND(ISNUMBER(G15),G15>0)", DANGER_BG, DANGER, True)
+        cf_formula(ws, "G16", "AND(ISNUMBER(G16),G16>0)", DANGER_BG, DANGER, True)
+        cf_formula(ws, "G13", "AND(ISNUMBER(G13),G13<0)", DANGER_BG, DANGER, True)
         # timeline
         section(ws, T, 19, 2, 4, "PROJECT TIMELINE", color=LAVENDER)
         tl = [("Duration (days)", '=IF(OR(C14="",C15=""),"",C15-C14)', "0"),
@@ -1283,7 +1371,49 @@ class Builder:
         ws["B29"].alignment = Alignment(vertical="center", indent=1)
         for r, hgt in ((8, 12), (22, 12), (28, 8)):
             ws.row_dimensions[r].height = hgt
-        skin(ws, 16, 30, cards=[(2, 5, 9, 7), (2, 9, 9, 21), (2, 23, 9, 29), (11, 9, 16, 29)], hide_headers=True)
+        # ---- Eisenhower matrix (open tasks flagged Urgent? / Important? on Variable Tasks)
+        ws.row_dimensions[31].height = 14
+        section(ws, T, 32, 2, 16, "Eisenhower matrix  —  open tasks by urgency and importance (set Urgent? / Important? on Variable Tasks)",
+                color=TEAL)
+        quads = [("Do first", "urgent + important", 2, 5, 34, DANGER_BG, DANGER), ("Schedule", "important, not urgent", 6, 9, 34, INFO_BG, INFO),
+                 ("Delegate", "urgent, not important", 2, 5, 45, WARNING_BG, WARNING), ("Eliminate", "neither", 6, 9, 45, LIGHT_GRAY, SECONDARY)]
+        qcards = []
+        for name, hint, c1, c2, r0, bg, fg in quads:
+            ws.merge_cells(f"{L(c1)}{r0}:{L(c2)}{r0}")
+            ws[f"{L(c1)}{r0}"] = f'="{name.upper()}   ·   {hint}   ("&COUNTIF({VT("AD")},"{name}")&")"'
+            paint(ws, f"{L(c1)}{r0}:{L(c2)}{r0}", f=fill(bg))
+            ws[f"{L(c1)}{r0}"].font = T.font(10, True, fg)
+            ws[f"{L(c1)}{r0}"].alignment = Alignment(vertical="center", indent=1)
+            ws.row_dimensions[r0].height = 24
+            for k in range(1, 9):
+                r = r0 + k
+                ws.merge_cells(f"{L(c1)}{r}:{L(c2 - 1)}{r}")
+                m = f'MATCH("{name}|{k}",{VT("AE")},0)'
+                ws[f"{L(c1)}{r}"] = f'=IFERROR(INDEX({VT("C")},{m})&"",IF({k}=1,"— none —",""))'
+                ws[f"{L(c2)}{r}"] = f'=IFERROR(IF(INDEX({VT("I")},{m})="","",INDEX({VT("I")},{m})),"")'
+                ws[f"{L(c1)}{r}"].font = T.font(9)
+                ws[f"{L(c1)}{r}"].alignment = Alignment(vertical="center", indent=1)
+                ws[f"{L(c2)}{r}"].font = T.font(9, True, fg)
+                ws[f"{L(c2)}{r}"].number_format = FMT_SDATE
+                ws[f"{L(c2)}{r}"].alignment = Alignment(horizontal="center", vertical="center")
+                for cc in range(c1, c2 + 1):
+                    ws.cell(row=r, column=cc).border = Border(bottom=Side(style="hair", color=BORDER))
+            qcards.append((c1, r0, c2, r0 + 8))
+        ws.row_dimensions[43].height = 10
+        ws.row_dimensions[44].height = 10
+        section(ws, T, 34, 11, 16, "How to use it", color=LAVENDER)
+        tips = ["Mark each task Urgent? and Important? (Yes/No)", "on the Variable Tasks tab (columns after Notes).",
+                "Do first: act now.  Schedule: plan a date.", "Delegate: hand it to a teammate.",
+                "Eliminate: drop it or park it.", "Completed tasks drop off automatically.",
+                f'="Unclassified open tasks: "&(COUNTIFS({VT("C")},"?*",{VT("K")},"<>"&{DONE})-COUNTIF({VT("AE")},"?*"))']
+        for i, t in enumerate(tips):
+            r = 35 + i
+            ws.merge_cells(f"K{r}:P{r}")
+            ws[f"K{r}"] = t
+            ws[f"K{r}"].font = T.font(9, i == len(tips) - 1, DARK if i < len(tips) - 1 else MIDNIGHT)
+            ws[f"K{r}"].alignment = Alignment(vertical="center", indent=1)
+        skin(ws, 16, 54, cards=[(2, 5, 9, 7), (2, 9, 9, 21), (2, 23, 9, 29), (11, 9, 16, 29), (2, 32, 16, 32),
+                                *qcards, (11, 34, 16, 42)], hide_headers=True)
 
     # ================================================================ TAB 13 KANBAN
     def build_kb(self):
@@ -1478,28 +1608,32 @@ class Builder:
                 "3. Go to Project Budget. Add budget lines: choose the Project ID, a category, a planned amount and (later) actual expenses.",
                 "4. Go to Variable Tasks. Add one row per task and link it to a project with the Project dropdown.",
                 "5. Optional: add repeating work on Recurring Tasks and time blocks on Task Schedule.",
-                "6. Open the All-in-One Dashboard — every number, chart and list updates automatically.",
+                "6. Open the All-in-One Dashboard — every number, chart and list updates automatically. Pick a Year / From / To month in its Period card.",
             ]),
             ("CELL COLOURS", [
                 "Light mint = input (type or choose from a dropdown).  Light grey = formula (don't type over it).  White = information.",
                 "Light teal = positive result.  Light red = warning / negative.  Lavender = optional or system list.",
-                "Columns headed in grey ('AUTOMATION HELPERS') power the dashboards. Leave them in place; you may hide them (right-click › Hide).",
+                "Grey-headed helper columns power the dashboards. They are grouped and collapsed — click the small + above the column letters to see them. Never delete them.",
             ]),
             ("HOW TO ADD PROJECTS", [
                 "Type the project name in the next empty row of Project Overview. Progress, budget, actual cost, remaining budget, days remaining, task counts and health fill in by themselves.",
                 "Progress = average progress of the project's tasks (a task with the 'Completed' status counts as 100%). A project marked Completed shows 100%.",
+                "Optional: enter Revenue for client projects — Profit (revenue − actual cost) and Margin are calculated and shown on Project Manager and the dashboard.",
                 "Health: Completed / Cancelled / Overdue (past due date) / Over budget (actual > budget) / At risk (has overdue tasks) / On track.",
                 "Add objectives, deliverables, milestones, dependencies, risks and notes in the database on the right of the 'Project Manager' tab.",
             ]),
             ("HOW TO CREATE TASKS", [
                 "Variable Tasks: one-time tasks. Required for automation: Task Name. Recommended: Project, Assigned To, Start Date, Due Date, Priority, Status.",
+                "When you finish a task, set Status to Completed and type the Completed On date (the cell turns amber if it's missing). The dashboard's 'completed' line counts tasks by that date.",
+                "Urgent? / Important? (Yes/No) place a task in the Eisenhower matrix on the Decision Matrix tab: Do first, Schedule, Delegate or Eliminate.",
                 "Status drives the Kanban board (first five statuses in Setup = five Kanban columns). Changing a status moves the card automatically.",
-                "Recurring Tasks: choose a frequency. For 'Custom', enter the interval in days. Update 'Last Completed' when you finish an occurrence — the next date moves forward.",
+                "Recurring Tasks: choose a frequency. For 'Custom', enter the interval in days. Update 'Last Completed' when you finish an occurrence — the next date moves forward. Occurrences appear on both calendars and in the dashboard's Due today list, marked ↻.",
                 "Task Schedule: pick a task from the dropdown (or type any event). Project, priority, status and owner fill in; the block appears on the Weekly Calendar.",
                 "Need more rows? Excel edition: rows 7–506 are pre-built (500 tasks). Type directly below the last row of an Excel Table and it expands; copy the formulas of the row above into helper columns if they are not filled automatically.",
             ]),
             ("HOW THE DASHBOARDS WORK", [
-                "All-in-One Dashboard: KPI cards use COUNTIF/COUNTIFS/SUM over the project, task and budget tables. Change 'Chart year' to re-draw the monthly productivity chart.",
+                "All-in-One Dashboard: four tiles (projects, task completion, remaining budget, this period), a status strip, six charts and six lists. The Period card (Year / From / To) drives the 'this period' tile, the highlighted months and 'Project deadlines in period'.",
+                "Excel edition: the dashboard's rounded cards, icons and linked text boxes are Excel shapes. Google Sheets shows the same dashboard without shapes (square cards, text links in the sidebar).",
                 "Monthly Calendar: choose a year and month. Each day shows up to two tasks due (colour = task category; red = overdue), the first project deadline (▲) and a count of extra tasks / scheduled blocks.",
                 "Weekly Calendar: type any date to view that week. Blocks show at their start hour; ⋮ marks the rest of a multi-hour block. Colour = priority.",
                 "Task Filter: combine filters; blank = all. Up to 100 results are listed.",
@@ -1578,8 +1712,8 @@ class Builder:
         ws.protection.formatRows = False
 
     def page_setup(self):
-        areas = {S_DASH: "A1:BL50", S_MCAL: "A1:K39", S_WCAL: "A1:I41", S_KB: "A1:P53", S_GC: "A1:BS69", S_PM: "A1:G77",
-                 S_DM: "A1:Q30", S_TF: "A1:L118", S_INS: "A1:D90", S_SETUP: "A1:O70"}
+        areas = {S_DASH: "A1:BL77", S_MCAL: "A1:K39", S_WCAL: "A1:I41", S_KB: "A1:P53", S_GC: "A1:BS69", S_PM: "A1:G77",
+                 S_DM: "A1:Q54", S_TF: "A1:L118", S_INS: "A1:D90", S_SETUP: "A1:O70"}
         for n in ORDER:
             ws = self.ws[n]
             ws.page_setup.orientation = "landscape"

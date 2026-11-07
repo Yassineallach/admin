@@ -31,17 +31,17 @@ The Google Sheets edition is built from the same generator, adapted for Google S
 | # | Tab | Section | Purpose |
 |---|---|---|---|
 | 1 | Setup | Setup | Workspace details, currency, week start, every dropdown list |
-| 2 | All-in-One Dashboard | Dashboards | 4 KPI tiles for a period you choose, 6 charts (tasks by month, completion donut, project progress, budget by month, category radar, team workload), upcoming and overdue lists, icon sidebar to every tab |
+| 2 | All-in-One Dashboard | Dashboards | 4 tiles (projects, task completion, remaining budget, this period), a status strip (due today, due this week, overdue, recurring today), 6 charts, and 6 lists including the project performance table. A Period picker drives the period figures |
 | 3 | Monthly Calendar | Dashboards | Pick a year and month. Shows tasks due (coloured by category), project deadlines and scheduled blocks |
 | 4 | Weekly Calendar | Dashboards | Monday–Sunday, 7 AM–8 PM time grid, tasks due, daily workload and weekly statistics |
-| 5 | Project Overview | Projects | Portfolio table: progress, budget, actual, remaining and health are calculated |
+| 5 | Project Overview | Projects | Portfolio table: progress, budget, actual, remaining and health are calculated. Optional Revenue gives profit and margin |
 | 6 | Project Manager | Projects | Pick a project to see its details, timeline, team, objectives, deliverables, milestones, dependencies, risks and notes |
 | 7 | Project Budget | Projects | Planned vs actual budget lines, utilisation, alerts, category summary |
-| 8 | Variable Tasks | Tasks | Main database of one-time tasks (500 rows) |
+| 8 | Variable Tasks | Tasks | Main database of one-time tasks (500 rows), with Completed On and Urgent?/Important? fields |
 | 9 | Recurring Tasks | Tasks | Daily, weekly, biweekly, monthly, quarterly, annual or custom repeats, with the next date calculated |
 | 10 | Task Schedule | Tasks | Time blocks (date, start and end time). Feeds the Weekly Calendar |
 | 11 | Task Filter | Tasks | Filter by 10 criteria, including keyword search |
-| 12 | Decision Matrix | Extras | Weighted scoring of 3 options against up to 10 criteria |
+| 12 | Decision Matrix | Extras | Weighted scoring of 3 options against up to 10 criteria, plus an Eisenhower matrix of open tasks (Do first / Schedule / Delegate / Eliminate) |
 | 13 | Kanban Board | Extras | 5 columns built from the first five Task Statuses |
 | 14 | Gantt Chart | Extras | Timeline drawn from task dates, in daily or weekly view |
 | 15 | Instructions | Extras | In-workbook help |
@@ -77,6 +77,10 @@ The Google Sheets edition is built from the same generator, adapted for Google S
   - Health is a decision chain: Completed › Cancelled › Overdue › Over budget › At risk › On track.
 - **Filtered and sorted lists.** Helper columns on *Variable Tasks* (headed in grey) give matching rows a running number (1, 2, 3…). The dashboard lists, Task Filter, Kanban and Gantt fetch those rows with `INDEX/MATCH`. Upcoming and overdue lists are sorted with `SMALL()` on a rank value (due date plus a tiny row offset). This method gives the same results in Excel 2010+, Microsoft 365, Google Sheets and LibreOffice, with no dynamic-array formulas.
 - **Calendars.** Each task gets a key made of its due date and a running number (`46333|1`, `46333|2`…). A calendar cell looks up `date|1` and `date|2`, and project deadlines work the same way.
+- **Completion date.** When a task is marked Completed, type its *Completed On* date (the cell turns amber until you do). The dashboard's "completed" line counts tasks by that date; if it's blank, the due date is used instead.
+- **Recurring tasks on calendars.** For every recurring task, hidden helper columns test each day shown on the Monthly and Weekly calendars (and today). Matching days list the task with ↻, after that day's one-time tasks. The same test feeds the dashboard's *Due today* list and *recurring today* count.
+- **Eisenhower matrix.** *Urgent?* and *Important?* (Yes/No) on Variable Tasks give each open task a quadrant: both Yes → Do first, only Important → Schedule, only Urgent → Delegate, neither → Eliminate. Completed tasks drop off.
+- **Revenue and margin.** Profit = Revenue − actual cost; Margin = Profit ÷ Revenue. Projects without revenue show "—".
 - **Recurring next date:**
   - Day-based frequencies (daily, weekly, biweekly, custom) add whole intervals to the start date: `start + ROUNDUP((base−start)/step,0)×step`.
   - Month-based frequencies (monthly, quarterly, annually) use `EDATE`, so month-end dates stay valid.
@@ -89,7 +93,7 @@ The Google Sheets edition is built from the same generator, adapted for Google S
 
 ## Demo data
 
-Rows marked **DEMO DATA** belong to a fictional company, "Northwind Studio". The demo has 8 projects, 60 tasks, 18 budget lines, 10 recurring tasks, 22 schedule blocks, 25 project details and 1 decision.
+Rows marked **DEMO DATA** belong to a fictional company, "Northwind Studio". The DEMO file's *Today's date override* (Setup) is set to Nov 7, 2026 so the demo always looks current; clear that cell to use the real date. The demo has 8 projects, 60 tasks, 18 budget lines, 10 recurring tasks, 22 schedule blocks, 25 project details and 1 decision.
 
 **Remove it:** the easiest way is to start from the BLANK file. To clear the demo file by hand, select the light-mint cells that contain data on Project Overview, Project Budget, Variable Tasks, Recurring Tasks, Task Schedule, the Project Manager database and Decision Matrix, then press Delete. Never delete whole rows or the grey helper columns.
 
@@ -103,6 +107,7 @@ The workbook has room for 100 projects, 500 tasks, 500 budget lines, 200 recurri
 |---|---|
 | A task isn't on the dashboard, calendar or Gantt | It needs a Task Name. Date views also need a Due Date (and a Start Date for the Gantt). Pick the Project from the dropdown so the name matches exactly |
 | A Kanban card is missing | Its Status must be one of the first five Task Statuses. Each column shows up to 15 cards |
+| A Completed On cell is amber | The task is Completed but has no completion date yet; type the date you finished it |
 | A dropdown is empty | Its source list on Setup is empty |
 | "+N more" appears on the calendar | More than 2 tasks are due that day. Use Task Filter with a date range to see them all |
 | A date shows as a number | Format the cell as a Date |
@@ -112,8 +117,8 @@ The workbook has room for 100 projects, 500 tasks, 500 budget lines, 200 recurri
 
 ## Quality assurance performed
 
-- Every workbook (2 editions × demo/blank) was recalculated headlessly in LibreOffice: 19,642 formulas each, **0 errors**.
-- An independent Python script (`build/validate_project_manager.py`) re-calculates the expected results from the demo data and compares them with the spreadsheet's values. It covers 688 checks across all four files:
+- Every workbook (2 editions × demo/blank) was recalculated headlessly in LibreOffice: 31,831 formulas each, **0 errors**.
+- An independent Python script (`build/validate_project_manager.py`) re-calculates the expected results from the demo data and compares them with the spreadsheet's values. It covers 962 checks across all four files:
   - KPIs and sorted lists
   - Project roll-ups
   - Recurring next dates and occurrences this month

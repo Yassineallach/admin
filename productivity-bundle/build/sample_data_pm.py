@@ -85,10 +85,18 @@ def build_tasks():
             else:
                 status, prog = rnd.choice([("To Do", 0.0), ("Backlog", 0.0), ("To Do", 0.0)])
             act = round(est * prog * rnd.uniform(0.8, 1.3), 1) if prog > 0 else None
+            notes = "Client sign-off needed" if rnd.random() < 0.12 else None
+            completed_on = None
+            if status == "Completed":
+                completed_on = min(ANCHOR, due + dt.timedelta(days=rnd.randint(-3, 2)))
+            urgent = important = None
+            if status != "Completed":
+                urgent = "Yes" if (due - ANCHOR).days <= 10 else "No"
+                important = "Yes" if pri in ("Critical", "High") else "No"
             tasks.append(dict(
                 name=tname, desc=f"{tname} for {pname}", project=pname, cat=cat, who=who,
                 start=s, due=due, pri=pri, status=status, est=est, act=act, prog=prog,
-                notes="Client sign-off needed" if rnd.random() < 0.12 else None,
+                notes=notes, completed_on=completed_on, urgent=urgent, important=important,
             ))
     # a few stand-alone admin tasks due in the coming days
     extras = [
@@ -100,9 +108,13 @@ def build_tasks():
     for (n_, c_, w_, so, do, p_, st) in extras:
         tasks.append(dict(name=n_, desc=n_, project="Annual Report 2026" if "Budget" in n_ else None, cat=c_, who=w_,
                           start=d(so), due=d(do), pri=p_, status=st, est=2, act=None,
-                          prog=0.5 if st != "To Do" else 0.0, notes=None))
+                          prog=0.5 if st != "To Do" else 0.0, notes=None, completed_on=None,
+                          urgent="Yes", important="Yes" if p_ == "High" else "No"))
     return tasks
 
+
+# client revenue per project (None = internal project)
+REVENUE = [26000, 60000, 52000, None, None, None, 9000, None]
 
 # project index (1-based) , category, planned, actual, date offset, vendor, description
 BUDGET = [

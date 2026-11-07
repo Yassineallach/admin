@@ -129,3 +129,59 @@ def scale(c="FFFFFF", size=64):
 
 ICONS = {"bar_chart": bar_chart, "people": people, "donut": donut, "money": money, "clipboard": clipboard,
          "calendar": calendar, "kanban": kanban, "gantt": gantt, "gear": gear, "filter": filt, "book": book, "scale": scale}
+
+
+def clock(c="FFFFFF", size=64):
+    im = _new(); d = ImageDraw.Draw(im); col = _rgb(c)
+    d.ellipse((24, 24, 232, 232), outline=col, width=18)
+    d.rounded_rectangle((119, 64, 137, 136), 8, fill=col)
+    d.rounded_rectangle((119, 120, 186, 138), 8, fill=col)
+    return _out(im, size)
+
+
+def question(c="FFFFFF", size=64):
+    im = _new(); d = ImageDraw.Draw(im); col = _rgb(c)
+    d.ellipse((24, 24, 232, 232), outline=col, width=16)
+    d.arc((86, 60, 170, 140), 180, 60, fill=col, width=18)
+    d.rounded_rectangle((119, 128, 137, 160), 8, fill=col)
+    d.ellipse((116, 176, 140, 200), fill=col)
+    return _out(im, size)
+
+
+def table(c="FFFFFF", size=64):
+    im = _new(); d = ImageDraw.Draw(im); col = _rgb(c)
+    d.rounded_rectangle((26, 40, 230, 216), 14, outline=col, width=16)
+    d.rectangle((26, 40, 230, 92), fill=col)
+    d.rounded_rectangle((26, 144, 230, 156), 4, fill=col)
+    d.rounded_rectangle((100, 92, 112, 216), 4, fill=col)
+    return _out(im, size)
+
+
+def repeat(c="FFFFFF", size=64):
+    im = _new(); d = ImageDraw.Draw(im); col = _rgb(c)
+    d.arc((36, 36, 220, 220), 200, 340, fill=col, width=20)
+    d.arc((36, 36, 220, 220), 20, 160, fill=col, width=20)
+    d.polygon([(198, 52), (232, 106), (172, 108)], fill=col)
+    d.polygon([(58, 204), (24, 150), (84, 148)], fill=col)
+    return _out(im, size)
+
+
+def week(c="FFFFFF", size=64):
+    im = _new(); d = ImageDraw.Draw(im); col = _rgb(c)
+    d.rounded_rectangle((30, 50, 226, 226), 18, outline=col, width=16)
+    d.rectangle((30, 50, 226, 100), fill=col)
+    for x in (70, 170):
+        d.rounded_rectangle((x, 24, x + 18, 72), 8, fill=col)
+    d.rounded_rectangle((60, 140, 196, 170), 8, fill=col)
+    return _out(im, size)
+
+
+def stack(c="FFFFFF", size=64):
+    im = _new(); d = ImageDraw.Draw(im); col = _rgb(c)
+    d.polygon([(128, 30), (230, 82), (128, 134), (26, 82)], fill=col)
+    d.line([(26, 128), (128, 180), (230, 128)], fill=col, width=18)
+    d.line([(26, 172), (128, 224), (230, 172)], fill=col, width=18)
+    return _out(im, size)
+
+
+ICONS.update({"clock": clock, "question": question, "table": table, "repeat": repeat, "week": week, "stack": stack})
