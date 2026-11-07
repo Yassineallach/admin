@@ -316,6 +316,85 @@ def shape_problems(path):
     return probs
 
 
+def geometry_problems(path, sheet_title="All-in-One Dashboard", min_gap=8):
+    """Pixel-accurate collision check for a sheet's drawing layer.
+
+    Cards  = shapes named Tile / Highlight / Panel / Pill (+ Sidebar).
+    Content = charts, text boxes and pictures.
+    Rules: cards never overlap and keep >= min_gap px between them (sidebar excluded from the gap rule, but nothing
+    may overlap it except its own icons); every content item lies fully inside one card, inside the sidebar, or in
+    open canvas without touching any card edge.
+    """
+    import re as _re
+    from openpyxl import load_workbook as _lw
+    from openpyxl.utils import get_column_letter as _gl
+    z = zipfile.ZipFile(path)
+    wbx = z.read("xl/workbook.xml").decode()
+    rels = z.read("xl/_rels/workbook.xml.rels").decode()
+    rid = _re.search(r'<sheet [^>]*name="' + _re.escape(sheet_title) + r'"[^>]*r:id="(rId\d+)"', wbx).group(1)
+    rel = next(m for m in _re.findall(r"<Relationship [^>]*>", rels) if f'Id="{rid}"' in m)
+    target = _re.search(r'Target="([^"]+)"', rel).group(1).split("/")[-1]
+    srels = z.read(f"xl/worksheets/_rels/{target}.rels").decode()
+    dpath = "xl/drawings/" + _re.search(r'Target="[^"]*?(drawing\d+\.xml)"', srels).group(1)
+    ws = _lw(path)[sheet_title]
+    cols = [int(7 * (ws.column_dimensions[_gl(c)].width or 8.43) + 0.49) for c in range(1, 200)]
+    rows = [round((ws.row_dimensions[r].height or 15) * 96 / 72) for r in range(1, 400)]
+    cx = lambda c, off: sum(cols[:c]) + off / 9525
+    ry = lambda r, off: sum(rows[:r]) + off / 9525
+    X = "{http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing}"
+    A = "{http://schemas.openxmlformats.org/drawingml/2006/main}"
+    root = ET.fromstring(z.read(dpath))
+    cards, content, sidebar = [], [], None
+    for anc in root:
+        f_, t_ = anc.find(X + "from"), anc.find(X + "to")
+        if f_ is None or t_ is None:
+            continue
+        box = (cx(int(f_.find(X + "col").text), int(f_.find(X + "colOff").text)), ry(int(f_.find(X + "row").text), int(f_.find(X + "rowOff").text)),
+               cx(int(t_.find(X + "col").text), int(t_.find(X + "colOff").text)), ry(int(t_.find(X + "row").text), int(t_.find(X + "rowOff").text)))
+        sp, pic, gf = anc.find(X + "sp"), anc.find(X + "pic"), anc.find(X + "graphicFrame")
+        if sp is not None:
+            name = sp.find(f"{X}nvSpPr/{X}cNvPr").get("name")
+            if name.startswith("Sidebar"):
+                sidebar = (name, *box)
+            elif name.startswith(("Tile", "Highlight", "Panel", "Pill")):
+                cards.append((name, *box))
+            elif name.startswith("Active"):
+                content.append((name, *box))
+            else:
+                txt = "".join(t.text or "" for t in sp.iter(A + "t"))
+                content.append((f"{name} {txt[:25]!r}", *box))
+        elif pic is not None:
+            content.append((pic.find(f"{X}nvPicPr/{X}cNvPr").get("name"), *box))
+        elif gf is not None:
+            content.append((gf.find(f"{X}nvGraphicFramePr/{X}cNvPr").get("name"), *box))
+    probs = []
+
+    def overlap(a, b, gap=0):
+        return not (a[3] + gap <= b[1] or b[3] + gap <= a[1] or a[4] + gap <= b[2] or b[4] + gap <= a[2])
+
+    def inside(i, c):
+        return i[1] >= c[1] - 0.5 and i[2] >= c[2] - 0.5 and i[3] <= c[3] + 0.5 and i[4] <= c[4] + 0.5
+
+    for i, a in enumerate(cards):
+        if sidebar and overlap(a, sidebar):
+            probs.append(f"card {a[0]} overlaps the sidebar")
+        for b in cards[i + 1:]:
+            if overlap(a, b):
+                probs.append(f"cards overlap: {a[0]} {tuple(round(v) for v in a[1:])} / {b[0]} {tuple(round(v) for v in b[1:])}")
+            elif overlap(a, b, min_gap):
+                probs.append(f"cards closer than {min_gap}px: {a[0]} / {b[0]}")
+    for it in content:
+        homes = [c for c in cards if inside(it, c)]
+        # a card nested in a bigger card (e.g. pill on a panel) counts as one home
+        if sidebar and inside(it, sidebar):
+            continue
+        if not homes:
+            touching = [c[0] for c in cards if overlap(it, c)]
+            if touching:
+                probs.append(f"{it[0]} {tuple(round(v) for v in it[1:])} crosses the edge of {touching}")
+    return probs, len(cards), len(content)
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("path")
@@ -325,6 +404,11 @@ if __name__ == "__main__":
     probs = lint(a.path, set(a.strict), a.charts_from)
     if a.charts_from:
         probs += shape_problems(a.charts_from)
+        z_ = zipfile.ZipFile(a.charts_from)
+        if any("drawing" in n_ for n_ in z_.namelist()) and b"<xdr:sp " in b"".join(
+                z_.read(n_) for n_ in z_.namelist() if n_.startswith("xl/drawings/drawing")):
+            gp, _, _ = geometry_problems(a.charts_from)
+            probs += gp
     for p in probs:
         print("  ✗", p)
     print(f"{len(probs)} layout problem(s)")

@@ -50,7 +50,7 @@ TILES = [(5, 18), (20, 33), (35, 48), (50, 63)]
 LEFT, MID, RIGHT, WIDE = (5, 26), (28, 44), (46, 63), (5, 44)
 
 # ---- row plan (px)
-ROWS = {1: 34, 2: 12, 3: 20, 4: 24, 5: 26, 6: 22, 7: 18, 8: 40, 9: 12}
+ROWS = {1: 34, 2: 12, 3: 20, 4: 24, 5: 26, 6: 22, 7: 18, 8: 50, 9: 12}
 A_T, A0, A1, A_P = 10, 11, 22, 23                       # band A: title, chart rows, pad
 B_T, B_P = 25, 38                                       # band B
 C_T, C_H, C0, C_N, C_P = 40, 41, 42, 8, 50             # band C lists
@@ -661,7 +661,7 @@ class DashV3:
                 pass
         # strip pills
         for ((c1, c2), link, bg, fg) in self.pills:
-            x0, x1, y0, y1 = X(c1), X(c2 + 1), Y(8) + 6, Y(9) - 6
+            x0, x1, y0, y1 = X(c1), X(c2 + 1), Y(8) + 19, Y(8) + 43   # >= 8 px clear of the tiles (incl. the taller highlight)
             lay.shape(x0, y0, x1, y1, radius=0.5, fill=bg, name="Pill")
             lay.text(x0 + 8, y0, x1 - 8, y1, textlink=link, size=10, bold=True, color=fg, align="c")
         # panels
