@@ -185,3 +185,19 @@ def stack(c="FFFFFF", size=64):
 
 
 ICONS.update({"clock": clock, "question": question, "table": table, "repeat": repeat, "week": week, "stack": stack})
+
+
+def week_num(n):
+    """Calendar icon with a bold number on it (Week 1-6 tabs)."""
+    from PIL import ImageFont
+
+    def make(c="FFFFFF", size=64):
+        im = _new(); d = ImageDraw.Draw(im); col = _rgb(c)
+        d.rounded_rectangle((30, 50, 226, 226), 18, outline=col, width=16)
+        d.rectangle((30, 50, 226, 100), fill=col)
+        for x in (70, 170):
+            d.rounded_rectangle((x, 24, x + 18, 72), 8, fill=col)
+        f = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 118)
+        d.text((128, 166), str(n), font=f, fill=col, anchor="mm")
+        return _out(im, size)
+    return make

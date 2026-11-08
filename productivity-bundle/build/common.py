@@ -139,7 +139,7 @@ def col_px(ws, c: int) -> int:
 
 
 def title_bar(ws, T: Theme, title: str, subtitle: str, last_col: int, home_link: str | None = "All-in-One Dashboard",
-              demo: bool = False, hero_to: int | None = None):
+              demo: bool = False, hero_to: int | None = None, home_label: str = "⌂ Dashboard"):
     """Navy hero header on rows 2-3 (same look as the dashboard).
 
     Left: title (row 2) and subtitle (row 3). Right: "⌂ Dashboard" (row 2) and "Next tab ▸" (row 3) links in a block
@@ -172,7 +172,7 @@ def title_bar(ws, T: Theme, title: str, subtitle: str, last_col: int, home_link:
     right = Alignment(horizontal="right", vertical="center", indent=1)
     if home_link:
         c = ws.cell(row=2, column=rb)
-        c.value = f'=HYPERLINK("#{quote(home_link)}!A1","⌂ Dashboard")'
+        c.value = f'=HYPERLINK("#{quote(home_link)}!A1","{home_label}")'
         c.font = T.font(10, True, WHITE)
         c.alignment = right
     if TAB_ORDER and ws.title in TAB_ORDER:

@@ -400,6 +400,7 @@ if __name__ == "__main__":
     ap.add_argument("path")
     ap.add_argument("--charts-from", help="original (pre-recalc) file to read chart anchors from")
     ap.add_argument("--strict", nargs="*", default=["All-in-One Dashboard"])
+    ap.add_argument("--geometry", nargs="*", default=["All-in-One Dashboard"], help="sheets whose shape layer to check")
     a = ap.parse_args()
     probs = lint(a.path, set(a.strict), a.charts_from)
     if a.charts_from:
@@ -407,8 +408,11 @@ if __name__ == "__main__":
         z_ = zipfile.ZipFile(a.charts_from)
         if any("drawing" in n_ for n_ in z_.namelist()) and b"<xdr:sp " in b"".join(
                 z_.read(n_) for n_ in z_.namelist() if n_.startswith("xl/drawings/drawing")):
-            gp, _, _ = geometry_problems(a.charts_from)
-            probs += gp
+            titles = set(load_workbook(a.charts_from, read_only=True).sheetnames)
+            for t in a.geometry:
+                if t in titles:
+                    gp, _, _ = geometry_problems(a.charts_from, t)
+                    probs += gp
     for p in probs:
         print("  ✗", p)
     print(f"{len(probs)} layout problem(s)")

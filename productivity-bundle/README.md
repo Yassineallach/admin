@@ -6,7 +6,7 @@ Four standalone products that share one design system:
 |---|---|---|---|
 | 1 | Ultimate Project Manager (15 tabs) | ✅ Built, validated, Etsy listing ready | Excel .xlsx + Google Sheets edition, each as DEMO and BLANK |
 | 2 | Ultimate OneNote Planner (212 pages) | ✅ Built, validated, Etsy listing ready (seller exports the .onepkg) | OneNote notebook via Graph importer → .onepkg, plus hyperlinked PDF |
-| 3 | Weekly Planner Pro (8 tabs) | ⏳ Planned | Excel + Google Sheets |
+| 3 | Weekly Planner Pro (8 tabs) | ✅ Built, validated, Etsy listing ready | Excel .xlsx + Google Sheets edition, each as DEMO and BLANK |
 | 4 | Ultimate Budget Spreadsheet (28 tabs) | ⏳ Planned | Excel + Google Sheets |
 
 ## Layout
@@ -49,6 +49,17 @@ python3 build_listing_package_planner.py  # etsy_upload/ (add the exported .onep
 
 The native notebook is built in the seller's Microsoft account by `onenote_import.py` (Microsoft Graph) and exported
 from OneNote for Windows as `.onepkg`. See `Guides/Seller_Guide_Build_And_Export_OneNote.md`.
+
+## Rebuild Product 3
+
+```bash
+cd productivity-bundle/build
+python3 build_weekly_planner.py           # writes the 4 workbooks -> dist/03_Weekly_Planner_Pro/
+python3 validate_weekly_planner.py        # LibreOffice recalc + 3,018 value/scenario checks
+python3 md_to_pdf.py ../dist/03_Weekly_Planner_Pro/Guides/*.md
+python3 listing_images_wp.py --reshoot    # real screenshots -> 10 listing photos
+python3 build_listing_package_wp.py       # etsy_upload/ (ZIP + START_HERE.pdf)
+```
 
 ## Etsy listings (built alongside each product)
 

@@ -26,7 +26,7 @@ def icon_centre(i):
     return ICON_Y0 + i * ICON_STEP
 
 
-def cells(ws, T, quote, current, last_row, c1=1, c2=1, row_px=None):
+def cells(ws, T, quote, current, last_row, c1=1, c2=1, row_px=None, nav=None):
     """Google Sheets fallback: dark column + short text links placed at the icon positions."""
     for r in range(1, last_row + 1):
         for c in range(c1, c2 + 1):
@@ -37,7 +37,7 @@ def cells(ws, T, quote, current, last_row, c1=1, c2=1, row_px=None):
         tops.append(acc)
         acc += h
     used = set()
-    for i, (tab, _icon, short) in enumerate(NAV):
+    for i, (tab, _icon, short) in enumerate(nav or NAV):
         target = icon_centre(i) - 8
         r = next((k + 1 for k, t in enumerate(tops) if t >= target and row_px[k] >= 14 and (k + 1) not in used), None)
         if r is None or r > last_row:
@@ -51,14 +51,15 @@ def cells(ws, T, quote, current, last_row, c1=1, c2=1, row_px=None):
         cell.alignment = Alignment(horizontal="center", vertical="center")
 
 
-def draw(layer, current, height_px):
+def draw(layer, current, height_px, nav=None):
     """Excel: gradient bar + icons with hyperlinks/tooltips; the current tab's icon sits in a mint circle."""
     layer.shape(0, 0, BAR_W, height_px, radius=0.2, fill=None, grad=([(0, "0F6E68"), (100, "0B4F4C")], 90), name="Sidebar")
-    for i, (tab, icon, _short) in enumerate(NAV):
+    for i, (tab, icon, _short) in enumerate(nav or NAV):
         cy = icon_centre(i)
+        make = icons.ICONS[icon] if isinstance(icon, str) else icon
         if tab == current:
             layer.shape(6, cy - 21, 48, cy + 21, geom="ellipse", fill="E1F3F0", name="Active")
-            png = icons.ICONS[icon](c="0F6E68", size=64)
+            png = make(c="0F6E68", size=64)
         else:
-            png = icons.ICONS[icon](c="FFFFFF", size=64)
+            png = make(c="FFFFFF", size=64)
         layer.picture(13, cy - 14, 41, cy + 14, png, link_sheet=None if tab == current else tab, tooltip=tab)
