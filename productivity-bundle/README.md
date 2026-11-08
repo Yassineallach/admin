@@ -5,7 +5,7 @@ Four standalone products that share one design system:
 | # | Product | Status | Formats |
 |---|---|---|---|
 | 1 | Ultimate Project Manager (15 tabs) | ✅ Built, validated, Etsy listing ready | Excel .xlsx + Google Sheets edition, each as DEMO and BLANK |
-| 2 | Ultimate OneNote Planner | ⏳ Next | OneNote-importable pages + PDF guide |
+| 2 | Ultimate OneNote Planner (212 pages) | ✅ Built, validated, Etsy listing ready (seller exports the .onepkg) | OneNote notebook via Graph importer → .onepkg, plus hyperlinked PDF |
 | 3 | Weekly Planner Pro (8 tabs) | ⏳ Planned | Excel + Google Sheets |
 | 4 | Ultimate Budget Spreadsheet (28 tabs) | ⏳ Planned | Excel + Google Sheets |
 
@@ -33,6 +33,22 @@ python3 md_to_pdf.py ../dist/01_Ultimate_Project_Manager/Guides/*.md
 
 Requirements: Python 3.10+, `openpyxl`, `reportlab`, and LibreOffice (`soffice`) for recalculation.
 The validator uses a recalc helper script; pass `--recalc /path/to/recalc.py` if it isn't found automatically.
+
+## Rebuild Product 2
+
+```bash
+cd productivity-bundle/build
+python3 onenote_html.py                   # OneNote pages + manifest -> dist/02_Ultimate_OneNote_Planner/OneNote_Import/
+python3 planner_pdf.py                    # hyperlinked PDF planner (226 pages)
+python3 validate_planner.py               # spec counts, dates, HTML subset, links, PDF, importer vs mock Graph
+python3 md_to_pdf.py ../dist/02_Ultimate_OneNote_Planner/Guides/*.md
+cp onenote_import.py ../dist/02_Ultimate_OneNote_Planner/OneNote_Import/
+python3 listing_images_planner.py         # 10 listing photos from real PDF pages
+python3 build_listing_package_planner.py  # etsy_upload/ (add the exported .onepkg first)
+```
+
+The native notebook is built in the seller's Microsoft account by `onenote_import.py` (Microsoft Graph) and exported
+from OneNote for Windows as `.onepkg`. See `Guides/Seller_Guide_Build_And_Export_OneNote.md`.
 
 ## Etsy listings (built alongside each product)
 

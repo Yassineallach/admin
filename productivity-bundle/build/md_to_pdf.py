@@ -99,6 +99,24 @@ def render(md_path: Path, pdf_path: Path, footer: str = "Ultimate Productivity B
             story.append(ListFlowable(items, bulletType="1" if numbered else "bullet", start="1" if numbered else None,
                                       bulletFontName="Body", bulletFontSize=8, bulletColor=c(BLUE), leftIndent=12))
             continue
+        elif ln.startswith(">"):
+            quote = []
+            while i < len(lines) and lines[i].startswith(">"):
+                quote.append(lines[i].lstrip(">").strip())
+                i += 1
+            paras, cur = [], []
+            for q in quote + [""]:
+                if q:
+                    cur.append(q)
+                elif cur:
+                    paras.append(" ".join(cur))
+                    cur = []
+            t = Table([[Paragraph(inline(q), ST["p"])] for q in paras], colWidths=[A4[0] - 36 * mm])
+            t.setStyle(TableStyle([("BACKGROUND", (0, 0), (-1, -1), c(BG)), ("LINEBEFORE", (0, 0), (0, -1), 3, c(BLUE)),
+                                   ("LEFTPADDING", (0, 0), (-1, -1), 10), ("TOPPADDING", (0, 0), (-1, -1), 5),
+                                   ("BOTTOMPADDING", (0, 0), (-1, -1), 3)]))
+            story += [t, Spacer(1, 6)]
+            continue
         elif ln.strip():
             story.append(Paragraph(inline(ln), ST["p"]))
         i += 1
