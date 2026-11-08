@@ -125,7 +125,7 @@ class Builder:
         lc.alignment = Alignment(vertical="bottom", indent=1)
         vc = ws.cell(row=r + 1, column=c1, value=formula)
         vc.font = self.T.font(15, True, DARK)
-        vc.alignment = Alignment(vertical="center", indent=1, shrink_to_fit=True)
+        vc.alignment = Alignment(horizontal="left", vertical="center", indent=1, shrink_to_fit=True)
         if numfmt:
             vc.number_format = numfmt
         ws.row_dimensions[r].height = 18

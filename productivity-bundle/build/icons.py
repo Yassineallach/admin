@@ -201,3 +201,82 @@ def week_num(n):
         d.text((128, 166), str(n), font=f, fill=col, anchor="mm")
         return _out(im, size)
     return make
+
+
+# ---------------------------------------------------------------- finance icons (Product 4)
+def bank(c="FFFFFF", size=64):
+    im = _new(); d = ImageDraw.Draw(im); col = _rgb(c)
+    d.polygon([(128, 22), (234, 82), (22, 82)], fill=col)
+    for x in (44, 92, 140, 188):
+        d.rounded_rectangle((x, 98, x + 24, 192), 6, fill=col)
+    d.rounded_rectangle((22, 204, 234, 230), 6, fill=col)
+    return _out(im, size)
+
+
+def receipt(c="FFFFFF", size=64):
+    im = _new(); d = ImageDraw.Draw(im); col = _rgb(c)
+    pts = [(52, 24), (204, 24), (204, 232)]
+    for i in range(6):
+        x = 204 - i * 25.3
+        pts += [(x - 12.6, 214), (x - 25.3, 232)]
+    pts += [(52, 232)]
+    d.polygon(pts, fill=col)
+    clear = (0, 0, 0, 0)
+    for y in (70, 112, 154):
+        d.rounded_rectangle((82, y, 174, y + 16), 6, fill=clear)
+    return _out(im, size)
+
+
+def wallet(c="FFFFFF", size=64):
+    im = _new(); d = ImageDraw.Draw(im); col = _rgb(c)
+    d.rounded_rectangle((24, 64, 232, 220), 26, fill=col)
+    d.rounded_rectangle((40, 36, 196, 80), 16, fill=col)
+    d.rounded_rectangle((150, 116, 244, 170), 18, fill=(0, 0, 0, 0))
+    d.ellipse((172, 132, 194, 154), fill=col)
+    return _out(im, size)
+
+
+def pie(c="FFFFFF", size=64):
+    im = _new(); d = ImageDraw.Draw(im); col = _rgb(c)
+    d.pieslice((24, 30, 216, 222), 0, 270, fill=col)
+    d.pieslice((44, 14, 236, 206), 270, 360, fill=col)
+    return _out(im, size)
+
+
+def piggy(c="FFFFFF", size=64):
+    im = _new(); d = ImageDraw.Draw(im); col = _rgb(c)
+    d.ellipse((30, 70, 214, 210), fill=col)
+    d.polygon([(70, 82), (88, 36), (118, 76)], fill=col)
+    d.rounded_rectangle((200, 112, 240, 156), 12, fill=col)
+    for x in (62, 160):
+        d.rounded_rectangle((x, 190, x + 30, 236), 8, fill=col)
+    d.rounded_rectangle((104, 58, 150, 70), 5, fill=(0, 0, 0, 0))
+    d.ellipse((150, 108, 166, 124), fill=(0, 0, 0, 0))
+    return _out(im, size)
+
+
+def card(c="FFFFFF", size=64):
+    im = _new(); d = ImageDraw.Draw(im); col = _rgb(c)
+    d.rounded_rectangle((18, 52, 238, 204), 22, fill=col)
+    d.rectangle((18, 84, 238, 112), fill=(0, 0, 0, 0))
+    d.rounded_rectangle((42, 150, 110, 172), 6, fill=(0, 0, 0, 0))
+    return _out(im, size)
+
+
+def trend(c="FFFFFF", size=64):
+    im = _new(); d = ImageDraw.Draw(im); col = _rgb(c)
+    d.line([(26, 196), (96, 126), (140, 162), (222, 72)], fill=col, width=24, joint="curve")
+    d.polygon([(232, 40), (232, 116), (166, 52)], fill=col)
+    d.rounded_rectangle((20, 214, 236, 234), 6, fill=col)
+    return _out(im, size)
+
+
+def ban(c="FFFFFF", size=64):
+    im = _new(); d = ImageDraw.Draw(im); col = _rgb(c)
+    d.ellipse((24, 24, 232, 232), outline=col, width=26)
+    d.line([(64, 192), (192, 64)], fill=col, width=26)
+    return _out(im, size)
+
+
+ICONS.update({"bank": bank, "receipt": receipt, "wallet": wallet, "pie": pie, "piggy": piggy, "card": card,
+              "trend": trend, "ban": ban})

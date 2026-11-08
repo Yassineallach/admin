@@ -7,7 +7,7 @@ Four standalone products that share one design system:
 | 1 | Ultimate Project Manager (15 tabs) | ✅ Built, validated, Etsy listing ready | Excel .xlsx + Google Sheets edition, each as DEMO and BLANK |
 | 2 | Ultimate OneNote Planner (212 pages) | ✅ Built, validated, Etsy listing ready (seller exports the .onepkg) | OneNote notebook via Graph importer → .onepkg, plus hyperlinked PDF |
 | 3 | Weekly Planner Pro (8 tabs) | ✅ Built, validated, Etsy listing ready | Excel .xlsx + Google Sheets edition, each as DEMO and BLANK |
-| 4 | Ultimate Budget Spreadsheet (28 tabs) | ⏳ Planned | Excel + Google Sheets |
+| 4 | Ultimate Budget Spreadsheet (28 tabs) | ✅ Built, validated, Etsy listing ready | Excel .xlsx + Google Sheets edition, each as DEMO and BLANK |
 
 ## Layout
 
@@ -59,6 +59,17 @@ python3 validate_weekly_planner.py        # LibreOffice recalc + 3,018 value/sce
 python3 md_to_pdf.py ../dist/03_Weekly_Planner_Pro/Guides/*.md
 python3 listing_images_wp.py --reshoot    # real screenshots -> 10 listing photos
 python3 build_listing_package_wp.py       # etsy_upload/ (ZIP + START_HERE.pdf)
+```
+
+## Rebuild Product 4
+
+```bash
+cd productivity-bundle/build
+python3 build_budget.py                   # writes the 4 workbooks -> dist/04_Ultimate_Budget_Spreadsheet/
+python3 validate_budget.py                # LibreOffice recalc + 2,283 checks against an independent Python model
+python3 md_to_pdf.py ../dist/04_Ultimate_Budget_Spreadsheet/Guides/*.md
+python3 listing_images_bg.py --reshoot    # real screenshots -> 10 listing photos
+python3 build_listing_package_bg.py       # etsy_upload/ (ZIP + START_HERE.pdf)
 ```
 
 ## Etsy listings (built alongside each product)
