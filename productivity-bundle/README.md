@@ -72,6 +72,19 @@ python3 listing_images_bg.py --reshoot    # real screenshots -> 10 listing photo
 python3 build_listing_package_bg.py       # etsy_upload/ (ZIP + START_HERE.pdf)
 ```
 
+## Mini-products (focused variants, separate listings)
+
+`build_minis.py` builds six standalone trackers from the same tested engine — Debt Payoff Calculator, Sinking Funds
+Tracker, Net Worth Tracker, No-Spend Challenge Tracker, Investment Growth Calculator, Habit Tracker — each in Excel and
+Google Sheets editions, DEMO and BLANK (`dist/05_Mini_Products/`).
+
+```bash
+cd productivity-bundle/build
+python3 build_minis.py                    # 24 workbooks
+python3 validate_minis.py                 # LibreOffice recalc (0 errors) + 562 value checks
+python3 listing_minis.py --reshoot        # screenshots, 6 images, LISTING.md, etsy_upload/ per product
+```
+
 ## Etsy listings (built alongside each product)
 
 Every product gets a matching listing in `listings/<product>/`:
