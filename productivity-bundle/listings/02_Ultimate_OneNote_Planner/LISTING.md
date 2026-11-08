@@ -61,12 +61,11 @@ OneNote notebook, hyperlinked PDF, digital download, digital planner
 
 ---
 
-## Price (suggestion, not data)
+## Price (based on Etsy research, Nov 2026)
 
-- **List price: $12.99**, with a **30 % launch sale (≈ $9.09)** for the first few weeks.
-- Why: it's a dated 2027 planner plus a large undated template library, delivered as two formats. I haven't checked current Etsy prices for this, so look at competing OneNote and hyperlinked planners before publishing and adjust.
-- It's dated for 2027, so it sells best from about September 2026 through March 2027. Rebuild for 2028 next summer (see the Seller Guide).
-
+- **Launch: $5.99**, then $7.99. OneNote planners mostly sell at $3.60–$8, with bundles higher.
+- Most competitors are labelled "2026–2027", and buyers search by year. This one is dated 2027 only. Ask me to add 2026 (or make it undated) if you want to match them.
+- Etsy fees at $5.99 ≈ $1.04 per sale (US rates).
 ---
 
 ## Description

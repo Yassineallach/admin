@@ -59,11 +59,12 @@ Microsoft Excel, Google Sheets, digital download, spreadsheet template
 
 ---
 
-## Price (suggestion, not data)
+## Price (based on Etsy research, Nov 2026)
 
-- **List price: $14.99**, with a **30 % launch sale (≈ $10.49)** for the first few weeks to win early sales and reviews.
-- Why: single project-dashboard spreadsheets on Etsy were listed around $5–$11 when I researched this. This one has 15 connected tabs and both Excel and Google Sheets editions, so it can sit above that range once it has reviews. Check current competitor prices before publishing.
-
+- **Launch: $8.99** (list $14.99 with a 40 % sale) until you have 5–10 reviews, then a 25–30 % sale (≈ $10.99).
+- Market: project-management sheets run from a few dollars (multi-project tracker ≈ $4.49) up to about $55 for dependency-aware Gantt templates. Most sit at $5–$15.
+- Your edge to mention: works in Excel 2016+ **and** Google Sheets. Some competitors need Excel 365/2021.
+- Etsy fees at $8.99 ≈ $1.33 per sale (6.5 % transaction + 3 % + $0.25 processing + $0.20 listing, US rates).
 ---
 
 ## Description

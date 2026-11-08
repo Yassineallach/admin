@@ -23,10 +23,10 @@ Files are in `images/`, 2400 × 1800 px (4:3). The first image is the thumbnail.
 
 ---
 
-## Title (136 / 140 characters)
+## Title (129 / 140 characters)
 
 ```
-Budget Spreadsheet Excel Google Sheets, Monthly Budget Planner, Debt Snowball Tracker, Savings Tracker, Paycheck Budget, Finance Planner
+2026 2027 Budget Spreadsheet Excel Google Sheets, Monthly Budget Planner, Debt Snowball Tracker, Savings Tracker, Paycheck Budget
 ```
 
 ---
@@ -59,18 +59,19 @@ Microsoft Excel, Google Sheets, digital download, spreadsheet template
 
 ---
 
-## Price (suggestion, not data)
+## Price (based on Etsy research, Nov 2026)
 
-- **List price: $16.99**, with a **30 % launch sale (≈ $11.89)** for the first few weeks.
-- Why: it's the largest product in the bundle (28 tabs, with a debt plan, calendar and paycheck planner). I haven't checked current Etsy prices for budget spreadsheets, so compare similar listings before publishing.
-- Budget spreadsheets sell best from December to January (new-year budgeting).
-
+- **Launch: $9.99** (list $19.99 with a 50 % sale) for the first 5–10 orders, then about $11.99–$13.99 (still shown as a sale from $19.99).
+- Market: all-in-one annual budget workbooks sell at about $10–$11 on sale (list ≈ $20–$21). Paycheck-only and simple budgets cost $2–$5. A debt-payoff + budget listing has 358 reviews, so that's the bar.
+- What buyers complain about in this niche: formulas that break when the date changes. Yours is tested with different "today" dates and start months. Say "tested formulas — works any year" in the first lines of the description.
+- Best season: December–January. List it before December.
+- Etsy fees at $9.99 ≈ $1.42 per sale (US rates).
 ---
 
 ## Description
 
 ```
-Take control of your money with one connected spreadsheet. Log income and spending once — 12 monthly budgets, an all-in-one dashboard, a calendar, debt payoff plan and savings goals all update automatically.
+Tested formulas that work any year — start in any month. Take control of your money with one connected spreadsheet. Log income and spending once — 12 monthly budgets, an all-in-one dashboard, a calendar, debt payoff plan and savings goals all update automatically.
 
 Works in Microsoft Excel and Google Sheets (both editions included). No macros, no add-ons, no formulas to write.
 

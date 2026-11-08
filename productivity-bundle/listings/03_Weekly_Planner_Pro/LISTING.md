@@ -59,12 +59,12 @@ Microsoft Excel, Google Sheets, digital download, spreadsheet template
 
 ---
 
-## Price (suggestion, not data)
+## Price (based on Etsy research, Nov 2026)
 
-- **List price: $9.99**, with a **30 % launch sale (≈ $6.99)** for the first few weeks.
-- Why: it's smaller than the Project Manager (8 tabs vs 15), so it sits below it in price. As a bundle add-on it raises the value of the bundle. I haven't checked current Etsy prices for weekly planner spreadsheets, so look at competing listings before publishing and adjust.
-- It isn't tied to a year: weeks follow the start date you type, so it sells all year round.
-
+- **Launch: $4.99** (list $8.99 with a 45 % sale), then about $5.99–$6.99 once it has reviews.
+- Market: habit trackers and weekly planner sheets range from under $1 to about $18, and many sit at $2–$7. This is the most crowded and cheapest of your four categories.
+- It's also a good "entry" product that brings first buyers into the shop and sells them the bigger templates.
+- Etsy fees at $4.99 ≈ $0.97 per sale (US rates).
 ---
 
 ## Description
