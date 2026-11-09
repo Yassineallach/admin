@@ -436,3 +436,31 @@ def solidify_databars(path):
                 data = xml.encode("utf-8")
             zout.writestr(item, data)
     shutil.move(tmp, path)
+
+
+# ---------------------------------------------------------------- Google Sheets: native in-workbook links
+def nativize_links(wb):
+    """Replace =HYPERLINK("#'Tab'!A1", label) formulas with native cell hyperlinks (text + link to a place in the
+    workbook). Excel follows either form; Google Sheets converts native links on import but does not reliably follow
+    the "#Tab!A1" formula form, so the Google Sheets editions use native links. Returns the number converted."""
+    import re
+    from openpyxl.worksheet.hyperlink import Hyperlink
+    pat = re.compile(r'^=HYPERLINK\("#([^"]+)",(.*)\)$', re.S)
+    n = 0
+    for ws in wb.worksheets:
+        for row in ws.iter_rows():
+            for c in row:
+                v = c.value
+                if not (isinstance(v, str) and v.startswith("=HYPERLINK(")):
+                    continue
+                m = pat.match(v)
+                if not m:
+                    continue
+                target, label = m.group(1), m.group(2).strip()
+                if re.fullmatch(r'"[^"]*"', label):
+                    c.value = label[1:-1]
+                else:
+                    c.value = "=" + label
+                c.hyperlink = Hyperlink(ref=c.coordinate, location=target)
+                n += 1
+    return n

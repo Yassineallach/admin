@@ -1837,6 +1837,8 @@ def main():
         for demo in (True, False):
             builder = Builder(ed, demo)
             wb = builder.build()
+            if ed != "excel":
+                nativize_links(wb)
             p = out / folder / f"Ultimate_Project_Manager_{suffix}_{'DEMO' if demo else 'BLANK'}.xlsx"
             p.parent.mkdir(parents=True, exist_ok=True)
             wb.save(p)

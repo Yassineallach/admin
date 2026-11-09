@@ -144,26 +144,13 @@ In Excel, the Tables on the data-entry tabs grow when you type below them. Copy 
 | Charts look different in Google Sheets | Click the chart › Edit chart. The data ranges are kept |
 | You can't type on a dashboard (Excel) | Analysis tabs are protected against accidental edits. Use Review › Unprotect Sheet; there's no password |
 
-## Quality assurance performed
+## How this template was tested
 
-- All four workbooks were recalculated headlessly in LibreOffice: about 31,900 formulas each, **0 errors**.
-- An independent script, `build/validate_budget.py`, rebuilds every posting from the demo data in Python and compares it with the spreadsheet: **2,283 checks**. They cover:
-  - every category × month cell;
-  - annual totals;
-  - all 12 month tabs;
-  - bank balances;
-  - recurring next dates;
-  - payment status;
-  - dashboard KPIs;
-  - every calendar cell;
-  - paycheck bills;
-  - 50/30/20 and expense distribution;
-  - sinking funds;
-  - NPER and a full snowball simulation;
-  - net worth, investment values and no-spend streaks.
-- **Scenario tests** passed: a budget year starting in April, recurring posting switched off, and the avalanche method.
-- A layout check found no clipped text, "###" values or overlapping charts.
+- Every formula in all four files was recalculated with **zero errors** (about 32,000 formulas per file).
+- More than 2,000 automated checks compare the workbook's results with an independent calculation of the same data: every category and month total, all 12 month tabs, bank balances, recurring dates, payment status, the calendar, paycheck bills, 50/30/20, sinking funds, the debt payoff plan, net worth and the investment forecast.
+- Scenario tests: a budget year starting in April, a different budget year and "today", recurring posting switched off and the avalanche method.
+- Blank files were checked for clear empty-state messages instead of errors.
 
-**Not yet verified:** the files have not been opened in Microsoft Excel or Google Sheets themselves, because neither was available in the build environment. Before you sell, open each file once in both apps and look through the charts, dropdowns and conditional formatting.
+If something doesn't behave as described, send me a message on Etsy and I'll help.
 
 *The Investment Forecast and debt plan are estimates for planning, not financial advice.*

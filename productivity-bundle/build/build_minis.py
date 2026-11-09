@@ -872,6 +872,8 @@ def main():
                     continue
                 b = Mini(key, ed, demo)
                 wb = b.build()
+                if ed != "excel":
+                    _C.nativize_links(wb)
                 p = out_path(key, ed, demo)
                 p.parent.mkdir(parents=True, exist_ok=True)
                 wb.save(p)

@@ -3,7 +3,7 @@
   Ultimate_Planner_2027.onepkg            — OneNote notebook; only once the seller has exported it (see the Seller Guide)
                                             and put it in listings/02_Ultimate_OneNote_Planner/
   Ultimate_Planner_2027_Hyperlinked.pdf   — the PDF planner
-  OneNote_Planner_User_Guide.pdf          — buyer guide
+  Planner_User_Guide.pdf                  — buyer guide (without OneNote-notebook sections when no .onepkg is included)
   START_HERE.pdf                          — which file to open in which app
 
 Four files, under Etsy's limit of five files of 20 MB each.
@@ -51,12 +51,28 @@ def start_here_md(cfg, has_onepkg):
 2. Tap any link to jump to a month, week, template or note page.
 3. **⌂ Index** at the top of every page brings you back.
 
-The full **User Guide** is in OneNote_Planner_User_Guide.pdf.
+The full **User Guide** is in Planner_User_Guide.pdf.
 
 ## Need help?
 
 Send me a message on Etsy. I'm happy to help you get set up.
 """
+
+
+def pdf_only_guide(md: str) -> str:
+    """The buyer guide for a download without the OneNote notebook: no .onepkg rows, notes or sections."""
+    out, skip = [], False
+    for ln in md.splitlines():
+        if ln.startswith("## "):
+            skip = ln.strip() == "## Using the OneNote notebook"
+        if skip or ".onepkg" in ln:
+            continue
+        out.append(ln)
+    text_ = "\n".join(out)
+    text_ = text_.replace("A complete digital planner for OneNote and PDF note-taking apps:", "A complete hyperlinked digital planner for PDF note-taking apps:")
+    text_ = text_.replace("**Can I change colours or add pages?** Yes. In OneNote everything is editable: add rows and pages, rename sections, change colours.",
+                          "**Can I add pages?** Yes. Duplicate any page in your note app as often as you like.")
+    return text_
 
 
 def main():
@@ -68,7 +84,13 @@ def main():
     if src:
         shutil.copy2(src, OUT / ONEPKG)
     shutil.copy2(DIST / "PDF_Planner" / "Ultimate_Planner_2027_Hyperlinked.pdf", OUT)
-    shutil.copy2(DIST / "Guides" / "OneNote_Planner_User_Guide.pdf", OUT)
+    guide = (DIST / "Guides" / "OneNote_Planner_User_Guide.md").read_text(encoding="utf-8")
+    if not src:
+        guide = pdf_only_guide(guide)
+    gmd = OUT / "Planner_User_Guide.md"
+    gmd.write_text(guide, encoding="utf-8")
+    md_to_pdf.render(gmd, OUT / "Planner_User_Guide.pdf", footer="Ultimate Planner 2027 · User Guide")
+    gmd.unlink()
     md = OUT / "START_HERE.md"
     md.write_text(start_here_md(cfg, bool(src)), encoding="utf-8")
     md_to_pdf.render(md, OUT / "START_HERE.pdf", footer="Ultimate Planner 2027 · Start Here")
@@ -77,8 +99,9 @@ def main():
         mb = f.stat().st_size / 1e6
         print(f"{f.name}: {mb:.2f} MB", "(OVER Etsy's 20 MB limit!)" if mb > 20 else "")
     if not src:
-        print(f"WARNING: no {ONEPKG} yet. Export it (Guides/Seller_Guide_Build_And_Export_OneNote.pdf), put it in "
-              f"{LST.relative_to(ROOT)}/ and run this again. Don't publish the listing's OneNote-notebook claims without it.")
+        print(f"note: no {ONEPKG} — built the PDF-planner package. Use 'Version A' in LISTING.md. To sell the OneNote "
+              f"notebook too, export it (Seller Guide), put it in {LST.relative_to(ROOT)}/, rerun this script and "
+              f"listing_images_planner.py, then use 'Version B'.")
 
 
 if __name__ == "__main__":

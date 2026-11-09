@@ -915,6 +915,8 @@ def main():
         for demo in (True, False):
             b = Builder(ed, demo)
             wb = b.build()
+            if ed != "excel":
+                _C.nativize_links(wb)
             p = out / folder / f"Weekly_Planner_Pro_{suffix}_{'DEMO' if demo else 'BLANK'}.xlsx"
             p.parent.mkdir(parents=True, exist_ok=True)
             wb.save(p)

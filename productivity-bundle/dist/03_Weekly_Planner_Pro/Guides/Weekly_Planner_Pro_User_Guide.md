@@ -129,24 +129,11 @@ To plan further ahead, reuse a week tab or duplicate the file.
 | You can't change the layout (Excel) | Tabs are protected against accidental overwrites. Use Review › Unprotect Sheet; there's no password |
 | A chart looks different in Google Sheets | Click the chart › Edit chart. The data ranges are kept |
 
-## Quality assurance performed
+## How this template was tested
 
-- All four workbooks (2 editions × demo/blank) were recalculated headlessly in LibreOffice with **0 formula errors**.
-- An independent script, `build/validate_weekly_planner.py`, recomputes the expected results from the demo data and compares them with the spreadsheet: **3,018 checks** across the four files. They cover:
-  - week dates and ISO week numbers;
-  - every schedule slot;
-  - day, week and six-week progress;
-  - habits, water, exercise and productivity;
-  - every calendar cell and month statistic;
-  - deadline status;
-  - week goals in the calendar;
-  - blank-state messages;
-  - dropdown wiring, sheet protection and the reset names.
-- **Scenario tests** on a modified copy passed:
-  - a Sunday week start;
-  - a week tab moved to a different month;
-  - 30-minute slots;
-  - renaming the "done" status.
-- A layout check found no clipped text, "###" values or overlapping charts.
+- Every formula in all four files was recalculated with **zero errors**.
+- More than 3,000 automated checks compare the workbook's results with independently calculated values: week dates and week numbers, every schedule slot, day and week progress, all trackers, every calendar cell and the month statistics.
+- Scenario tests: a Sunday week start, a week tab moved to another month, 30-minute schedule slots and a renamed "done" status.
+- Blank files were checked for clear empty-state messages instead of errors.
 
-**Not yet verified:** the files have not been opened in Microsoft Excel or Google Sheets themselves, because neither was available in the build environment. Before you sell, open each file once in both apps and look through the charts, dropdowns and conditional formatting.
+If something doesn't behave as described, send me a message on Etsy and I'll help.

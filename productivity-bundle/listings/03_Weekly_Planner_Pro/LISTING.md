@@ -21,6 +21,10 @@ Files are in `images/`, 2400 × 1800 px (4:3). The first image is the thumbnail 
 | 9 | 09_how_it_works.png | Three set-up steps and compatibility with Excel and Google Sheets |
 | 10 | 10_excel_and_sheets.png | A week tab in the Excel edition and in the Google Sheets edition |
 
+## Video (optional, recommended)
+
+Upload `video/listing_video.mp4`: a 14-second silent slideshow of the listing images. Listings with a video tend to hold attention longer. Rebuild with `python3 build/listing_video.py`.
+
 ---
 
 ## Title (134 / 140 characters)
@@ -166,3 +170,4 @@ Run `python3 build/build_listing_package_wp.py`, then upload everything in `etsy
 - [ ] Paste the title, tags, description and materials. Set the price.
 - [ ] Upload the two files from `etsy_upload/`.
 - [ ] Preview the listing on mobile.
+- [ ] In the Google Sheets copy, click two or three sidebar text links and the "Next tab" link to confirm they jump to the right tab.

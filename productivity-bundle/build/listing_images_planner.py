@@ -27,7 +27,11 @@ ROOT = Path(__file__).resolve().parent.parent
 PDF = ROOT / "dist" / "02_Ultimate_OneNote_Planner" / "PDF_Planner" / "Ultimate_Planner_2027_Hyperlinked.pdf"
 OUT = ROOT / "listings" / "02_Ultimate_OneNote_Planner"
 SCREENS, IMAGES = OUT / "screens", OUT / "images"
-FOOT = "Instant download  ·  OneNote notebook + hyperlinked PDF  ·  Pages shown from the PDF edition"
+# The OneNote notebook (.onepkg) only exists once the seller has exported it. Without it, the images sell the product
+# as what the buyer really gets: a hyperlinked PDF planner.
+HAS_ONEPKG = any((d / "Ultimate_Planner_2027.onepkg").exists() for d in (OUT, ROOT / "dist" / "02_Ultimate_OneNote_Planner"))
+FOOT = ("Instant download  ·  OneNote notebook + hyperlinked PDF  ·  Pages shown from the PDF edition" if HAS_ONEPKG
+        else "Instant download  ·  Hyperlinked PDF planner  ·  GoodNotes, Notability & more")
 BLUE = (47, 111, 170)
 GREEN = (31, 169, 156)
 
@@ -93,8 +97,9 @@ def stats_row(img, y, items, x0=130, x1=W - 130):
 def hero():
     img = canvas()
     text(img, (150, 170), "ULTIMATE", 64, "SemiBold", TEAL)
-    text(img, (150, 250), "OneNote\nPlanner 2027", 140, "ExtraBold", NAVY, spacing=0)
-    text(img, (150, 590), "Digital planner for OneNote,\nGoodNotes & PDF apps", 46, "Medium", DARK)
+    text(img, (150, 250), ("OneNote" if HAS_ONEPKG else "Digital") + "\nPlanner 2027", 140, "ExtraBold", NAVY, spacing=0)
+    text(img, (150, 590), "Digital planner for OneNote,\nGoodNotes & PDF apps" if HAS_ONEPKG
+         else "Hyperlinked PDF for GoodNotes,\nNotability & PDF apps", 46, "Medium", DARK)
     y = 760
     for t_ in ("Yearly, monthly & 53 weekly pages", "111 professional templates", "8 note layouts", "Fully hyperlinked index & tabs"):
         img = card(img, (150, y, 900, y + 92), radius=46, shade=False, fill=WHITE)
@@ -103,7 +108,7 @@ def hero():
         y += 118
     pill(img, (150, 1270), "212 PAGES", 40, NAVY)
     pill(img, (470, 1270), "6,400+ LINKS", 40, TEAL)
-    pill(img, (150, 1380), "ONENOTE + PDF", 40, ORANGE)
+    pill(img, (150, 1380), "ONENOTE + PDF" if HAS_ONEPKG else "HYPERLINKED PDF", 40, ORANGE)
     img, _ = tablet(img, shot("m1_cal"), 1300, 760, 960)
     img, _ = tablet(img, shot("index"), 1180, 300, 1000)
     footer(img, FOOT)
@@ -128,7 +133,7 @@ def included():
     img = card(img, (130, 1430, W - 130, 1640), radius=40)
     text(img, (190, 1470), "YOU RECEIVE", 30, "Bold", TEAL)
     x = 190
-    for f_ in ("OneNote notebook (.onepkg)", "Hyperlinked PDF planner", "PDF user guide", "Start Here guide"):
+    for f_ in (("OneNote notebook (.onepkg)",) if HAS_ONEPKG else ()) + ("Hyperlinked PDF planner (226 pages)", "PDF user guide", "Start Here guide"):
         x = pill(img, (x, 1530), f_, 32, MINT, NAVY) + 26
     footer(img, FOOT)
     save(img, "02_whats_included.png")
@@ -240,9 +245,13 @@ def notes():
 # ------------------------------------------------------------------ 9 compatibility
 def compatibility():
     img = canvas()
-    heading(img, "Which file do I use?", "Two formats included — pick the one for your app")
-    rows = [("✓", TEAL, "OneNote for Windows (Microsoft 365)", "OneNote notebook (.onepkg) — real pages, tick boxes, tables, links"),
-            ("✓", TEAL, "OneNote for Mac, web & iPad", "PDF planner inserted as printouts (links don't click in printouts)"),
+    if HAS_ONEPKG:
+        heading(img, "Which file do I use?", "Two formats included — pick the one for your app")
+    else:
+        heading(img, "Works with your favourite apps", "One hyperlinked PDF — open it wherever you take notes")
+    rows = [("✓", TEAL, "OneNote for Windows (Microsoft 365)", "OneNote notebook (.onepkg) — real pages, tick boxes, tables, links") if HAS_ONEPKG
+            else ("✓", TEAL, "iPad & tablets", "Write with Apple Pencil or a stylus in your favourite PDF note app"),
+            ("✓", TEAL, "OneNote (any device)", "Insert the PDF as printouts and write on top (links don't click in printouts)"),
             ("✓", TEAL, "GoodNotes, Notability, Xodo, Drawboard, Samsung Notes", "Hyperlinked PDF — tabs and index links click"),
             ("✓", TEAL, "Paper", "Print the PDF (landscape, US Letter)"),
             ("✗", CORAL, "Not a physical product", "Nothing is shipped — instant digital download")]
@@ -262,7 +271,8 @@ def how_it_works():
     img = canvas()
     heading(img, "Start planning in minutes", "Download, open, tap the index")
     steps = [("book", "1. Download", "Get the files from your Etsy Purchases page after checkout."),
-             ("stack", "2. Open", "Double-click the .onepkg in OneNote for Windows, or import the PDF into your note app."),
+             ("stack", "2. Open", "Double-click the .onepkg in OneNote for Windows, or import the PDF into your note app." if HAS_ONEPKG
+              else "Import the PDF into GoodNotes, Notability or any PDF note app."),
              ("calendar", "3. Plan", "Start at the General Index. Every month, week and template is one tap away.")]
     x = 130
     for icon, t_, b_ in steps:

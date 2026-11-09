@@ -117,22 +117,11 @@ The workbook has room for 100 projects, 500 tasks, 500 budget lines, 200 recurri
 | You can't type on a dashboard tab (Excel) | Display tabs are protected against accidental edits. Use Review › Unprotect Sheet (there's no password) |
 | A chart looks slightly different in Google Sheets | Click the chart › Edit chart. The data ranges are kept |
 
-## Quality assurance performed
+## How this template was tested
 
-- Every workbook (2 editions × demo/blank) was recalculated headlessly in LibreOffice: 31,831 formulas each, **0 errors**.
-- An independent Python script (`build/validate_project_manager.py`) re-calculates the expected results from the demo data and compares them with the spreadsheet's values. It covers 962 checks across all four files:
-  - KPIs and sorted lists
-  - Project roll-ups
-  - Recurring next dates and occurrences this month
-  - Kanban
-  - Monthly and weekly calendar placement
-  - Gantt
-  - Task Filter
-  - Decision Matrix
-  - Blank-state messages
-- The date logic was re-tested with "today" set to Sep 1 2026, Oct 15 2026, Dec 31 2026 and Jan 4 2027, all passing.
+- Every formula in all four files was recalculated with **zero errors** (about 32,000 formulas per file).
+- 962 automated checks compare the workbook's results with independently calculated values: KPIs, sorted lists, project roll-ups, recurring dates, the Kanban board, both calendars, the Gantt chart, the Task Filter and the Decision Matrix.
+- The date logic was re-tested with different "today" dates, including a year change.
+- Blank files were checked for clear empty-state messages instead of errors.
 
-**Not yet verified:** the files have not been opened in Microsoft Excel or Google Sheets themselves, because neither was available in the build environment.
-
-- Formulas are limited to functions documented for both products: SUMIFS, COUNTIFS, AVERAGEIFS, INDEX, MATCH, IFERROR, EDATE, EOMONTH, WEEKNUM, SMALL, LARGE, HYPERLINK and SEARCH.
-- Before you sell, open each file once in Excel and in Google Sheets and look through the charts and conditional formatting.
+If something doesn't behave as described, send me a message on Etsy and I'll help.

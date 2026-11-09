@@ -80,6 +80,11 @@ def q(s):
     return quote(s)
 
 
+def cur(label):
+    """Tile label with the currency symbol from Easy Setup, e.g. TOTAL INCOME ($)."""
+    return f'="{label} ("&{SYM}&")"'
+
+
 def R(sheet, c, r1, r2):
     return f"{q(sheet)}!${c}${r1}:${c}${r2}"
 
@@ -269,7 +274,7 @@ class Builder:
                  ("Budget year", SD.YEAR if self.demo else "=YEAR(TODAY())", "year", "The year your budget period starts in"),
                  ("First month of your budget", SD.START_MONTH, "month", "Start in any month — 12 months follow"),
                  ("Currency", "USD", "cur", "Pick from the list"),
-                 ("Currency symbol", f'=IFERROR(INDEX($Q$12:$Q$23,MATCH(C14,$P$12:$P$23,0)),"$")', "calc", "Automatic"),
+                 ("Currency symbol", f'=IFERROR(INDEX($Q$12:$Q$23,MATCH(C14,$P$12:$P$23,0)),"$")', "calc", "Shown on dashboards and month tabs"),
                  ("Starting balance", f"=SUM({BA('E')})", "calcm", "Sum of account opening balances"),
                  ("Today's date override", SD.ANCHOR if self.demo else None, "date",
                   "DEMO date — clear it to use today" if self.demo else "Leave blank to use the real date"),
@@ -345,7 +350,7 @@ class Builder:
             r = EXP1 + i
             if i < len(SD.EXPENSE):
                 cat, grp, bk, bud = SD.EXPENSE[i]
-                ws[f"B{r}"], ws[f"C{r}"], ws[f"D{r}"], ws[f"E{r}"] = cat, grp, bk, bud
+                ws[f"B{r}"], ws[f"C{r}"], ws[f"D{r}"], ws[f"E{r}"] = cat, grp, bk, (bud if self.demo else 0)
             self.inp(S, f"B{r}")
             self.inp(S, f"C{r}:D{r}", align=CENTER)
             self.inp(S, f"E{r}", FMT_M, RIGHT)
@@ -876,11 +881,11 @@ class Builder:
         # tiles
         inc, exp_f, exp_v, sav, debt = "$K$27", "$E$30", "$E$54", "$K$41", "$K$55"
         bud = "($D$30+$D$54)"
-        self.tiles(ws, 7, [("INCOME", f"={inc}", FMT_M, C_INC, C_INC), ("EXPENSES", f"={exp_f}+{exp_v}", FMT_M, C_EXP, C_EXP),
-                           ("SAVINGS", f"={sav}", FMT_M, C_SAV, C_SAV), ("DEBT PAYMENTS", f"={debt}", FMT_M, C_DEBT)], c1=2, width=3)
+        self.tiles(ws, 7, [(cur("INCOME"), f"={inc}", FMT_M, C_INC, C_INC), (cur("EXPENSES"), f"={exp_f}+{exp_v}", FMT_M, C_EXP, C_EXP),
+                           (cur("SAVINGS"), f"={sav}", FMT_M, C_SAV, C_SAV), (cur("DEBT PAYMENTS"), f"={debt}", FMT_M, C_DEBT)], c1=2, width=3)
         ws.row_dimensions[9].height = 6
-        self.tiles(ws, 10, [("MONTHLY BUDGET", f"={bud}", FMT_M, NAVY), ("ACTUAL SPENDING", f"={exp_f}+{exp_v}", FMT_M, C_EXP),
-                            ("BUDGET REMAINING", f"={bud}-({exp_f}+{exp_v})", FMT_M, C_INC),
+        self.tiles(ws, 10, [(cur("MONTHLY BUDGET"), f"={bud}", FMT_M, NAVY), (cur("ACTUAL SPENDING"), f"={exp_f}+{exp_v}", FMT_M, C_EXP),
+                            (cur("BUDGET REMAINING"), f"={bud}-({exp_f}+{exp_v})", FMT_M, C_INC),
                             ("SAVINGS RATE", f'=IF({inc}=0,"—",{sav}/{inc})', FMT_PCT, C_GOAL)], c1=2, width=3)
         cf_formula(ws, "H11", "AND(ISNUMBER(H11),H11<0)", EXP_BG, C_EXP, True)
         ws["D9"] = f"={bud}"           # total budget (read by Annual Totals)
@@ -1038,15 +1043,15 @@ class Builder:
         sel = "$P$5"
         pick = lambda col: f"IF({sel}=0,{q(S_AT)}!${col}${AT1 + 12},INDEX({q(S_AT)}!${col}${AT1}:${col}${AT1 + 11},{sel}))"
         ws.row_dimensions[6].height = 10
-        self.tiles(ws, 7, [("TOTAL INCOME", "=" + pick("C"), FMT_M0, C_INC, C_INC),
-                           ("TOTAL EXPENSES", "=" + pick("D"), FMT_M0, C_EXP, C_EXP),
-                           ("NET CASH FLOW", "=" + pick("H"), FMT_M0, NAVY),
-                           ("TOTAL SAVINGS", "=" + pick("E"), FMT_M0, C_SAV, C_SAV)], c1=2, width=3)
+        self.tiles(ws, 7, [(cur("TOTAL INCOME"), "=" + pick("C"), FMT_M0, C_INC, C_INC),
+                           (cur("TOTAL EXPENSES"), "=" + pick("D"), FMT_M0, C_EXP, C_EXP),
+                           (cur("NET CASH FLOW"), "=" + pick("H"), FMT_M0, NAVY),
+                           (cur("TOTAL SAVINGS"), "=" + pick("E"), FMT_M0, C_SAV, C_SAV)], c1=2, width=3)
         ws.row_dimensions[9].height = 6
         self.tiles(ws, 10, [("SAVINGS RATE", f'=IF({pick("C")}=0,"—",{pick("E")}/{pick("C")})', FMT_PCT, C_GOAL),
-                            (f'=IF({sel}=0,"BUDGET (FULL YEAR)","MONTHLY BUDGET")', "=" + pick("L"), FMT_M0, NAVY),
-                            ("BUDGET REMAINING", f"={pick('L')}-{pick('D')}", FMT_M0, C_INC),
-                            ("TOTAL DEBT", f"=SUM({DC('E')})", FMT_M0, C_EXP, C_EXP)], c1=2, width=3)
+                            (f'=IF({sel}=0,"BUDGET, FULL YEAR","MONTHLY BUDGET")&" ("&{SYM}&")"', "=" + pick("L"), FMT_M0, NAVY),
+                            (cur("BUDGET REMAINING"), f"={pick('L')}-{pick('D')}", FMT_M0, C_INC),
+                            (cur("TOTAL DEBT"), f"=SUM({DC('E')})", FMT_M0, C_EXP, C_EXP)], c1=2, width=3)
         cf_formula(ws, "H11", "AND(ISNUMBER(H11),H11<0)", EXP_BG, C_EXP, True)
         cf_formula(ws, "E8", "AND(ISNUMBER(E8),E8<0)", EXP_BG, C_EXP, True)
         ws.row_dimensions[12].height = 10
@@ -2157,6 +2162,8 @@ def main():
                 continue
             b = Builder(ed, demo)
             wb = b.build()
+            if ed != "excel":
+                _C.nativize_links(wb)
             p = out / folder / f"Ultimate_Budget_Spreadsheet_{suffix}_{'DEMO' if demo else 'BLANK'}.xlsx"
             p.parent.mkdir(parents=True, exist_ok=True)
             wb.save(p)
