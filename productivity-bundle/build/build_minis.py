@@ -847,6 +847,7 @@ class Mini(BB.Builder):
         self.wb.active = self.order.index(first)
         for n in self.order:
             self.ws[n].sheet_view.tabSelected = (n == first)
+        _C.localeproof_dates(self.wb)                 # dates as text must not depend on the language of Excel
         return self.wb
 
 

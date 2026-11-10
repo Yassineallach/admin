@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 from openpyxl.formatting.rule import FormulaRule, DataBarRule
@@ -483,4 +484,83 @@ def nativize_links(wb):
                     c.value = "=" + label
                 c.hyperlink = Hyperlink(ref=c.coordinate, location=target)
                 n += 1
+    return n
+
+
+# ---------------------------------------------------------------- dates as text, the same in every language of Excel
+_DAYS = ("Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday")
+_MONTHS = ("January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December")
+_DATE_TOKENS = re.compile(r"dddd|ddd|d|mmmm|mmm|yyyy|yy")
+
+
+def date_text(x: str, fmt: str) -> str:
+    """Formula fragment that writes date `x` in `fmt` without TEXT().
+
+    TEXT(date,"mmm d, yyyy") depends on the language of the buyer's Excel: French Excel expects "jj/aaaa", German "TT/JJJJ",
+    and prints the letters d and y as they are. DAY, MONTH, YEAR and WEEKDAY are the same everywhere."""
+    lst = lambda names, n=None: ",".join(f'"{s[:n] if n else s}"' for s in names)
+    piece = {"dddd": f"CHOOSE(WEEKDAY({x}),{lst(_DAYS)})", "ddd": f'MID("{"".join(d[:3] for d in _DAYS)}",WEEKDAY({x})*3-2,3)', "d": f"DAY({x})",
+             "mmmm": f"CHOOSE(MONTH({x}),{lst(_MONTHS)})", "mmm": f'MID("{"".join(m[:3] for m in _MONTHS)}",MONTH({x})*3-2,3)',
+             "yyyy": f"YEAR({x})", "yy": f"RIGHT(YEAR({x}),2)"}
+    parts, pos = [], 0
+    for m in _DATE_TOKENS.finditer(fmt):
+        if m.start() > pos:
+            parts.append(f'"{fmt[pos:m.start()]}"')
+        parts.append(piece[m.group()])
+        pos = m.end()
+    if pos < len(fmt):
+        parts.append(f'"{fmt[pos:]}"')
+    return "(" + "&".join(parts) + ")"
+
+
+def _split_text_call(f: str, start: int):
+    """f[start:] begins with 'TEXT('. Returns (end index after the closing bracket, [arguments]) or None."""
+    i, depth, quote, args, a0 = start + 5, 1, False, [], start + 5
+    while i < len(f):
+        ch = f[i]
+        if ch == '"':
+            quote = not quote
+        elif not quote:
+            if ch == "(":
+                depth += 1
+            elif ch == ")":
+                depth -= 1
+                if depth == 0:
+                    args.append(f[a0:i])
+                    return i + 1, args
+            elif ch == "," and depth == 1:
+                args.append(f[a0:i])
+                a0 = i + 1
+        i += 1
+    return None
+
+
+def localeproof_dates(wb) -> int:
+    """Rewrite every TEXT(date,"<day/month/year format>") in the workbook with date_text(). Returns the number rewritten."""
+    n = 0
+    for ws in wb.worksheets:
+        for row in ws.iter_rows():
+            for cell in row:
+                f = cell.value
+                if not (isinstance(f, str) and f.startswith("=") and "TEXT(" in f):
+                    continue
+                pos = 0
+                while True:
+                    i = f.find("TEXT(", pos)
+                    if i < 0:
+                        break
+                    if i and (f[i - 1].isalnum() or f[i - 1] == "_"):
+                        pos = i + 5
+                        continue
+                    got = _split_text_call(f, i)
+                    fmt = got[1][1].strip() if got and len(got[1]) == 2 else ""
+                    body = fmt[1:-1]
+                    if (fmt[:1] == '"' and fmt[-1:] == '"' and _DATE_TOKENS.search(body)
+                            and not re.search(r"[h0#@sA-Z]", _DATE_TOKENS.sub("", body))):
+                        f = f[:i] + date_text(got[1][0].strip(), body) + f[got[0]:]
+                        n += 1
+                        pos = i                      # look again from here: the argument may hold another TEXT()
+                    else:
+                        pos = i + 5
+                cell.value = f
     return n

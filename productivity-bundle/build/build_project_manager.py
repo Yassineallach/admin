@@ -1786,6 +1786,7 @@ class Builder:
         self.wb.active = ORDER.index(S_DASH if self.demo else S_SETUP)
         for n in ORDER:
             self.ws[n].sheet_view.tabSelected = (n == (S_DASH if self.demo else S_SETUP))
+        localeproof_dates(self.wb)                 # dates as text must not depend on the language of Excel
         return self.wb
 
 
