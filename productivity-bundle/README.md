@@ -85,6 +85,19 @@ python3 validate_minis.py                 # LibreOffice recalc (0 errors) + 562 
 python3 listing_minis.py --reshoot        # screenshots, 6 images, LISTING.md, etsy_upload/ per product
 ```
 
+## Bundle, pins and videos
+
+```bash
+cd productivity-bundle/build
+python3 build_bundle.py       # listings/06_Ultimate_Productivity_Bundle/: one ZIP with the three spreadsheets, 6 images, LISTING.md
+python3 pins.py               # listings/pins/: one 1000x1500 Pinterest pin per listing + PINS.md (titles, descriptions)
+python3 listing_video.py      # a 14 s slideshow video per listing
+python3 stress_dates.py       # future-date test: leap day 2028, July-June budget year, Sunday start, 2030
+```
+
+Both spreadsheet editions use Arial, so the layout is the same in every Excel version, Google Sheets and the test renderer.
+The planner ships as two PDFs: dated 2027 and undated (`planner_pdf.py` builds both).
+
 ## Etsy listings (built alongside each product)
 
 Every product gets a matching listing in `listings/<product>/`:

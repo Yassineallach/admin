@@ -128,6 +128,7 @@ PLEASE NOTE
 • This is a DIGITAL product. Nothing will be shipped.
 • Undated: weeks follow the start date you choose, so you can use it any year.
 • For personal use. Please don't resell or share the files.
+• Save with the 3-in-1 Productivity Bundle in my shop: Project Manager + Weekly Planner Pro + Budget Spreadsheet.
 • Questions? Send me a message — I'm happy to help.
 ```
 
@@ -159,6 +160,8 @@ Run `python3 build/build_listing_package_wp.py`, then upload everything in `etsy
 2. `START_HERE.pdf`: how to open the files, plus your Google Sheets copy links
 
 ---
+
+> The description mentions the bundle. Remove that line until the bundle listing is live.
 
 ## Seller checklist before publishing
 

@@ -108,7 +108,7 @@ def hero():
         y += 118
     pill(img, (150, 1270), "212 PAGES", 40, NAVY)
     pill(img, (470, 1270), "6,400+ LINKS", 40, TEAL)
-    pill(img, (150, 1380), "ONENOTE + PDF" if HAS_ONEPKG else "HYPERLINKED PDF", 40, ORANGE)
+    pill(img, (150, 1380), "DATED 2027 + UNDATED EDITION", 40, ORANGE)
     img, _ = tablet(img, shot("m1_cal"), 1300, 760, 960)
     img, _ = tablet(img, shot("index"), 1180, 300, 1000)
     footer(img, FOOT)
@@ -133,7 +133,7 @@ def included():
     img = card(img, (130, 1430, W - 130, 1640), radius=40)
     text(img, (190, 1470), "YOU RECEIVE", 30, "Bold", TEAL)
     x = 190
-    for f_ in (("OneNote notebook (.onepkg)",) if HAS_ONEPKG else ()) + ("Hyperlinked PDF planner (226 pages)", "PDF user guide", "Start Here guide"):
+    for f_ in (("OneNote notebook (.onepkg)",) if HAS_ONEPKG else ()) + ("2027 planner (PDF)", "Undated planner (PDF)", "PDF user guide", "Start Here guide"):
         x = pill(img, (x, 1530), f_, 32, MINT, NAVY) + 26
     footer(img, FOOT)
     save(img, "02_whats_included.png")
@@ -158,7 +158,7 @@ def hyperlinked():
 # ------------------------------------------------------------------ 4 monthly
 def monthly():
     img = canvas()
-    heading(img, "12 monthly sections", "Calendar  ·  Goals  ·  Reflection — dated for 2027")
+    heading(img, "12 monthly sections", "Calendar  ·  Goals  ·  Reflection — dated 2027, plus an undated edition")
     img, b = framed(img, shot("m1_cal"), 110, 440, 1500, 1240)
     img, b2 = framed(img, shot("m1_goals"), 1660, 440, 630, 560)
     img, b3 = framed(img, shot("m1_refl"), 1660, b2[3] + 110, 630, 560)
@@ -172,7 +172,7 @@ def monthly():
 # ------------------------------------------------------------------ 5 weekly
 def weekly():
     img = canvas()
-    heading(img, "53 weekly trackers", "Dated Monday–Sunday for every week of 2027")
+    heading(img, "53 weekly trackers", "Dated for every week of 2027 — or use the undated edition any year")
     img, _ = framed(img, shot("w1"), 110, 360, 1450, 1330)
     x, y = 1640, 400
     for icon, t_, b_ in (("stack", "Top 3 goals & priorities", "Tick-box lists for the week's focus"),

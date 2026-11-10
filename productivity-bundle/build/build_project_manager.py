@@ -1053,7 +1053,7 @@ class Builder:
     def build_pm(self):
         ws, T = self.ws[S_PM], self.T
         setup_sheet(ws, {"B": 20, "C": 16, "D": 16, "E": 16, "F": 19, "G": 14, "H": 3, "I": 31, "J": 13, "K": 50, "L": 17, "M": 15,
-                         "N": 13, "O": 22, "P": 3, "Q": 6, "R": 6})
+                         "N": 13, "O": 32, "P": 3, "Q": 6, "R": 6})
         title_bar(ws, T, "PROJECT MANAGER  ·  Project detail view", "Select a project — the left panel updates instantly. Add objectives, milestones, risks… in the database on the right.", 15, demo=self.demo)
         ws["B5"] = "PROJECT ▸"
         ws["B5"].font = T.font(11, True, NAVY)

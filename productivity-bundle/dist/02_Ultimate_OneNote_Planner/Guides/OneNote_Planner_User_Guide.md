@@ -69,13 +69,14 @@ The notebook is organised in OneNote like this:
 
 ## Tips
 
-- Week pages are dated for 2027 (Monday to Sunday, ISO weeks). Week 53 is a spare page; fill in your own dates.
+- In the 2027 edition, week pages are dated Monday to Sunday (ISO weeks). Week 53 is a spare page; fill in your own dates.
+- The undated edition has the same 226 pages with blank calendar grids and week dates: start any month, reuse it any year.
 - Colour code: teal = year & months, blue = weekly & meetings, green = tasks, lavender = goals & notes, orange = time & ideas, red = money.
 - Search everything in OneNote with **Ctrl+E** (Mac: **Cmd+Option+F**).
 
 ## FAQ
 
-**Can I use it for another year?** The 111 templates and 8 note pages are undated and reusable forever. The monthly calendars and weekly dates are for 2027.
+**Can I use it for another year?** Yes. Use `Ultimate_Planner_Undated_Hyperlinked.pdf`: the same planner with blank dates on the calendars and weekly pages. In the 2027 edition, the 111 templates and 8 note pages are undated too.
 
 **Can I change colours or add pages?** Yes. In OneNote everything is editable: add rows and pages, rename sections, change colours.
 

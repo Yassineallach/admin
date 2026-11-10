@@ -79,7 +79,8 @@ def year_pages(year):
         CK(["Click any checkbox to tick it (Ctrl+1 adds a new one)", "Tab moves to the next table cell; Tab in the last cell adds a row",
             "Ctrl+K inserts a link to another page", "Use the search box (Ctrl+E) to find anything in the planner"]),
     ], key="howto"))
-    pages.append(Page(f"Yearly Goals {year}", [
+    yl = f" {year}" if year else ""          # year=None builds the undated edition
+    pages.append(Page(f"Yearly Goals{yl}", [
         F("My word for the year", "Biggest priority", "I will be proud if…", "Main obstacle to watch", cols=1),
         H("Goals by area"),
         T(["Area", "Goal", "Why it matters", "Target date", "Status"],
@@ -88,7 +89,7 @@ def year_pages(year):
         T(["Quarter", "Milestones", "Done?"], [[q, "", "☐"] for q in ("Q1", "Q2", "Q3", "Q4")]),
         H("Habits to build"), CK(5),
     ], key="year_goals"))
-    pages.append(Page(f"Year at a Glance {year}", [("yearcal", year)], key="year_glance"))
+    pages.append(Page(f"Year at a Glance{yl}", [("yearcal", year)], key="year_glance"))
     pages.append(Page("Resources", [
         H("Important links"), T(["Name", "Link / location", "Notes"], 8),
         H("Key contacts"), T(["Name", "Role", "Email / phone"], 6),
@@ -99,21 +100,21 @@ def year_pages(year):
 
 
 def month_pages(year, m):
-    name = MONTHS[m - 1]
+    name = MONTHS[m - 1] + (f" {year}" if year else "")
     return [
-        Page(f"{name} {year} — Calendar", [
+        Page(f"{name} — Calendar", [
             ("calendar", year, m),
             COLS([H("Important dates"), T(["Date", "Event"], 5)], [H("Deadlines"), T(["Date", "Deadline"], 5)]),
             COLS([H("Appointments"), T(["Date", "Time", "With"], 4)], [H("Events"), T(["Date", "Event"], 4)]),
-        ], subtitle="Monthly calendar", key=f"m{m}_cal"),
-        Page(f"{name} {year} — Goals", [
+        ], subtitle="Monthly calendar" if year else "Monthly calendar — write in your dates", key=f"m{m}_cal"),
+        Page(f"{name} — Goals", [
             F("Focus for the month", "One thing that would make this month great", cols=1),
             H("Main goals"),
             T(["Goal", "Category", "Action steps", "Target date", "Progress", "Status"], 6),
             H("Action checklist"), CK(8),
             SC("How confident am I about these goals?", 10),
         ], subtitle="Monthly goals", key=f"m{m}_goals"),
-        Page(f"{name} {year} — Reflection", [
+        Page(f"{name} — Reflection", [
             COLS([H("Major achievements"), LN(4)], [H("Challenges"), LN(4)]),
             COLS([H("What went well"), LN(4)], [H("What needs improvement"), LN(4)]),
             H("Lessons learned"), LN(3),
@@ -125,6 +126,8 @@ def month_pages(year, m):
 
 def week_dates(year, w):
     """Monday of ISO week w (weeks past the year's last ISO week are 'spare' pages)."""
+    if year is None:
+        return None, None, 53
     last = dt.date(year, 12, 28).isocalendar()[1]
     if w > last:
         return None, None, last
@@ -138,7 +141,7 @@ def week_page(year, w):
         span = f"{mon:%b %d} – {sun:%b %d, %Y}".replace(" 0", " ")
         days_rows = [[f"{DAYS[i]} {(mon + dt.timedelta(days=i)).day}", "", ""] for i in range(7)]
     else:
-        span = "Spare week — fill in your dates"
+        span = "Spare week — fill in your dates" if year else "Undated — fill in your dates"
         days_rows = [[d, "", ""] for d in DAYS]
     return Page(f"Week {w:02d}", [
         F("Dates", "Weekly main goal", cols=1),

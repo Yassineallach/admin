@@ -127,6 +127,7 @@ PLEASE NOTE
 • This is a DIGITAL product. Nothing will be shipped.
 • For personal or internal business use. Please don't resell or share the files.
 • Colours may look slightly different on different screens.
+• Save with the 3-in-1 Productivity Bundle in my shop: Project Manager + Weekly Planner Pro + Budget Spreadsheet.
 • Questions? Send me a message — I'm happy to help you get set up.
 ```
 
@@ -158,6 +159,8 @@ Etsy allows up to 5 files of 20 MB each. Upload everything in `etsy_upload/`:
 2. `START_HERE.pdf`: how to open the files in each app, plus your Google Sheets copy links
 
 ---
+
+> The description mentions the bundle. Remove that line until the bundle listing is live.
 
 ## Seller checklist before publishing
 

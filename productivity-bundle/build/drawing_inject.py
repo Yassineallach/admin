@@ -59,7 +59,7 @@ class Item:
 class Layer:
     cols: list
     rows: list
-    font: str = "Aptos"
+    font: str = "Arial"
     items: list = field(default_factory=list)
     _id: int = 1000
 

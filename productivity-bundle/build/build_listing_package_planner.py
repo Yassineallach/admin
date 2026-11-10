@@ -2,11 +2,12 @@
 
   Ultimate_Planner_2027.onepkg            — OneNote notebook; only once the seller has exported it (see the Seller Guide)
                                             and put it in listings/02_Ultimate_OneNote_Planner/
-  Ultimate_Planner_2027_Hyperlinked.pdf   — the PDF planner
+  Ultimate_Planner_2027_Hyperlinked.pdf   — the PDF planner, dated 2027
+  Ultimate_Planner_Undated_Hyperlinked.pdf — the same planner with blank dates (any year)
   Planner_User_Guide.pdf                  — buyer guide (without OneNote-notebook sections when no .onepkg is included)
   START_HERE.pdf                          — which file to open in which app
 
-Four files, under Etsy's limit of five files of 20 MB each.
+Four files (five with the .onepkg), within Etsy's limit of five files of 20 MB each.
 Usage: python build_listing_package_planner.py
 """
 from __future__ import annotations
@@ -44,6 +45,8 @@ def start_here_md(cfg, has_onepkg):
 {onenote_row}| **OneNote for Mac, web or iPad** | **Ultimate_Planner_2027_Hyperlinked.pdf**: insert it into a page with *Insert › File/PDF Printout* |
 | **GoodNotes, Notability, Xodo, Drawboard, Samsung Notes** | **Ultimate_Planner_2027_Hyperlinked.pdf**: import it as a new notebook. The tabs and index links are clickable |
 | **Paper** | Print **Ultimate_Planner_2027_Hyperlinked.pdf** in landscape, "fit to page" |
+
+**Two editions are included.** *Ultimate_Planner_2027_Hyperlinked.pdf* is dated for 2027. *Ultimate_Planner_Undated_Hyperlinked.pdf* has the same pages with blank dates, so you can start any month and reuse it every year.
 {shared_txt}
 ## First steps
 
@@ -84,6 +87,7 @@ def main():
     if src:
         shutil.copy2(src, OUT / ONEPKG)
     shutil.copy2(DIST / "PDF_Planner" / "Ultimate_Planner_2027_Hyperlinked.pdf", OUT)
+    shutil.copy2(DIST / "PDF_Planner" / "Ultimate_Planner_Undated_Hyperlinked.pdf", OUT)
     guide = (DIST / "Guides" / "OneNote_Planner_User_Guide.md").read_text(encoding="utf-8")
     if not src:
         guide = pdf_only_guide(guide)

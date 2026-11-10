@@ -51,11 +51,11 @@ FMT_TIME = "h:mm AM/PM"
 
 
 class Theme:
-    """Edition-aware style factory (font differs between Excel and Google Sheets editions)."""
+    """Edition-aware style factory (both editions use Arial so the layout is identical everywhere)."""
 
     def __init__(self, edition: str):
         self.edition = edition
-        self.font_name = "Aptos" if edition == "excel" else "Arial"
+        self.font_name = "Arial"          # in every Excel version and Google Sheets; same metrics as the test renderer
 
     def font(self, size=10, bold=False, color=DARK, italic=False, underline=None):
         return Font(name=self.font_name, size=size, bold=bold, color=color, italic=italic, underline=underline)

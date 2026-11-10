@@ -8,7 +8,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent / "listings"
 PICKS = {"01_Ultimate_Project_Manager": [1, 3, 5, 4, 2], "02_Ultimate_OneNote_Planner": [1, 3, 5, 6, 2],
-         "03_Weekly_Planner_Pro": [1, 3, 4, 5, 6], "04_Ultimate_Budget_Spreadsheet": [1, 3, 4, 7, 2]}
+         "03_Weekly_Planner_Pro": [1, 3, 4, 5, 6], "04_Ultimate_Budget_Spreadsheet": [1, 3, 4, 7, 2],
+         "06_Ultimate_Productivity_Bundle": [1, 2, 3, 4, 5]}
 SEC = 2.4
 
 for prod, idx in PICKS.items():

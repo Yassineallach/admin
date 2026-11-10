@@ -59,6 +59,6 @@ layout flat (square corners, text navigation instead of icons).
 
 ## Typography
 
-- Excel edition: **Aptos** (Office 365 default; older Office substitutes Calibri).
+- Excel edition: **Arial** (available in every Excel version, so the layout never shifts).
 - Google Sheets edition: **Arial**.
 - OneNote: Segoe UI headings / body (OneNote desktop default family).

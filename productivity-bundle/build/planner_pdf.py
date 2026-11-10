@@ -155,7 +155,8 @@ def block(b, width, color):
         return [grid(data, [hw] + [dw] * days, row_h=16 * K), SP(4)]
     if kind == "calendar":
         y, m = b[1], b[2]
-        weeks = cal.Calendar(0).monthdatescalendar(y, m)
+        undated = y is None
+        weeks = [[None] * 7] * 6 if undated else cal.Calendar(0).monthdatescalendar(y, m)
         rh = min(56, 300 / len(weeks)) * K
         data = [[d[:3] for d in PC.DAYS]]
         extra = [("BACKGROUND", (0, 0), (-1, 0), col), ("TEXTCOLOR", (0, 0), (-1, 0), colors.white), ("FONTNAME", (0, 0), (-1, 0), "Sans-Bold"),
@@ -163,8 +164,8 @@ def block(b, width, color):
         for wi, wk in enumerate(weeks):
             row = []
             for di, d in enumerate(wk):
-                row.append(str(d.day))
-                if d.month != m:
+                row.append("" if undated else str(d.day))
+                if not undated and d.month != m:
                     extra += [("BACKGROUND", (di, wi + 1), (di, wi + 1), CANVAS), ("TEXTCOLOR", (di, wi + 1), (di, wi + 1), colors.HexColor("#9AAAA9"))]
             data.append(row)
         extra.append(("FONTNAME", (0, 1), (-1, -1), "Sans-Bold"))
@@ -175,7 +176,7 @@ def block(b, width, color):
         cells = []
         for m in range(1, 13):
             d = [[PC.MONTHS[m - 1]] + [""] * 6, [x[:2] for x in PC.DAYS]]
-            for wk in cal.Calendar(0).monthdayscalendar(y, m):
+            for wk in (cal.Calendar(0).monthdayscalendar(y, m) if y else [[0] * 7] * 6):
                 d.append([str(x) if x else "" for x in wk])
             while len(d) < 8:
                 d.append([""] * 7)
@@ -183,7 +184,8 @@ def block(b, width, color):
             t.setStyle(TableStyle([("SPAN", (0, 0), (-1, 0)), ("BACKGROUND", (0, 0), (-1, 0), col), ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
                                    ("FONTNAME", (0, 0), (-1, 0), "Sans-Bold"), ("FONTNAME", (0, 1), (-1, -1), "Sans"), ("FONTSIZE", (0, 0), (-1, -1), 7),
                                    ("ALIGN", (0, 0), (-1, -1), "CENTER"), ("TEXTCOLOR", (0, 1), (-1, 1), SUB), ("FONTNAME", (0, 1), (-1, 1), "Sans-Bold"),
-                                   ("TOPPADDING", (0, 0), (-1, -1), 1), ("BOTTOMPADDING", (0, 0), (-1, -1), 1)]))
+                                   ("TOPPADDING", (0, 0), (-1, -1), 1), ("BOTTOMPADDING", (0, 0), (-1, -1), 1)]
+                                  + ([("GRID", (0, 2), (-1, -1), 0.4, LINE)] if not y else [])))
             cells.append(t)
         rows = [cells[i:i + 4] for i in range(0, 12, 4)]
         t = Table(rows, colWidths=[width / 4] * 4)
@@ -297,7 +299,7 @@ def build_pdf(out: Path, year=PC.YEAR):
     tabs.append(("notes", "Notes", "9B7BE0", "contents_notes"))
 
     doc = BaseDocTemplate(str(out), pagesize=(PW, PH), leftMargin=MX0, rightMargin=PW - MX1, topMargin=PH - MY1, bottomMargin=MY0,
-                          title=f"Ultimate Planner {year}", author="Ultimate Productivity Bundle")
+                          title=f"Ultimate Planner {year or 'Undated'}", author="Ultimate Productivity Bundle")
     frame = Frame(MX0, MY0, CW, MY1 - MY0 - 8, id="f", leftPadding=0, rightPadding=0, topPadding=0, bottomPadding=0)
     doc.addPageTemplates([PageTemplate("p", [frame], onPage=background, onPageEnd=make_rail(tabs))])
     story = []
@@ -305,11 +307,12 @@ def build_pdf(out: Path, year=PC.YEAR):
     # cover + index
     story += [Mark("cover", "index"), Spacer(1, 120),
               Paragraph(f'<font size="14" color="#14958B">ULTIMATE</font>', ST["title"]), Spacer(1, 14),
-              Paragraph(f'<font size="44">Planner {year}</font>', ParagraphStyle("big", parent=ST["title"], leading=50)), Spacer(1, 18),
-              Paragraph("Yearly goals · 12 monthly calendars · 53 weekly trackers · 111 templates · 8 note layouts", ST["sub"]), Spacer(1, 30),
+              Paragraph(f'<font size="44">Planner{" " + str(year) if year else ""}</font>', ParagraphStyle("big", parent=ST["title"], leading=50)), Spacer(1, 18),
+              Paragraph(("" if year else "UNDATED EDITION — use it any year · ") +
+                        "Yearly goals · 12 monthly calendars · 53 weekly trackers · 111 templates · 8 note layouts", ST["sub"]), Spacer(1, 30),
               Paragraph(a("index", "Open the General Index ›"), ParagraphStyle("go", parent=ST["link"], fontSize=13)),
               Spacer(1, 10), Paragraph("Tip: the tabs on the left are clickable on every page.", ST["sub"]), PageBreak()]
-    story += [Mark("index", "index")] + header("General index", "0B4F4C", f"Ultimate Planner {year}",
+    story += [Mark("index", "index")] + header("General index", "0B4F4C", f"Ultimate Planner {year}" if year else "Ultimate Planner — Undated",
                                               "Click any link to jump to that page. Every page has a ⌂ Index link (top right) and the tabs on the left.")
     rows = []
     months = [s for s in secs if s.group == "Months"]
@@ -357,4 +360,9 @@ if __name__ == "__main__":
     out.mkdir(parents=True, exist_ok=True)
     f = out / f"Ultimate_Planner_{PC.YEAR}_Hyperlinked.pdf"
     build_pdf(f)
+    print("wrote", f)
+    MARKS.clear()
+    FIT_LOG.clear()
+    f = out / "Ultimate_Planner_Undated_Hyperlinked.pdf"
+    build_pdf(f, year=None)
     print("wrote", f)

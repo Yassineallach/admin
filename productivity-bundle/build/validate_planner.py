@@ -129,6 +129,26 @@ def main():
     check("pdf pages reachable", len(targets) >= n - 1, f"{len(targets)} of {n}")
     compact = [k for k, (f, _) in PP.FIT_LOG.items() if f < 1]
     print(f"  PDF: {n} pages, {links} links, {len(compact)} pages compacted (min {min(f for f, _ in PP.FIT_LOG.values()):.2f})")
+    # 4b — undated edition: same pages and links, no year anywhere
+    upath = Path(tempfile.mkdtemp()) / "u.pdf"
+    PP.MARKS.clear()
+    PP.FIT_LOG.clear()
+    PP.build_pdf(upath, year=None)
+    ur = PdfReader(str(upath))
+    check("undated page count", len(ur.pages) == n, str(len(ur.pages)))
+    upages = {p.indirect_reference.idnum: i for i, p in enumerate(ur.pages)}
+    ulinks = ubroken = 0
+    for p in ur.pages:
+        for an in p.get("/Annots") or []:
+            a = an.get_object()
+            if a.get("/Subtype") == "/Link":
+                ulinks += 1
+                d = a.get("/Dest")
+                ubroken += d is None or d[0].idnum not in upages
+    check("undated links", ulinks == links and ubroken == 0, f"{ulinks} links, {ubroken} broken")
+    utext = "".join((ur.pages[i].extract_text() or "") for i in (0, 1, 3, 4, 6, 43, 44))
+    check("undated has no year", str(PC.YEAR) not in utext)
+    check("undated one page per planner page", all(f >= 0.7 for f, _ in PP.FIT_LOG.values()))
     # 5 — importer against mock Graph
     res = subprocess.run([sys.executable, str(HERE / "test_onenote_import.py")], capture_output=True, text=True)
     check("importer mock test", "RESULT: PASS" in res.stdout, res.stdout[-300:])

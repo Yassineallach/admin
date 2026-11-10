@@ -67,7 +67,7 @@
     }
   },
   "typography": {
-    "excel": "Aptos (falls back to Calibri/Arial on older Office)",
+    "excel": "Arial (available in every Excel version)",
     "google_sheets": "Arial",
     "onenote": "Segoe UI / Aptos",
     "sizes_pt": {
