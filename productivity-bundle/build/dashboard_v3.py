@@ -35,17 +35,17 @@ from openpyxl.utils import get_column_letter as L
 
 import icons
 import sidebar
-from common import (BG, BORDER, DANGER, DANGER_BG, DARK, FMT_PCT, FMT_SDATE, INFO, LAVENDER, MIDNIGHT, NAVY, SECONDARY,
+from common import (PAPER, BRASS, BG, BORDER, DANGER, DANGER_BG, DARK, FMT_PCT, FMT_SDATE, INFO, LAVENDER, MIDNIGHT, NAVY, SECONDARY,
                     SOFT_BLUE, SOFT_LAV, SOFT_TEAL, TEAL, WARNING, WHITE, add_list_dv, fill, place_chart)
 from drawing_inject import Layer, col_px_list, row_px_list
 
 COLW = 2.86            # -> 20 px
 NCOLS = 66
 E0 = 70                # engine start column
-GREY_BAR = "B4C1C0"
-TASK_COLS = ["2F6FAA", "0F6E68", "CF3A43", "EE8A3A", "1FA99C"]
-STATUS_COLS = ["9AAAA9", "9B7BE0", "14958B", "EE8A3A", "0B4F4C", "CF3A43"]
-PRIORITY_COLS = ["CF3A43", "EE8A3A", "2F6FAA", "1FA99C"]
+GREY_BAR = "B8B2A6"
+TASK_COLS = ["A87620", "2B5148", "B3382C", "D29A3A", "2E7D4F"]
+STATUS_COLS = ["B8B2A6", "A87620", "2E7D4F", "D29A3A", "1F3D36", "B3382C"]
+PRIORITY_COLS = ["B3382C", "D29A3A", "A87620", "2E7D4F"]
 
 TILES = [(5, 18), (20, 33), (35, 48), (50, 63)]
 LEFT, MID, RIGHT, WIDE = (5, 26), (28, 44), (46, 63), (5, 44)
@@ -96,7 +96,7 @@ def clean_chart(ch, legend=True, axes=True):
             ax.minorTickMark = "none"
             ax.txPr = _rich(750, SECONDARY)
             ax.spPr = GraphicalProperties(ln=LineProperties(noFill=True))
-        ch.y_axis.majorGridlines = ChartLines(spPr=GraphicalProperties(ln=LineProperties(solidFill="E3ECEB", w=6350)))
+        ch.y_axis.majorGridlines = ChartLines(spPr=GraphicalProperties(ln=LineProperties(solidFill="EFEAE0", w=6350)))
         ch.x_axis.majorGridlines = None
 
 
@@ -339,16 +339,16 @@ class DashV3:
         ]
         self.tile_cells = []
         for (c1, c2), (label, val, nf, sub, hl, key, icon) in zip(TILES, tiles):
-            bg = fill("17A397") if hl else fill(WHITE)
-            fg = WHITE if hl else NAVY
+            bg = fill(NAVY)
+            fg = PAPER
             self.panel(c1, 3, c2, 7)
             if not self.excel:
                 for r in range(3, 8):
                     for cc in range(c1, c2 + 1):
                         self.ws.cell(row=r, column=cc).fill = bg
             self.put(c1, 7, c2, 7, label, self.F(9, True, fg), Alignment(horizontal="center", vertical="center"))
-            self.put(c1, 4, c2, 5, val, self.F(22, True, fg), Alignment(horizontal="center", vertical="center"), nf)
-            self.put(c1, 6, c2, 6, sub, self.F(8, False, "D9F2EE" if hl else SECONDARY), Alignment(horizontal="center", vertical="center"))
+            self.put(c1, 4, c2, 5, val, self.F(22, True, BRASS), Alignment(horizontal="center", vertical="center"), nf)
+            self.put(c1, 6, c2, 6, sub, self.F(8, False, "C9D3CF"), Alignment(horizontal="center", vertical="center"))
             DASH[key] = f"{L(c1)}4"
             DASH[key + "_sub"] = f"{L(c1)}6"
             self.tile_cells.append(((c1, c2), f"${L(c1)}$4", f"${L(c1)}$6", f"${L(c1)}$7", hl, icon))
@@ -358,7 +358,7 @@ class DashV3:
         pills = [(f'="●  "&{e["due_today"]}&" due today"', SOFT_TEAL, MIDNIGHT, "pill_today"),
                  (f'="●  "&{e["due_week"]}&" open, due this week"', SOFT_BLUE, MIDNIGHT, "pill_week"),
                  (f'="●  "&{e["overdue_tasks"]}&" overdue tasks"', DANGER_BG, DANGER, "pill_overdue"),
-                 (f'="↻  "&{e["recurring_today"]}&" recurring today"', SOFT_LAV, "5B3FA8", "pill_recurring")]
+                 (f'="↻  "&{e["recurring_today"]}&" recurring today"', SOFT_LAV, "7A5514", "pill_recurring")]
         thick = Side(style="thick", color=BG)
         self.pills = []
         for (c1, c2), (fm, bg, fg, key) in zip(TILES, pills):
@@ -390,10 +390,10 @@ class DashV3:
         line.add_data(Reference(ws, min_col=E + 6, min_row=40, max_row=52), titles_from_data=True)
         s = line.series[0]
         s.smooth = True
-        s.graphicalProperties.line.solidFill = "2F7E9E"
+        s.graphicalProperties.line.solidFill = "2B5148"
         s.graphicalProperties.line.width = 28575
         s.marker = Marker(symbol="circle", size=6)
-        s.marker.graphicalProperties = GraphicalProperties(solidFill=WHITE, ln=LineProperties(solidFill="2F7E9E", w=15875))
+        s.marker.graphicalProperties = GraphicalProperties(solidFill=WHITE, ln=LineProperties(solidFill="2B5148", w=15875))
         clean_chart(bar)
         bar += line
         place_chart(ws, bar, LEFT[0], A0, LEFT[1], A1)
@@ -414,7 +414,7 @@ class DashV3:
         pb.gapWidth = 80
         pb.add_data(Reference(ws, min_col=E + 4, max_col=E + 5, min_row=62, max_row=67), titles_from_data=True)
         pb.set_categories(Reference(ws, min_col=E + 3, min_row=63, max_row=67))
-        pb.series[0].graphicalProperties.solidFill = "E2F2EF"
+        pb.series[0].graphicalProperties.solidFill = "EFEAE0"
         for s in pb.series:
             s.graphicalProperties.line.noFill = True
         for i, colr in enumerate(reversed(TASK_COLS)):
@@ -441,7 +441,7 @@ class DashV3:
         b.overlap = -5
         b.add_data(Reference(ws, min_col=E + 4, max_col=E + 5, min_row=70, max_row=78), titles_from_data=True)
         b.set_categories(Reference(ws, min_col=E + 3, min_row=71, max_row=78))
-        b.series[0].graphicalProperties.solidFill = "8ED6CC"
+        b.series[0].graphicalProperties.solidFill = "9DB5AC"
         b.series[1].graphicalProperties.solidFill = MIDNIGHT
         for s in b.series:
             s.graphicalProperties.line.noFill = True
@@ -490,7 +490,7 @@ class DashV3:
             self.put(a, 29, b_, 29, f"={self.in_year}+{i - 1}", self.F(9, True, NAVY), Alignment(horizontal="center", vertical="center"),
                      "0", fill(WHITE), box)
             ws.conditional_formatting.add(f"{L(a)}29:{L(b_)}29", FormulaRule(formula=[f"{L(a)}29={self.in_year}"],
-                                                                                fill=fill("17A397"), font=Font(color=WHITE, bold=True)))
+                                                                                fill=fill("1F3D36"), font=Font(color=WHITE, bold=True)))
         months = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"]
         lo, hi = self.e["lo"], self.e["hi"]
         for i, m in enumerate(months):
@@ -498,7 +498,7 @@ class DashV3:
             a = 46 + (i % 3) * 6
             self.put(a, r, a + 5, r, m, self.F(9, True, NAVY), Alignment(horizontal="center", vertical="center"), None, fill(WHITE), box)
             ws.conditional_formatting.add(f"{L(a)}{r}:{L(a + 5)}{r}", FormulaRule(
-                formula=[f"AND({i + 1}>={lo},{i + 1}<={hi})"], fill=fill("17A397"), font=Font(color=WHITE, bold=True)))
+                formula=[f"AND({i + 1}>={lo},{i + 1}<={hi})"], fill=fill("1F3D36"), font=Font(color=WHITE, bold=True)))
         self.put(c1, 36, c2, 36, "Pick a year and month range with the ▾ cells above.", self.F(8, False, SECONDARY, italic=True),
                  Alignment(horizontal="center", vertical="center"))
 
@@ -577,7 +577,7 @@ class DashV3:
         t.gapWidth = 60
         t.add_data(Reference(ws, min_col=E + 4, max_col=E + 5, min_row=86, max_row=93), titles_from_data=True)
         t.set_categories(Reference(ws, min_col=E + 3, min_row=87, max_row=93))
-        t.series[0].graphicalProperties.solidFill = "17A397"
+        t.series[0].graphicalProperties.solidFill = "1F3D36"
         t.series[1].graphicalProperties.solidFill = WARNING
         for s in t.series:
             s.graphicalProperties.line.noFill = True
@@ -611,7 +611,7 @@ class DashV3:
             self.list_col(19, 25, r, f'=IF({ir}="","",{glyph("INDEX(" + VT("K") + "," + ir + ")")})', 9, False, MIDNIGHT)
             self.list_col(29, 38, r, f'=IF({idl}="",{q("No deadlines in this period")},INDEX({POV("C")},{idl})&"")')
             self.list_col(39, 43, r, f'=IF({idl}="","",TEXT(INDEX({POV("H")},{idl}),"mmm d"))', 9, True, MIDNIGHT, "right")
-            self.list_col(47, 57, r, f'=IF({irc}="",{q("Nothing recurring this week")},"↻ "&INDEX({RT("C")},{irc}))', 9, False, "5B3FA8")
+            self.list_col(47, 57, r, f'=IF({irc}="",{q("Nothing recurring this week")},"↻ "&INDEX({RT("C")},{irc}))', 9, False, "7A5514")
             self.list_col(58, 62, r, f'=IF({irc}="","",TEXT(INDEX({RT("N")},{irc}),"ddd d"))', 9, True, MIDNIGHT, "right")
         DASH.update(recent_first=f"F{E0R}", deadline_first=f"AC{E0R}", recurring_first=f"AU{E0R}", recurring_next_first=f"BF{E0R}")
 
@@ -620,7 +620,7 @@ class DashV3:
         ws = self.ws
         lay = Layer(col_px_list(ws, NCOLS + 2), row_px_list(ws, LAST_ROW + 2), font=self.T.font_name)
         X, Y = lay.x, lay.y
-        shadow = ("0F6E68", 16, 18, 4)
+        shadow = ("2B5148", 16, 18, 4)
         G = 3   # grow cards a little past their cell box
 
         def card(x0, y0, x1, y1, **kw):
@@ -629,18 +629,12 @@ class DashV3:
         # tiles
         for ((c1, c2), v, sub, lab, hl, icon) in self.tile_cells:
             x0, x1, y0, y1 = X(c1), X(c2 + 1), Y(3), Y(8)
-            if hl:
-                card(x0, y0 - 6, x1, y1 + 6, radius=0.16, fill=None, grad=([(0, "1EB5A6"), (100, "86DDD3")], 90),
-                          shadow=("17A397", 45, 26, 6), name="Highlight")
-                png = icons.donut(c="E1F3F0", size=96, accent="0B4F4C")
-            else:
-                card(x0, y0, x1, y1, radius=0.14, fill=WHITE, shadow=shadow, name="Tile")
-                png = icons.ICONS[icon](c="0F6E68", size=96)
-            fg = WHITE if hl else NAVY
+            card(x0, y0, x1, y1, radius=0.14, fill=NAVY, shadow=shadow, name="Tile")
+            png = icons.donut(c="FAF7F2", size=96, accent="D29A3A") if icon == "donut" else icons.ICONS[icon](c="FAF7F2", size=96)
             lay.picture(x0 + 16, y0 + 22, x0 + 60, y0 + 66, png)
-            lay.text(x0 + 66, y0 + 12, x1 - 10, y0 + 56, textlink=v, size=24 if not hl else 26, bold=not hl, color=fg, align="c")
-            lay.text(x0 + 66, y0 + 58, x1 - 10, y0 + 76, textlink=sub, size=9, color="E3F7F4" if hl else "5F7472", align="c")
-            lay.text(x0 + 10, y1 - 28, x1 - 10, y1 - 8, textlink=lab, size=11, color=fg, align="c")
+            lay.text(x0 + 66, y0 + 12, x1 - 10, y0 + 56, textlink=v, size=24, bold=True, color=BRASS, align="c")
+            lay.text(x0 + 66, y0 + 58, x1 - 10, y0 + 76, textlink=sub, size=9, color="C9D3CF", align="c")
+            lay.text(x0 + 10, y1 - 28, x1 - 10, y1 - 8, textlink=lab, size=11, color=PAPER, align="c")
             if c1 == TILES[2][0]:
                 pass
         # strip pills
@@ -677,8 +671,8 @@ class DashV3:
         sl.overlap = 100
         sl.gapWidth = 0
         sl.add_data(Reference(ws, min_col=E0 + 14, max_col=E0 + 15, min_row=4, max_row=4), titles_from_data=False)
-        sl.series[0].graphicalProperties.solidFill = NAVY
-        sl.series[1].graphicalProperties.solidFill = "BFE7E1"
+        sl.series[0].graphicalProperties.solidFill = BRASS
+        sl.series[1].graphicalProperties.solidFill = "2B5148"
         for s in sl.series:
             s.graphicalProperties.line.noFill = True
         clean_chart(sl, legend=False)

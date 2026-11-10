@@ -1,69 +1,69 @@
 {
-  "name": "Ultimate Productivity Bundle \u2014 Design System",
-  "version": "2.0.0 (teal)",
+  "name": "Brass Ledger — Design System",
+  "version": "3.0.0 (Brass Ledger)",
   "color": {
     "primary": {
-      "deep_navy": "#0B4F4C",
-      "midnight_blue": "#0F6E68",
-      "professional_blue": "#14958B",
-      "soft_blue": "#E1F3F0"
+      "deep_navy": "#1F3D36",
+      "midnight_blue": "#2B5148",
+      "professional_blue": "#D29A3A",
+      "soft_blue": "#EFEAE0"
     },
     "accent": {
-      "teal": "#1FA99C",
-      "soft_teal": "#DDF3EF",
-      "lavender": "#9B7BE0",
-      "soft_lavender": "#F1ECFB"
+      "teal": "#2E7D4F",
+      "soft_teal": "#E4EFE8",
+      "lavender": "#A87620",
+      "soft_lavender": "#F6EBD3"
     },
     "neutral": {
-      "background": "#EDF5F4",
+      "background": "#FAF7F2",
       "white": "#FFFFFF",
-      "light_gray": "#E7EFEE",
-      "medium_gray": "#9AAAA9",
-      "dark_text": "#1F3533",
-      "secondary_text": "#5F7472",
-      "border": "#D5E5E2"
+      "light_gray": "#F1ECE2",
+      "medium_gray": "#B8B2A6",
+      "dark_text": "#222222",
+      "secondary_text": "#444444",
+      "border": "#E6E1D8"
     },
     "status": {
-      "success": "#1E9E75",
-      "success_bg": "#E2F5EE",
-      "warning": "#EE8A3A",
-      "warning_bg": "#FEF0E3",
-      "danger": "#CF3A43",
-      "danger_bg": "#FBE8E9",
-      "info": "#2F6FAA",
-      "info_bg": "#E6EFF8"
+      "success": "#2E7D4F",
+      "success_bg": "#E4EFE8",
+      "warning": "#9A5B14",
+      "warning_bg": "#FBEFD9",
+      "danger": "#B3382C",
+      "danger_bg": "#F8E4E0",
+      "info": "#1F3D36",
+      "info_bg": "#E7EDEA"
     },
     "finance": {
-      "income": "#1FA99C",
-      "expense": "#CF3A43",
-      "savings": "#2F6FAA",
-      "goals": "#9B7BE0"
+      "income": "#2E7D4F",
+      "expense": "#B3382C",
+      "savings": "#A87620",
+      "goals": "#1F3D36"
     }
   },
   "cell_conventions": {
     "user_input": {
-      "fill": "#E1F3F0",
-      "meaning": "Light mint \u2014 type or pick a value here"
+      "fill": "#FFFFFF",
+      "meaning": "White with a border — type or pick a value here"
     },
     "standard": {
       "fill": "#FFFFFF",
-      "meaning": "White \u2014 standard information / labels"
+      "meaning": "White — standard information / labels"
     },
     "calculated": {
-      "fill": "#E7EFEE",
-      "meaning": "Light grey \u2014 formula, do not overwrite"
+      "fill": "#F1ECE2",
+      "meaning": "Paper tint — formula, do not overwrite"
     },
     "positive": {
       "fill": "#E2F4F0",
-      "meaning": "Light teal \u2014 positive result"
+      "meaning": "Light teal — positive result"
     },
     "warning": {
       "fill": "#FCEAEC",
-      "meaning": "Light red \u2014 warning or negative result"
+      "meaning": "Light red — warning or negative result"
     },
     "optional": {
       "fill": "#F0EDFC",
-      "meaning": "Lavender \u2014 optional / secondary information"
+      "meaning": "Lavender — optional / secondary information"
     }
   },
   "typography": {

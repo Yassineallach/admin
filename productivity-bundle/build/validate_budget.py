@@ -439,7 +439,7 @@ def check_blank(path, ed):
     res, wb = recalc(path)
     check(f"{ed} blank: no errors", res.get("total_errors", 1) == 0, str(res.get("error_summary")))
     da = wb[B.S_DASH]
-    check(f"{ed} blank: no unpaid bills message", da["B66"].value == "No unpaid bills — nice!", da["B66"].value)
+    check(f"{ed} blank: no unpaid bills message", da["B66"].value == "No unpaid bills", da["B66"].value)
     check(f"{ed} blank: savings rate dash", da["B11"].value == "—", da["B11"].value)
     check(f"{ed} blank: budget year = this year", wb[B.S_SET]["C12"].value == dt.date.today().year)
     check(f"{ed} blank: dropdown categories", wb[B.S_SET][f"AG{B.M1}"].value == "Salary")

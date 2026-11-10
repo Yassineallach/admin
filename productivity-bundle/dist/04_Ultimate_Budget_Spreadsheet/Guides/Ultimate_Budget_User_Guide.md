@@ -58,15 +58,14 @@ The icon sidebar (or text links in Google Sheets) jumps to every section. The Mo
 
 ### Cell colours
 
-| Colour | Meaning |
+| Cell | Meaning |
 |---|---|
-| Light mint | Type here |
-| Grey | Calculated: don't type over it |
-| Lavender | Optional, or a system list |
-| Teal tint | Income, or a good result |
-| Light red | Expenses, warnings, overdue or over budget |
-| Blue | Savings |
-| Lavender accents | Financial goals |
+| White with a border | Type here, or pick from the dropdown |
+| Shaded (paper tint) | Calculated: don't type over it |
+| Brass tint | Optional, or a system list |
+| Green tint | Positive result, done, or income |
+| Red tint | Warning: overdue, over budget, or a negative result |
+| Green block with a brass figure | A result: totals and key numbers |
 
 ## How the automation works (formula guide)
 
@@ -119,7 +118,7 @@ The demo includes:
 Every tab's subtitle says **DEMO DATA**.
 
 **Remove it:** start from the BLANK file. To clear the demo by hand:
-1. Clear the mint cells on Bank Accounts, Recurring Transactions, Payments, Variable Transactions, Paycheck Dashboard, Sinking Funds, Debt Calculator, Net Worth and the No-Spending Challenge log.
+1. Clear the white input cells on Bank Accounts, Recurring Transactions, Payments, Variable Transactions, Paycheck Dashboard, Sinking Funds, Debt Calculator, Net Worth and the No-Spending Challenge log.
 2. Clear Easy Setup › Today's date override.
 
 ## Capacity
@@ -129,7 +128,7 @@ Every tab's subtitle says **DEMO DATA**.
 - 52 paychecks.
 - 12 income categories and 30 expense categories.
 
-In Excel, the Tables on the data-entry tabs grow when you type below them. Copy the formulas in grey columns down with the new rows.
+In Excel, the Tables on the data-entry tabs grow when you type below them. Copy the formulas in shaded columns down with the new rows.
 
 ## Troubleshooting
 

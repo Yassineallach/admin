@@ -4,14 +4,17 @@ Copy-paste ready. Every screenshot is a real render of the DEMO workbook.
 
 ## Photos (upload in this order)
 
+Files are in `images/`, 2700 × 2025 px (4:3), in the Brass Ledger layout. Every screenshot is a real render of the finished product.
+
 | # | File | Alt text |
 |---|---|---|
-| 1 | 01_hero.png | Net Worth Tracker spreadsheet shown on a laptop |
-| 2 | 02_main_feature.png | Net Worth Tracker: know your number |
-| 3 | 03_second_feature.png | Net Worth Tracker: watch it grow |
-| 4 | 04_easy_start.png | Start tab with settings, instructions and links |
-| 5 | 05_whats_included.png | Files included and compatibility |
-| 6 | 06_excel_and_sheets.png | The Excel edition and the Google Sheets edition |
+| 1 | 01_hero.png | Net Worth Tracker: See what you own, what you owe and the difference |
+| 2 | 02_whats_included.png | What's included in Net Worth Tracker |
+| 3 | 03_main_tool.png | Assets minus liabilities, totalled for you |
+| 4 | 04_summary.png | Follow the change month by month |
+| 5 | 05_how_it_works.png | How Net Worth Tracker works in three steps |
+| 6 | 06_compatibility.png | Which apps Net Worth Tracker works with |
+| 7 | 07_what_you_receive.png | The files you receive with Net Worth Tracker |
 
 ## Title (125 / 140 characters)
 
@@ -50,7 +53,7 @@ Microsoft Excel, Google Sheets, digital download, spreadsheet template
 ## Description
 
 ```
-See your full financial picture in one place. List what you own and what you owe — your net worth, totals by type and debt-to-asset ratio calculate instantly. Record the totals each month to watch your net worth grow over 24 months.
+See what you own, what you owe and the difference. List what you own and what you owe — your net worth, totals by type and debt-to-asset ratio calculate instantly. Record the totals each month to watch your net worth grow over 24 months.
 
 ━━━━━━━━━━━━━━━━━━━━
 FEATURES
@@ -82,8 +85,8 @@ PLEASE NOTE
 ━━━━━━━━━━━━━━━━━━━━
 • This is a DIGITAL product. Nothing will be shipped.
 • For personal use. Please don't resell or share the files.
-• Want the complete system? This tracker is also included in the Ultimate Budget Spreadsheet (28 tabs) in my shop.
-• Questions? Send me a message — I'm happy to help.
+• This tracker is also part of the Ultimate Budget Spreadsheet (28 tabs) in my shop.
+• Questions? Send me a message and I will help.
 ```
 
 > **AI disclosure (check Etsy's current policy).** Parts of this product and its listing images were made with AI assistance. If Etsy still asks for it, add *"Designed by me with the help of AI tools."* to the description.
@@ -95,6 +98,6 @@ Upload everything in `etsy_upload/`: `Net_Worth_Tracker.zip` and `START_HERE.pdf
 ## Seller checklist
 
 - [ ] Open the Excel DEMO file in real Excel and the Google Sheets file in Google Sheets once.
-- [ ] Upload the 6 images in order and add the alt text.
+- [ ] Upload the 7 images in order and add the alt text.
 - [ ] Paste the title, tags, description and materials. Set the price.
 - [ ] Upload the two files from `etsy_upload/`.

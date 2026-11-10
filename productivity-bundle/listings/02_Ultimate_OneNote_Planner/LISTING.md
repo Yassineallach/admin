@@ -14,20 +14,19 @@ The images, the buyer guide and START_HERE.pdf switch automatically: they only m
 
 ## Photos (upload in this order)
 
-Files are in `images/`, 2400 × 1800 px. Every screenshot is a real page of the PDF planner.
+Files are in `images/`, 2700 × 2025 px (4:3), in the Brass Ledger layout. Every screenshot is a real render of the finished product.
 
 | # | File | Alt text |
 |---|---|---|
-| 1 | 01_hero.png | Digital planner 2027 on two tablets showing the hyperlinked general index and a January monthly calendar |
-| 2 | 02_whats_included.png | Overview of the planner: 12 monthly sections, 53 weekly trackers, 111 templates in 10 categories, 8 note layouts |
-| 3 | 03_hyperlinked.png | General index page with links to every month, week and template, plus side tabs on every page |
-| 4 | 04_monthly.png | January 2027 monthly calendar, monthly goals and monthly reflection pages |
-| 5 | 05_weekly.png | Weekly tracker page with top 3 goals, daily plan, habit tracker and weekly reflection |
-| 6 | 06_templates.png | Six example templates: project charter, priority matrix, meeting notes, habit tracker, sales pipeline, invoice |
-| 7 | 07_template_categories.png | Template names in six of the ten categories |
-| 8 | 08_notes.png | General notes layout, one of eight note layouts |
-| 9 | 09_which_file.png | Which apps the planner works with |
-| 10 | 10_how_it_works.png | Three steps to start: download, open, plan from the general index |
+| 1 | 01_hero.png | Ultimate Planner 2027: Your year, your weeks and your work notes in one file |
+| 2 | 02_whats_included.png | What's included in Ultimate Planner 2027 |
+| 3 | 03_main_tool.png | One page for the week: goals, plan, habits |
+| 4 | 04_summary.png | Every page is one tap from the index |
+| 5 | 05_how_it_works.png | How Ultimate Planner 2027 works in three steps |
+| 6 | 06_compatibility.png | Which apps Ultimate Planner 2027 works with |
+| 7 | 07_what_you_receive.png | The files you receive with Ultimate Planner 2027 |
+
+The first image is the thumbnail shown in search results.
 
 ## Video (optional, recommended)
 
@@ -52,7 +51,7 @@ digital planner, 2027 planner, undated planner, goodnotes planner, notability pl
 ## Description
 
 ```
-One planner for your whole year — and your work. Yearly goals, 12 monthly sections, 53 weekly trackers, 111 professional templates and 8 note layouts, all linked from one General Index.
+One planner for your whole year — and your work. Yearly goals, 12 monthly sections, 53 weekly trackers, 111 work templates and 8 note layouts, all linked from one General Index.
 
 TWO EDITIONS INCLUDED: a planner dated for 2027 and an undated planner you can start any month and reuse every year.
 
@@ -109,7 +108,7 @@ PLEASE NOTE
 • The 2027 edition has dated calendars and weekly pages. The undated edition has blank date grids. The 111 templates and 8 note layouts are undated in both.
 • Pages are landscape, US Letter size. They aren't fillable form fields: you write with a stylus or add text boxes in your note app.
 • For personal use. Please don't resell or share the files.
-• Questions? Send me a message — I'm happy to help.
+• Questions? Send me a message and I will help.
 ```
 
 ---
@@ -197,7 +196,7 @@ Run `python3 build/build_listing_package_planner.py`, then upload everything in 
 ## Seller checklist before publishing
 
 - [ ] Open the PDF in GoodNotes or Notability on a tablet and tap a few side tabs and index links.
-- [ ] Upload the 10 images in order and add the alt text.
+- [ ] Upload the 7 images in order and add the alt text.
 - [ ] Paste the Version A title, tags and description. Set the price.
 - [ ] Upload the files from `etsy_upload/`.
 - [ ] Version B only: follow the Seller Guide, then **open the exported .onepkg as a new notebook and click several links** before uploading it.

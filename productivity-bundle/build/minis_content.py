@@ -23,8 +23,8 @@ PLEASE NOTE
 ━━━━━━━━━━━━━━━━━━━━
 • This is a DIGITAL product. Nothing will be shipped.
 • For personal use. Please don't resell or share the files.
-• Want the complete system? This tracker is also included in the Ultimate Budget Spreadsheet (28 tabs) in my shop.
-• Questions? Send me a message — I'm happy to help."""
+• This tracker is also part of the Ultimate Budget Spreadsheet (28 tabs) in my shop.
+• Questions? Send me a message and I will help."""
 
 MINIS = {
     "debt": dict(
@@ -46,7 +46,7 @@ MINIS = {
         title="Debt Payoff Calculator Spreadsheet, Debt Snowball Avalanche Tracker, Excel Google Sheets, Debt Free Plan, Credit Card Payoff",
         tags="debt payoff tracker, debt snowball, debt avalanche, debt tracker, debt free, credit card payoff, loan payoff, google sheets debt, excel debt tracker, debt calculator, budget template, financial planner, debt spreadsheet",
         price=("$4.99", "$3.49", "Debt payoff trackers on Etsy commonly sell for about $3–$8."),
-        desc="""Find your debt-free date in minutes. List your debts, pick snowball or avalanche, add an extra payment — this calculator builds your month-by-month payoff plan automatically. Tested formulas: works any year, any currency.
+        desc="""Know the date you will be debt-free. List your debts, pick snowball or avalanche, add an extra payment — this calculator builds your month-by-month payoff plan automatically. Tested formulas: works any year, any currency.
 
 ━━━━━━━━━━━━━━━━━━━━
 FEATURES
@@ -78,7 +78,7 @@ FEATURES
         title="Sinking Funds Tracker Spreadsheet, Savings Goal Tracker Excel Google Sheets, Savings Challenge, Budget Savings Planner Template",
         tags="sinking funds, savings tracker, savings goal, sinking fund tracker, savings challenge, google sheets budget, excel savings, money saving, budget planner, savings planner, financial goals, emergency fund, savings template",
         price=("$4.49", "$2.99", "Sinking-fund and savings trackers commonly sell for about $2–$7."),
-        desc="""Plan for the expenses you know are coming — holidays, car repairs, insurance, travel — and watch every savings goal fill up. Log deposits and withdrawals; balances, progress and on-track status update automatically.
+        desc="""Save for each goal and see if you are on track: holidays, car repairs, insurance, travel. Log deposits and withdrawals; balances, progress and on-track status update automatically.
 
 ━━━━━━━━━━━━━━━━━━━━
 FEATURES
@@ -108,7 +108,7 @@ FEATURES
         title="Net Worth Tracker Spreadsheet, Assets and Liabilities Tracker Excel Google Sheets, Wealth Tracker, Financial Planner Template",
         tags="net worth tracker, net worth, wealth tracker, assets tracker, financial planner, sheets finance, excel net worth, money tracker, personal finance, debt tracker, investment tracker, finance template, budget planner",
         price=("$3.99", "$2.79", "Net worth trackers commonly sell for about $2–$6."),
-        desc="""See your full financial picture in one place. List what you own and what you owe — your net worth, totals by type and debt-to-asset ratio calculate instantly. Record the totals each month to watch your net worth grow over 24 months.
+        desc="""See what you own, what you owe and the difference. List what you own and what you owe — your net worth, totals by type and debt-to-asset ratio calculate instantly. Record the totals each month to watch your net worth grow over 24 months.
 
 ━━━━━━━━━━━━━━━━━━━━
 FEATURES
@@ -134,7 +134,7 @@ FEATURES
         title="No Spend Challenge Tracker Spreadsheet, 30 Day Savings Challenge Excel Google Sheets, Spending Tracker, Money Saving Challenge",
         tags="no spend challenge, savings challenge, no spend tracker, money challenge, spending tracker, frugal living, 30 day challenge, sheets tracker, excel tracker, saving money, budget challenge, habit tracker, money saving",
         price=("$2.99", "$1.99", "No-spend and savings challenges commonly sell for about $1–$5."),
-        desc="""Take a no-spend challenge and see exactly how much you save. Choose the length (up to 60 days) and your allowed exceptions, then mark each day — your streaks, success rate and money saved update automatically.
+        desc="""Count your no-spend days and what they saved. Choose the length (up to 60 days) and your allowed exceptions, then mark each day — your streaks, success rate and money saved update automatically.
 
 ━━━━━━━━━━━━━━━━━━━━
 FEATURES
@@ -164,7 +164,7 @@ FEATURES
         title="Investment Growth Calculator Spreadsheet, Compound Interest Calculator Excel Google Sheets, Savings Growth, Retirement Planner",
         tags="investment tracker, compound interest, invest calculator, savings growth, retirement planner, financial planner, sheets finance, excel calculator, wealth building, money growth, finance template, investing planner, fire calculator",
         price=("$3.99", "$2.79", "Compound-interest and investment calculators commonly sell for about $2–$7."),
-        desc="""See how regular investing could grow over time. Enter a starting amount, a regular contribution, an assumed return and the number of years — the future value, contributions, growth and inflation-adjusted value update instantly. Compare three return scenarios side by side.
+        desc="""See what regular investing could be worth. Enter a starting amount, a regular contribution, an assumed return and the number of years — the future value, contributions, growth and inflation-adjusted value update instantly. Compare three return scenarios side by side.
 
 All results are HYPOTHETICAL projections for planning and education, not guaranteed returns or financial advice.
 
@@ -196,7 +196,7 @@ FEATURES
         title="Habit Tracker Spreadsheet Google Sheets Excel, Monthly Habit Tracker, Daily Goal Tracker, Digital Habit Tracker, 12 Months",
         tags="habit tracker, digital habits, google sheets habit, habit spreadsheet, daily tracker, goal tracker, monthly tracker, routine tracker, self care tracker, productivity, excel tracker, habit planner, new year goals",
         price=("$3.99", "$2.79", "Habit trackers on Etsy range from under $1 to about $18; most sell for $2–$7."),
-        desc="""Build better habits one tick at a time. Type up to 12 habits, tick ✓ each day — every month shows your success rate per habit and a daily completion chart, and the year overview shows your progress month by month.
+        desc="""See which habits you keep, month by month. Type up to 12 habits, tick ✓ each day — every month shows your success rate per habit and a daily completion chart, and the year overview shows your progress month by month.
 
 ━━━━━━━━━━━━━━━━━━━━
 FEATURES

@@ -1,4 +1,4 @@
-"""Etsy listings for the six mini-products: real screenshots, 6 images each, LISTING.md and the etsy_upload package.
+"""Etsy listings for the six mini-products: real screenshots, 7 brand-layout images each, LISTING.md and the etsy_upload package.
 
 Usage: python listing_minis.py [--only debt funds ...] [--reshoot]
 Output: listings/05_Minis/<Product>/{screens,screens_sheets,images,etsy_upload}/ and LISTING.md
@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import argparse
 import glob
-import io
 import shutil
 import subprocess
 import sys
@@ -15,19 +14,17 @@ import tempfile
 import zipfile
 from pathlib import Path
 
-from PIL import Image, ImageDraw
+from PIL import Image
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import build_minis as M  # noqa: E402
-import icons  # noqa: E402
 import md_to_pdf  # noqa: E402
 from common import solidify_databars  # noqa: E402
-from listing_kit import (CORAL, DARK, GREY, MINT, NAVY, ORANGE, TEAL, W, WHITE, canvas, card, footer, framed,  # noqa: E402
-                         heading, icon_bullet, laptop, pill, text)
+import brand_listing as BL  # noqa: E402
+from brand_listings_content import mini_spec  # noqa: E402
 from minis_content import COMMON_NOTE, MINIS  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
-FOOT = "Instant download  ·  Excel + Google Sheets  ·  No macros"
 
 
 def crop_tail(path):
@@ -82,6 +79,11 @@ def shoot(key, edition, folder, only=None):
         stem = tmp / name
         subprocess.run(["pdftoppm", "-f", str(i), "-l", str(i), "-r", "220", "-png", "-singlefile", str(pdf), str(stem)], capture_output=True)
         subprocess.run(["convert", f"{stem}.png", "-trim", "+repage", str(folder / f"{name}.png")])
+        w_ = Image.open(folder / f"{name}.png").width
+        if w_ < 2000:                                  # tall tab fitted to one page: render again, sharper
+            subprocess.run(["pdftoppm", "-f", str(i), "-l", str(i), "-r", str(int(220 * 2300 / w_)), "-png", "-singlefile", str(pdf), str(stem)],
+                           capture_output=True)
+            subprocess.run(["convert", f"{stem}.png", "-trim", "+repage", str(folder / f"{name}.png")])
         crop_tail(folder / f"{name}.png")
     shutil.rmtree(tmp, ignore_errors=True)
 
@@ -91,133 +93,23 @@ class Lister:
         self.key, self.c = key, MINIS[key]
         self.name, self.slug, _ = M.PRODUCTS[key]
         self.out = ROOT / "listings" / "05_Minis" / self.slug
-        self.screens, self.sheets, self.images = self.out / "screens", self.out / "screens_sheets", self.out / "images"
-
-    def shot(self, name, top=0.0, bottom=1.0, folder=None, left=0.0, right=1.0):
-        im = Image.open((folder or self.screens) / f"{name}.png").convert("RGB")
-        w, h = im.size
-        return im.crop((int(w * left), int(h * top), int(w * right), int(h * bottom)))
-
-    def save(self, img, name):
-        self.images.mkdir(parents=True, exist_ok=True)
-        img.save(self.images / name, "PNG", optimize=True)
-
-    def ic(self, name):
-        return icons.ICONS[name](c="FFFFFF", size=96)
-
-    def hero(self):
-        kicker, title, checks = self.c["hero"]
-        img = canvas()
-        text(img, (150, 170), kicker, 60, "SemiBold", TEAL)
-        b = text(img, (150, 250), title, 104, "ExtraBold", NAVY, spacing=0)
-        text(img, (150, b[3] + 50), "Excel & Google Sheets template", 46, "Medium", DARK)
-        y = b[3] + 160
-        for t_ in checks:
-            img = card(img, (150, y, 860, y + 88), radius=44, shade=False, fill=WHITE)
-            text(img, (200, y + 44), "✓", 40, "Bold", TEAL, anchor="lm")
-            text(img, (260, y + 44), t_, 36, "SemiBold", DARK, anchor="lm")
-            y += 110
-        x_ = pill(img, (150, y + 40), "NO MACROS", 38, TEAL)
-        pill(img, (x_ + 26, y + 40), "DEMO + BLANK", 38, ORANGE)
-        t0, b0, l0, r0 = self.c.get("hero_crop", (0, 0.62, 0, 1))
-        img, _ = laptop(img, self.shot("main", t0, b0, left=l0, right=r0), 1640, 330, 1300)
-        footer(img, FOOT)
-        self.save(img, "01_hero.png")
-
-    def feature(self, spec, shot, fname):
-        title, sub, bullets = spec
-        img = canvas()
-        heading(img, title, sub)
-        img, _ = framed(img, self.shot(shot), 110, 360, 1450, 1330)
-        y = 400
-        for icon, t_, b_ in bullets:
-            y = icon_bullet(img, (1640, y), self.ic(icon), t_, b_, w=680, title_size=40, body_size=29) + 46
-        footer(img, FOOT)
-        self.save(img, fname)
-
-    def start_tab(self):
-        img = canvas()
-        heading(img, "Easy to start", "A Start tab with instructions, settings and links to every tab")
-        img, _ = framed(img, self.shot("start"), 110, 360, 1450, 1330)
-        steps = self.c["steps"]
-        y = 420
-        for i, s_ in enumerate(steps):
-            d = ImageDraw.Draw(img)
-            d.ellipse((1640, y, 1740, y + 100), fill=TEAL)
-            text(img, (1690, y + 50), str(i + 1), 48, "Bold", WHITE, anchor="mm")
-            text(img, (1770, y + 22), s_, 38, "SemiBold", DARK, max_w=540)
-            y += 200
-        footer(img, FOOT)
-        self.save(img, "04_easy_start.png")
-
-    def included(self):
-        img = canvas()
-        heading(img, "What you get", "Two editions, demo and blank, ready in minutes")
-        img = card(img, (130, 380, W - 130, 900), radius=40)
-        text(img, (190, 430), "YOU RECEIVE", 30, "Bold", TEAL)
-        x, y = 190, 500
-        for f_ in ("Excel – DEMO", "Excel – BLANK", "Google Sheets – DEMO", "Google Sheets – BLANK", "Start Here PDF"):
-            x = pill(img, (x, y), f_, 34, MINT, NAVY) + 26
-        text(img, (190, 640), "DEMO files show sample data so you can explore; BLANK files are ready for your own numbers.",
-             34, "Medium", GREY, max_w=W - 400)
-        img = card(img, (130, 980, W - 130, 1620), radius=40)
-        text(img, (190, 1030), "WORKS WITH", 32, "Bold", TEAL)
-        rows = [("Microsoft Excel (Windows & Mac)", "Clickable icon sidebar, protected formulas"),
-                ("Excel for the web", "Opens the same Excel file"),
-                ("Google Sheets", "Dedicated edition with the same formulas and charts"),
-                ("Not for Apple Numbers", "Not supported")]
-        y = 1100
-        for t_, b_ in rows:
-            mark, color = ("✗", CORAL) if t_.startswith("Not") else ("✓", TEAL)
-            text(img, (200, y), mark, 44, "Bold", color)
-            text(img, (270, y), t_, 38, "SemiBold", DARK)
-            text(img, (1150, y + 4), b_, 32, "Regular", GREY, max_w=1050)
-            y += 120
-        footer(img, FOOT)
-        self.save(img, "05_whats_included.png")
-
-    def editions(self):
-        img = canvas()
-        heading(img, "Excel & Google Sheets editions", "Both included — pick the app you already use")
-        img, _ = framed(img, self.shot("main", 0, 0.55), 110, 330, 1480, 1000)
-        img, _ = framed(img, self.shot("main", 0, 0.55, folder=self.sheets), 1000, 800, 1290, 860)
-        pill(img, (1640, 380), "Excel edition", 38, NAVY)
-        pill(img, (140, 1230), "Google Sheets edition", 38, TEAL)
-        footer(img, FOOT)
-        self.save(img, "06_excel_and_sheets.png")
+        self.screens = self.out / "screens"
 
     def images_all(self):
-        self.hero()
-        self.feature(self.c["f1"], "main", "02_main_feature.png")
-        second = [s[0] for s in self.c["shots"] if s[0] not in ("main", "start")]
-        if self.c["f2"] and second:
-            self.feature(self.c["f2"], second[0], "03_second_feature.png")
-        else:
-            self.feature(("Every detail at a glance", self.c["f1"][1], self.c["f1"][2][2:] or self.c["f1"][2]), "main", "03_second_feature.png")
-        self.start_tab()
-        self.included()
-        self.editions()
+        self.spec = mini_spec(self.key)
+        BL.make(self.spec)
 
     def listing_md(self):
         c = self.c
         tags = [t.strip() for t in c["tags"].split(",")]
         assert len(c["title"]) <= 140, (self.key, len(c["title"]))
         assert len(tags) == 13 and all(len(t) <= 20 for t in tags), (self.key, [t for t in tags if len(t) > 20])
-        alts = {"01_hero.png": f"{self.name} spreadsheet shown on a laptop", "02_main_feature.png": f"{self.name}: {c['f1'][0].lower()}",
-                "03_second_feature.png": f"{self.name}: {(c['f2'] or c['f1'])[0].lower()}",
-                "04_easy_start.png": "Start tab with settings, instructions and links", "05_whats_included.png": "Files included and compatibility",
-                "06_excel_and_sheets.png": "The Excel edition and the Google Sheets edition"}
         price, launch, market = c["price"]
         md = f"""# Etsy listing — {self.name}
 
 Copy-paste ready. Every screenshot is a real render of the DEMO workbook.
 
-## Photos (upload in this order)
-
-| # | File | Alt text |
-|---|---|---|
-""" + "\n".join(f"| {i + 1} | {f} | {a} |" for i, (f, a) in enumerate(alts.items())) + f"""
-
+{BL.photos_table(mini_spec(self.key))}
 ## Title ({len(c['title'])} / 140 characters)
 
 ```
@@ -269,7 +161,7 @@ Upload everything in `etsy_upload/`: `{self.slug}.zip` and `START_HERE.pdf`.
 ## Seller checklist
 
 - [ ] Open the Excel DEMO file in real Excel and the Google Sheets file in Google Sheets once.
-- [ ] Upload the 6 images in order and add the alt text.
+- [ ] Upload the 7 images in order and add the alt text.
 - [ ] Paste the title, tags, description and materials. Set the price.
 - [ ] Upload the two files from `etsy_upload/`.
 """
@@ -290,7 +182,7 @@ Upload everything in `etsy_upload/`: `{self.slug}.zip` and `START_HERE.pdf`.
         md = up / "START_HERE.md"
         md.write_text(f"""# Start Here — {self.name}
 
-Thank you for your purchase! Your download has this guide and **{self.slug}.zip**. Unzip it first (double-click on Mac; right-click › Extract All on Windows).
+Thank you for your purchase from Brass Ledger. Your download has this guide and **{self.slug}.zip**. Unzip it first (double-click on Mac; right-click › Extract All on Windows).
 
 ## Which file do I open?
 
@@ -314,11 +206,11 @@ Double-click the file. If you see *Protected View*, click **Enable Editing**. Th
 
 {steps}
 
-Every workbook opens on a **Start** tab with settings and instructions. Light-mint cells are for your input; grey cells calculate by themselves.
+Every workbook opens on a **Start** tab with settings and instructions. White cells with a border are for your input; shaded cells calculate by themselves.
 
 ## Need help?
 
-Send me a message on Etsy. I'm happy to help.
+Send me a message on Etsy and I will help.
 """, encoding="utf-8")
         md_to_pdf.render(md, up / "START_HERE.pdf", footer=f"{self.name} · Start Here")
         md.unlink()
@@ -333,7 +225,6 @@ def main():
         L_ = Lister(key)
         if a.reshoot or not (L_.screens / "main.png").exists():
             shoot(key, "excel", L_.screens)
-            shoot(key, "gsheets", L_.sheets, only={"main"})
         L_.images_all()
         L_.listing_md()
         L_.package()

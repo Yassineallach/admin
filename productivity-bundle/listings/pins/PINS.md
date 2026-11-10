@@ -20,7 +20,7 @@ Suggested boards: *Budget Spreadsheets & Money Trackers*, *Planner & Productivit
 
 - **Links to:** the Etsy listing for `04_Ultimate_Budget_Spreadsheet`
 - **Title:** Budget Spreadsheet for Excel & Google Sheets — 28 tabs
-- **Description:** A complete budget system: monthly budgets, bill calendar, debt snowball plan, sinking funds, net worth and more. Log once, everything updates. #budgetspreadsheet #budgeting #debtfree #googlesheets #personalfinance
+- **Description:** monthly budgets, bill calendar, debt snowball plan, sinking funds, net worth and more. Log once, everything updates. #budgetspreadsheet #budgeting #debtfree #googlesheets #personalfinance
 
 ## pin_budget_debt.png
 

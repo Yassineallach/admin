@@ -23,27 +23,28 @@ from reportlab.platypus import (BaseDocTemplate, Flowable, Frame, PageBreak, Pag
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import planner_content as PC  # noqa: E402
 
-LIB = "/usr/share/fonts/truetype/liberation/"
-pdfmetrics.registerFont(TTFont("Sans", LIB + "LiberationSans-Regular.ttf"))
-pdfmetrics.registerFont(TTFont("Sans-Bold", LIB + "LiberationSans-Bold.ttf"))
+import brand as BR  # noqa: E402
+pdfmetrics.registerFont(TTFont("Sans", str(BR.INTER[400])))
+pdfmetrics.registerFont(TTFont("Sans-Bold", str(BR.INTER[700])))
+pdfmetrics.registerFont(TTFont("Head", str(BR.FRAUNCES)))
 pdfmetrics.registerFont(TTFont("Sym", "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"))
 pdfmetrics.registerFontFamily("Sans", normal="Sans", bold="Sans-Bold", italic="Sans", boldItalic="Sans-Bold")
 
 PW, PH = landscape(letter)
 RAIL = 74
 MX0, MX1, MY0, MY1 = RAIL + 26, PW - 26, 24, PH - 22
-NAVY, TXT, SUB = colors.HexColor("#0B4F4C"), colors.HexColor("#1F3533"), colors.HexColor("#5F7472")
-LINE, HEAD, LABEL, CANVAS = colors.HexColor("#D5E5E2"), colors.HexColor("#E2F2EF"), colors.HexColor("#E7EFEE"), colors.HexColor("#F6FAF9")
+NAVY, TXT, SUB = colors.HexColor("#1F3D36"), colors.HexColor("#222222"), colors.HexColor("#444444")
+LINE, HEAD, LABEL, CANVAS = colors.HexColor("#E6E1D8"), colors.HexColor("#EFEAE0"), colors.HexColor("#F1ECE2"), colors.HexColor("#FAF7F2")
 CW = MX1 - MX0
 
 ST = {
-    "title": ParagraphStyle("t", fontName="Sans-Bold", fontSize=19, leading=23, textColor=NAVY),
+    "title": ParagraphStyle("t", fontName="Head", fontSize=21, leading=25, textColor=NAVY),
     "sub": ParagraphStyle("s", fontName="Sans", fontSize=9, leading=12, textColor=SUB),
     "h": ParagraphStyle("h", fontName="Sans-Bold", fontSize=10.5, leading=13, spaceBefore=7, spaceAfter=3),
     "cell": ParagraphStyle("c", fontName="Sans", fontSize=8, leading=10, textColor=TXT),
     "cellb": ParagraphStyle("cb", fontName="Sans-Bold", fontSize=8, leading=10, textColor=TXT),
     "note": ParagraphStyle("n", fontName="Sans", fontSize=8.5, leading=11, textColor=TXT),
-    "link": ParagraphStyle("l", fontName="Sans", fontSize=9, leading=13, textColor=colors.HexColor("#14958B")),
+    "link": ParagraphStyle("l", fontName="Sans", fontSize=9, leading=13, textColor=colors.HexColor("#A87620")),
 }
 
 
@@ -67,8 +68,26 @@ class Mark(Flowable):
         self.canv._planner_tab = self.tab
 
 
+_CMAP = set(pdfmetrics.getFont("Sans").face.charToGlyph)
+
+
+def sym(text):
+    """Characters the body font can't draw (☐ ⌂ ● …) fall back to the symbol font; markup tags are left alone."""
+    out, in_tag = [], False
+    for ch in str(text):
+        if ch == "<":
+            in_tag = True
+        if in_tag or ord(ch) in _CMAP or ch.isspace():
+            out.append(ch)
+        else:
+            out.append(f'<font name="Sym">{ch}</font>')
+        if ch == ">":
+            in_tag = False
+    return "".join(out)
+
+
 def P(text, style="cell"):
-    return Paragraph(text, ST[style])
+    return Paragraph(sym(text), ST[style])
 
 
 def grid(data, widths, header=True, row_h=None, extra=None, label_col=False):
@@ -97,10 +116,10 @@ def block(b, width, color):
     col = hexc(color)
     if kind == "h":
         st = ParagraphStyle("hx", parent=ST["h"], textColor=col)
-        return [Paragraph(b[1], st)]
+        return [Paragraph(sym(b[1]), st)]
     if kind == "note":
-        t = Table([[Paragraph(b[1], ST["note"])]], colWidths=[width])
-        t.setStyle(TableStyle([("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#FEF0E3")), ("BOX", (0, 0), (-1, -1), 0, colors.white),
+        t = Table([[Paragraph(sym(b[1]), ST["note"])]], colWidths=[width])
+        t.setStyle(TableStyle([("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#F6EBD3")), ("BOX", (0, 0), (-1, -1), 0, colors.white),
                                ("LEFTPADDING", (0, 0), (-1, -1), 8), ("TOPPADDING", (0, 0), (-1, -1), 5), ("BOTTOMPADDING", (0, 0), (-1, -1), 5)]))
         return [t, SP(4)]
     if kind == "fields":
@@ -119,7 +138,7 @@ def block(b, width, color):
         return [grid(data, ws, header=False, row_h=17 * K, extra=extra), SP(4)]
     if kind == "check":
         items = b[1] if isinstance(b[1], list) else [""] * b[1]
-        data = [[Paragraph('<font name="Sym" color="#14958B" size="10">☐</font>', ST["cell"]), P(t)] for t in items]
+        data = [[Paragraph('<font name="Sym" color="#A87620" size="10">☐</font>', ST["cell"]), P(t)] for t in items]
         t = Table(data, colWidths=[16, width - 16], rowHeights=15 * K)
         t.setStyle(TableStyle([("LINEBELOW", (1, 0), (1, -1), 0.5, LINE), ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
                                ("LEFTPADDING", (0, 0), (-1, -1), 2), ("TOPPADDING", (0, 0), (-1, -1), 1), ("BOTTOMPADDING", (0, 0), (-1, -1), 1)]))
@@ -148,7 +167,7 @@ def block(b, width, color):
         hw = 120 if days <= 7 else 90
         dw = (width - hw) / days
         head = ["Habit"] + ([d[:3] for d in PC.DAYS] if days == 7 else [str(i) for i in range(1, days + 1)])
-        box = '<font name="Sym" color="#9AAAA9" size="8">☐</font>'
+        box = '<font name="Sym" color="#B8B2A6" size="8">☐</font>'
         cst = ParagraphStyle("hc", parent=ST["cell"], alignment=TA_CENTER, fontSize=7 if days > 7 else 8)
         data = [[Paragraph(h, cst) if i else P(h, "cellb") for i, h in enumerate(head)]]
         data += [[P(nm)] + [Paragraph(box, cst) for _ in range(days)] for nm in names]
@@ -166,7 +185,7 @@ def block(b, width, color):
             for di, d in enumerate(wk):
                 row.append("" if undated else str(d.day))
                 if not undated and d.month != m:
-                    extra += [("BACKGROUND", (di, wi + 1), (di, wi + 1), CANVAS), ("TEXTCOLOR", (di, wi + 1), (di, wi + 1), colors.HexColor("#9AAAA9"))]
+                    extra += [("BACKGROUND", (di, wi + 1), (di, wi + 1), CANVAS), ("TEXTCOLOR", (di, wi + 1), (di, wi + 1), colors.HexColor("#B8B2A6"))]
             data.append(row)
         extra.append(("FONTNAME", (0, 1), (-1, -1), "Sans-Bold"))
         return [grid(data, [width / 7] * 7, header=False, row_h=[16 * K] + [rh] * len(weeks), extra=extra), SP(6)]
@@ -215,25 +234,36 @@ def make_rail(tabs):
             if key == cur:
                 canv.setFillColor(colors.white)
                 canv.roundRect(6, y + 1.5, RAIL - 10, h - 3, 4, stroke=0, fill=1)
-                canv.setFillColor(hexc(color))
+                canv.setFillColor(colors.HexColor("#D29A3A"))
                 canv.rect(6, y + 1.5, 3, h - 3, stroke=0, fill=1)
                 canv.setFillColor(NAVY)
                 canv.setFont("Sans-Bold", 7.5)
             else:
-                canv.setFillColor(hexc(color))
-                canv.circle(13, y + h / 2, 2.4, stroke=0, fill=1)
+                canv.setFillColor(colors.HexColor("#D29A3A"))
+                canv.circle(13, y + h / 2, 1.8, stroke=0, fill=1)
                 canv.setFillColor(colors.white)
                 canv.setFont("Sans", 7.5)
             canv.drawString(20, y + h / 2 - 2.6, label)
             canv.linkRect("", target, (0, y, RAIL, y + h), relative=0, thickness=0)
         # index link top-right of the content card
-        canv.setFillColor(colors.HexColor("#14958B"))
-        canv.setFont("Sans", 8)
-        canv.drawRightString(MX1, PH - 26, "⌂ Index")
+        canv.setFillColor(colors.HexColor("#A87620"))
+        canv.setFont("Sans-Bold", 8)
+        canv.drawRightString(MX1, PH - 26, "Index")
+        canv.setFont("Sym", 8)
+        canv.drawRightString(MX1 - 26, PH - 26, "⌂")
         canv.linkRect("", "index", (MX1 - 40, PH - 30, MX1, PH - 18), relative=0, thickness=0)
         canv.setFillColor(SUB)
         canv.setFont("Sans", 7)
         canv.drawRightString(MX1, 16, f"{doc.page}")
+        # brand mark bottom-left: wordmark with its brass double rule
+        em = 8.5
+        canv.setFillColor(NAVY)
+        canv.setFont("Head", em)
+        canv.drawString(MX0, 16, BR.NAME)
+        w = pdfmetrics.stringWidth(BR.NAME, "Head", em)
+        canv.setFillColor(colors.HexColor("#D29A3A"))
+        canv.rect(MX0, 16 - 0.26 * em, w, 0.075 * em, stroke=0, fill=1)
+        canv.rect(MX0, 16 - 0.26 * em - 0.072 * em, w, 0.022 * em, stroke=0, fill=1)
         canv.restoreState()
     return draw
 
@@ -254,9 +284,9 @@ def header(sec_name, color, title, subtitle=""):
                              ("FONTNAME", (0, 0), (-1, -1), "Sans-Bold"), ("FONTSIZE", (0, 0), (-1, -1), 7),
                              ("TOPPADDING", (0, 0), (-1, -1), 3), ("BOTTOMPADDING", (0, 0), (-1, -1), 3), ("LEFTPADDING", (0, 0), (-1, -1), 7),
                              ("RIGHTPADDING", (0, 0), (-1, -1), 6)]))
-    out = [lab, Spacer(1, 4), Paragraph(title, ST["title"])]
+    out = [lab, Spacer(1, 4), Paragraph(sym(title), ST["title"])]
     if subtitle:
-        out.append(Paragraph(subtitle, ST["sub"]))
+        out.append(Paragraph(sym(subtitle), ST["sub"]))
     out.append(Spacer(1, 6))
     return out
 
@@ -283,20 +313,20 @@ def fit_page(p, s):
 
 
 def a(key, text):
-    return f'<a href="#{key}" color="#14958B">{text}</a>'
+    return f'<a href="#{key}" color="#A87620">{text}</a>'
 
 
 def build_pdf(out: Path, year=PC.YEAR):
     secs = PC.build(year)
-    tabs = [("index", "Index", "A9D8D1", "index"), ("start", "Year", "6FCBBE", "year_goals")]
+    tabs = [("index", "Index", "C9D3CF", "index"), ("start", "Year", "D29A3A", "year_goals")]
     for s in secs:
         if s.group == "Months":
             tabs.append((s.key, s.short, s.color, s.pages[0].key))
-    tabs.append(("weekly", "Weeks", "2F6FAA", "contents_weekly"))
+    tabs.append(("weekly", "Weeks", "A87620", "contents_weekly"))
     for s in secs:
         if s.group == "Templates":
             tabs.append((s.key, s.short, s.color, f"contents_{s.key}"))
-    tabs.append(("notes", "Notes", "9B7BE0", "contents_notes"))
+    tabs.append(("notes", "Notes", "A87620", "contents_notes"))
 
     doc = BaseDocTemplate(str(out), pagesize=(PW, PH), leftMargin=MX0, rightMargin=PW - MX1, topMargin=PH - MY1, bottomMargin=MY0,
                           title=f"Ultimate Planner {year or 'Undated'}", author="Ultimate Productivity Bundle")
@@ -306,25 +336,25 @@ def build_pdf(out: Path, year=PC.YEAR):
 
     # cover + index
     story += [Mark("cover", "index"), Spacer(1, 120),
-              Paragraph(f'<font size="14" color="#14958B">ULTIMATE</font>', ST["title"]), Spacer(1, 14),
+              Paragraph('<font name="Sans-Bold" size="11" color="#D29A3A">B R A S S &nbsp; L E D G E R</font>', ST["title"]), Spacer(1, 14),
               Paragraph(f'<font size="44">Planner{" " + str(year) if year else ""}</font>', ParagraphStyle("big", parent=ST["title"], leading=50)), Spacer(1, 18),
               Paragraph(("" if year else "UNDATED EDITION — use it any year · ") +
                         "Yearly goals · 12 monthly calendars · 53 weekly trackers · 111 templates · 8 note layouts", ST["sub"]), Spacer(1, 30),
               Paragraph(a("index", "Open the General Index ›"), ParagraphStyle("go", parent=ST["link"], fontSize=13)),
               Spacer(1, 10), Paragraph("Tip: the tabs on the left are clickable on every page.", ST["sub"]), PageBreak()]
-    story += [Mark("index", "index")] + header("General index", "0B4F4C", f"Ultimate Planner {year}" if year else "Ultimate Planner — Undated",
+    story += [Mark("index", "index")] + header("General index", "1F3D36", f"Ultimate Planner {year}" if year else "Ultimate Planner — Undated",
                                               "Click any link to jump to that page. Every page has a ⌂ Index link (top right) and the tabs on the left.")
     rows = []
     months = [s for s in secs if s.group == "Months"]
 
     def r(label, html, color):
         lab = Paragraph(f'<font color="white"><b>{label}</b></font>', ST["cell"])
-        return [lab, Paragraph(html, ST["link"])], color
-    data = [r("Start", " · ".join(a(p.key, p.title) for p in secs[0].pages), "0B4F4C"),
-            r("Monthly calendars", " · ".join(a(f"m{m}_cal", PC.MONTHS[m - 1][:3]) for m in range(1, 13)), "14958B"),
-            r("Monthly goals", " · ".join(a(f"m{m}_goals", PC.MONTHS[m - 1][:3]) for m in range(1, 13)), "14958B"),
-            r("Monthly reflections", " · ".join(a(f"m{m}_refl", PC.MONTHS[m - 1][:3]) for m in range(1, 13)), "14958B"),
-            r("Weekly trackers", " ".join(a(f"w{w}", f"{w:02d}") for w in range(1, 54)), "2F6FAA")]
+        return [lab, Paragraph(sym(html), ST["link"])], color
+    data = [r("Start", " · ".join(a(p.key, p.title) for p in secs[0].pages), "1F3D36"),
+            r("Monthly calendars", " · ".join(a(f"m{m}_cal", PC.MONTHS[m - 1][:3]) for m in range(1, 13)), "A87620"),
+            r("Monthly goals", " · ".join(a(f"m{m}_goals", PC.MONTHS[m - 1][:3]) for m in range(1, 13)), "A87620"),
+            r("Monthly reflections", " · ".join(a(f"m{m}_refl", PC.MONTHS[m - 1][:3]) for m in range(1, 13)), "A87620"),
+            r("Weekly trackers", " ".join(a(f"w{w}", f"{w:02d}") for w in range(1, 54)), "A87620")]
     for s in secs:
         if s.group == "Templates":
             data.append(r(f"{s.name} ({len(s.pages)})", a(f"contents_{s.key}", "Contents") + " · " + " · ".join(a(p.key, p.title) for p in s.pages[:3]) + " …", s.color))

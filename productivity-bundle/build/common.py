@@ -55,10 +55,15 @@ class Theme:
 
     def __init__(self, edition: str):
         self.edition = edition
-        self.font_name = "Arial"          # in every Excel version and Google Sheets; same metrics as the test renderer
+        self.font_name = "Inter"          # brand body font (Google Sheets has it; Excel substitutes if not installed)
+        # Fraunces is the brand heading font; inside Excel it isn't available, so titles use Georgia there
+        self.title_name = "Georgia" if edition == "excel" else "Fraunces"
 
     def font(self, size=10, bold=False, color=DARK, italic=False, underline=None):
         return Font(name=self.font_name, size=size, bold=bold, color=color, italic=italic, underline=underline)
+
+    def title_font(self, size=18, color="FAF7F2"):
+        return Font(name=self.title_name, size=size, bold=True, color=color)
 
 
 def fill(color: str) -> PatternFill:
@@ -73,7 +78,8 @@ LEFT = Alignment(horizontal="left", vertical="center", wrap_text=False, indent=1
 LEFT_WRAP = Alignment(horizontal="left", vertical="top", wrap_text=True, indent=1)
 RIGHT = Alignment(horizontal="right", vertical="center", indent=1)
 
-FILL_INPUT = fill(SOFT_BLUE)
+FILL_INPUT = fill(WHITE)            # Brass Ledger: inputs are white with a border
+PAPER, BRASS = "FAF7F2", "D29A3A"
 FILL_CALC = fill(LIGHT_GRAY)
 FILL_POS = fill(SOFT_TEAL)
 FILL_NEG = fill(DANGER_BG)
@@ -128,8 +134,8 @@ def paint(ws, rng: str, f=None, font=None, border=None, align=None, numfmt=None)
 
 
 TAB_ORDER: list[str] = []          # set by each product builder (used for "Next tab" links)
-HERO_SUB = "A9D8D1"
-CELL_EDGE = Side(style="thin", color="DFEAE8")
+HERO_SUB = "C9D3CF"
+CELL_EDGE = Side(style="thin", color="E6E1D8")
 CELL_BOX = Border(left=CELL_EDGE, right=CELL_EDGE, top=CELL_EDGE, bottom=CELL_EDGE)
 
 
@@ -140,10 +146,10 @@ def col_px(ws, c: int) -> int:
 
 def title_bar(ws, T: Theme, title: str, subtitle: str, last_col: int, home_link: str | None = "All-in-One Dashboard",
               demo: bool = False, hero_to: int | None = None, home_label: str = "⌂ Dashboard"):
-    """Navy hero header on rows 2-3 (same look as the dashboard).
+    """Brass Ledger title bar on rows 2-3: green fill, paper title in the heading font, subtitle beneath.
 
-    Left: title (row 2) and subtitle (row 3). Right: "⌂ Dashboard" (row 2) and "Next tab ▸" (row 3) links in a block
-    of the right-most columns wide enough for the text. The navy band runs to `hero_to` (default last_col).
+    Right block (wide enough for the text): "BRASS LEDGER" small in brass (row 2) and one link (row 3) — the home tab,
+    or "Next tab" on the home tab itself. The band runs to `hero_to` (default last_col).
     """
     hero_to = hero_to or last_col
     ws.row_dimensions[1].height = 8
@@ -164,40 +170,49 @@ def title_bar(ws, T: Theme, title: str, subtitle: str, last_col: int, home_link:
         if last_col > rb:
             ws.merge_cells(f"{get_column_letter(rb)}{r}:{get_column_letter(last_col)}{r}")
     ws["B2"] = title
-    ws["B2"].font = T.font(18, True, WHITE)
+    ws["B2"].font = T.title_font(18, PAPER)
     ws["B2"].alignment = Alignment(vertical="center", indent=1)
     ws["B3"] = ("●  DEMO DATA   ·   " if demo else "") + subtitle
     ws["B3"].font = T.font(9, False, HERO_SUB)
     ws["B3"].alignment = Alignment(vertical="center", indent=1, shrink_to_fit=True)
     right = Alignment(horizontal="right", vertical="center", indent=1)
+    c = ws.cell(row=2, column=rb)                      # brand mark, small, in brass
+    c.value = "BRASS LEDGER"
+    c.font = T.font(8, True, BRASS)
+    c.alignment = right
+    c = ws.cell(row=3, column=rb)                      # one navigation link: home, or next tab on the home tab itself
     if home_link:
-        c = ws.cell(row=2, column=rb)
         c.value = f'=HYPERLINK("#{quote(home_link)}!A1","{home_label}")'
-        c.font = T.font(10, True, WHITE)
-        c.alignment = right
-    if TAB_ORDER and ws.title in TAB_ORDER:
+    elif TAB_ORDER and ws.title in TAB_ORDER:
         nxt = TAB_ORDER[(TAB_ORDER.index(ws.title) + 1) % len(TAB_ORDER)]
-        c = ws.cell(row=3, column=rb)
         c.value = f'=HYPERLINK("#{quote(nxt)}!A1","Next tab ▸")'
-        c.font = T.font(9, True, HERO_SUB)
-        c.alignment = right
+    c.font = T.font(9, True, PAPER)
+    c.alignment = right
+
+def kicker_text(text):
+    """Section labels are uppercase kickers; any explanation after a dash keeps its case."""
+    if not isinstance(text, str) or text.startswith("="):
+        return text
+    for sep in ("  —  ", " — "):
+        if sep in text:
+            head, rest = text.split(sep, 1)
+            return head.upper() + "  —  " + rest
+    return text.upper()
 
 
-def section(ws, T: Theme, r: int, c1: int, c2: int, text: str, color=BLUE, height=24, size=10):
-    """Card title row: white, navy bold text, coloured accent line on top (dashboard style)."""
-    accent = Side(style="medium", color=color if color not in (NAVY, MIDNIGHT) else BLUE)
+def section(ws, T: Theme, r: int, c1: int, c2: int, text: str, color=BLUE, height=24, size=9):
+    """Card title row: white, green uppercase kicker, brass rule on top."""
+    accent = Side(style="medium", color=BRASS)
     for c in range(c1, c2 + 1):
         cell = ws.cell(row=r, column=c)
         cell.fill = FILL_WHITE
-        cell.border = Border(top=accent, bottom=Side(style="thin", color="E8F0EE"),
+        cell.border = Border(top=accent, bottom=Side(style="thin", color="E6E1D8"),
                              left=THIN if c == c1 else None, right=THIN if c == c2 else None)
-    if isinstance(text, str) and not text.startswith("=") and text.isupper():
-        text = text.capitalize()
     if c2 > c1:
         ws.merge_cells(f"{get_column_letter(c1)}{r}:{get_column_letter(c2)}{r}")
-    cell = ws.cell(row=r, column=c1, value=text)
+    cell = ws.cell(row=r, column=c1, value=kicker_text(text))
     cell.font = T.font(size, True, NAVY)
-    cell.alignment = Alignment(vertical="center", indent=1)
+    cell.alignment = Alignment(vertical="center", indent=1, shrink_to_fit=True)
     ws.row_dimensions[r].height = height
 
 
@@ -207,7 +222,7 @@ def header_row(ws, T: Theme, r: int, c1: int, headers: list[str], color=NAVY, he
     helper = color == MED_GRAY
     for i, h in enumerate(headers):
         cell = ws.cell(row=r, column=c1 + i, value=h)
-        cell.fill = fill("F1F5F4" if helper else "E2F2EF")
+        cell.fill = fill("F3EFE7" if helper else "EFEAE0")
         cell.font = T.font(9, True, SECONDARY if helper else MIDNIGHT)
         cell.alignment = CENTER
         cell.border = Border(left=CELL_EDGE, right=CELL_EDGE, top=CELL_EDGE,
@@ -219,7 +234,7 @@ def mark_helper_headers(ws, r: int, c1: int, c2: int):
     """Restyle header cells of calculated helper columns (grey, secondary text)."""
     for c in range(c1, c2 + 1):
         cell = ws.cell(row=r, column=c)
-        cell.fill = fill("F1F5F4")
+        cell.fill = fill("F3EFE7")
         cell.font = Font(name=cell.font.name, size=9, bold=True, color=SECONDARY)
         cell.border = Border(left=CELL_EDGE, right=CELL_EDGE, top=CELL_EDGE, bottom=Side(style="medium", color=MED_GRAY))
 
@@ -244,6 +259,27 @@ def legend(ws, T: Theme, r: int, c: int, compact=False):
         tx.alignment = Alignment(vertical="center", indent=1)
 
 
+def green_tile(ws, T: Theme, r: int, c1: int, c2: int, label, formula, numfmt=None, size=15):
+    """Result block: green fill, small paper label (row r), main figure in brass (row r + 1)."""
+    gap = Side(style="medium", color=PAPER)
+    for rr in (r, r + 1):
+        if c2 > c1:
+            ws.merge_cells(f"{get_column_letter(c1)}{rr}:{get_column_letter(c2)}{rr}")
+        for cc in range(c1, c2 + 1):
+            cell = ws.cell(row=rr, column=cc)
+            cell.fill = FILL_NAVY
+            cell.border = Border(left=gap if cc == c1 else None, right=gap if cc == c2 else None)
+    lc = ws.cell(row=r, column=c1, value=label)
+    lc.font = T.font(8, True, "C9D3CF")
+    lc.alignment = Alignment(vertical="bottom", indent=1, shrink_to_fit=True)
+    vc = ws.cell(row=r + 1, column=c1, value=formula)
+    vc.font = T.font(size, True, BRASS)
+    vc.alignment = Alignment(horizontal="left", vertical="center", indent=1, shrink_to_fit=True)
+    if numfmt:
+        vc.number_format = numfmt
+    return vc
+
+
 def stat_strip(ws, T: Theme, r: int, items, start_col: int = 2, min_px: int = 130, end_col: int | None = None):
     """Row of KPI tiles (label row r, value row r+1). items: (label, formula, numfmt, accent).
 
@@ -260,23 +296,7 @@ def stat_strip(ws, T: Theme, r: int, items, start_col: int = 2, min_px: int = 13
         c2 = c
         if end_col and c2 > end_col:
             break
-        top = Side(style="medium", color=accent)
-        for rr in (r, r + 1):
-            if c2 > c1:
-                ws.merge_cells(f"{get_column_letter(c1)}{rr}:{get_column_letter(c2)}{rr}")
-            for cc in range(c1, c2 + 1):
-                cell = ws.cell(row=rr, column=cc)
-                cell.fill = FILL_WHITE
-                cell.border = Border(top=top if rr == r else None, bottom=THIN if rr == r + 1 else None,
-                                     left=THIN if cc == c1 else None, right=THIN if cc == c2 else None)
-        lc = ws.cell(row=r, column=c1, value=label)
-        lc.font = T.font(8, True, SECONDARY)
-        lc.alignment = Alignment(vertical="bottom", indent=1)
-        vc = ws.cell(row=r + 1, column=c1, value=formula)
-        vc.font = T.font(16, True, DARK)
-        vc.alignment = Alignment(horizontal="left", vertical="center", indent=1)
-        if numfmt:
-            vc.number_format = numfmt
+        green_tile(ws, T, r, c1, c2, label, formula, numfmt, size=16)
         c += 2  # one gutter column between tiles
     return c
 

@@ -82,20 +82,20 @@ Google Sheets editions, DEMO and BLANK (`dist/05_Mini_Products/`).
 cd productivity-bundle/build
 python3 build_minis.py                    # 24 workbooks
 python3 validate_minis.py                 # LibreOffice recalc (0 errors) + 562 value checks
-python3 listing_minis.py --reshoot        # screenshots, 6 images, LISTING.md, etsy_upload/ per product
+python3 listing_minis.py --reshoot        # screenshots, 7 images, LISTING.md, etsy_upload/ per product
 ```
 
 ## Bundle, pins and videos
 
 ```bash
 cd productivity-bundle/build
-python3 build_bundle.py       # listings/06_Ultimate_Productivity_Bundle/: one ZIP with the three spreadsheets, 6 images, LISTING.md
+python3 build_bundle.py       # listings/06_Ultimate_Productivity_Bundle/: one ZIP with the three spreadsheets, 7 images, LISTING.md
 python3 pins.py               # listings/pins/: one 1000x1500 Pinterest pin per listing + PINS.md (titles, descriptions)
 python3 listing_video.py      # a 14 s slideshow video per listing
 python3 stress_dates.py       # future-date test: leap day 2028, July-June budget year, Sunday start, 2030
 ```
 
-Both spreadsheet editions use Arial, so the layout is the same in every Excel version, Google Sheets and the test renderer.
+Brand: Brass Ledger (`build/brand.py`, `brand/`, `design-system/design-tokens.json`). Spreadsheet cells use Inter; titles use Georgia in Excel and Fraunces in Google Sheets. Inter is not bundled with Excel, so Excel shows its fallback font where Inter is not installed.
 The planner ships as two PDFs: dated 2027 and undated (`planner_pdf.py` builds both).
 
 ## Etsy listings (built alongside each product)
@@ -106,7 +106,7 @@ Every product gets a matching listing in `listings/<product>/`:
 |---|---|
 | `LISTING.md` | Title, 13 tags, description, details, price suggestion, FAQ, photo order + alt text, seller checklist |
 | `listing_config.json` | Your Google Sheets "make a copy" links and shop name |
-| `images/` *(generated)* | 10 listing photos, 2400×1800, built from real screenshots of the product |
+| `images/` *(generated)* | 7 listing photos, 2700×2025, in the Brass Ledger layout (`brand_listing.py`), built from real screenshots of the product |
 | `etsy_upload/` *(generated)* | The files buyers download: product ZIP + START_HERE.pdf |
 
 ```bash
@@ -117,5 +117,5 @@ python3 listing_images_pm.py                                 # 10 listing photos
 python3 build_listing_package_pm.py                          # etsy_upload/ (ZIP + START_HERE.pdf)
 ```
 
-`listing_kit.py` holds the shared image toolkit (brand canvas, laptop mockup, framed screenshots, pills, icon bullets),
-so later products reuse the same look.
+`brand_listing.py` holds the shared Brass Ledger image layout (seven images per listing) and `brand_listings_content.py` the copy and
+screenshot choices, so every listing follows the same format.

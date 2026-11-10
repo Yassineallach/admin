@@ -23,10 +23,10 @@ YEAR = 2027
 MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
 DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
 
-# section colours (teal theme)
-C = {"index": "0B4F4C", "year": "0F6E68", "month": "14958B", "week": "2F6FAA", "task": "1E9E75", "project": "2BB3A6",
-     "meeting": "2F6FAA", "goal": "9B7BE0", "time": "EE8A3A", "pro": "6F5BD0", "client": "1FA99C", "invoice": "CF3A43",
-     "report": "4D6A8A", "creative": "D9670F", "notes": "9B7BE0"}
+# section colours (Brass Ledger: greens for planning, brass tones for goals and time, red for money)
+C = {"index": "1F3D36", "year": "2B5148", "month": "2E7D4F", "week": "A87620", "task": "2E7D4F", "project": "1F3D36",
+     "meeting": "2B5148", "goal": "A87620", "time": "D29A3A", "pro": "7A5514", "client": "3F6B5E", "invoice": "B3382C",
+     "report": "5A6B66", "creative": "9A5B14", "notes": "A87620"}
 
 
 @dataclass
@@ -73,8 +73,8 @@ def year_pages(year):
             "Templates: 111 ready-made pages in 10 categories",
             "Notes: 8 note-taking layouts"]),
         H("Colour code"),
-        T(["Colour", "Section"], [["Teal", "Year & months"], ["Blue", "Weekly tracker, meetings"], ["Green", "Tasks"],
-                                  ["Lavender", "Goals & notes"], ["Orange", "Time management, creative"], ["Red", "Invoices & expenses"]]),
+        T(["Colour", "Section"], [["Green", "Year, months, tasks, projects, meetings"], ["Brass", "Weekly tracker, goals, time, notes"],
+                                  ["Red", "Invoices & expenses"]]),
         H("Tips for OneNote"),
         CK(["Click any checkbox to tick it (Ctrl+1 adds a new one)", "Tab moves to the next table cell; Tab in the last cell adds a row",
             "Ctrl+K inserts a link to another page", "Use the search box (Ctrl+E) to find anything in the planner"]),
@@ -256,7 +256,7 @@ TEMPLATES = {
     ],
     ("Time Management", "time", "Time"): [
         tpl("Time Blocking Planner", F("Date", cols=1), T(["Time", "Block", "Notes"], [[f"{h}:00", "", ""] for h in range(6, 22)])),
-        tpl("Pomodoro Tracker", F("Date", "Daily goal (pomodoros)", cols=2), T(["Task", "🍅 1", "🍅 2", "🍅 3", "🍅 4", "Done"], 10)),
+        tpl("Pomodoro Tracker", F("Date", "Daily goal (pomodoros)", cols=2), T(["Task", "● 1", "● 2", "● 3", "● 4", "Done"], 10)),
         tpl("Time Audit Log", F("Date", cols=1), T(["Time", "Activity", "Category", "Productive?"], [[f"{h}:00", "", "", ""] for h in range(7, 21)])),
         tpl("Weekly Schedule", T(["Time"] + [d[:3] for d in DAYS], [[f"{h}:00"] + [""] * 7 for h in range(7, 21)])),
         tpl("Daily Routine Planner", COLS([H("Morning"), T(["Time", "Activity"], 6)], [H("Evening"), T(["Time", "Activity"], 6)]), H("Non-negotiables"), CK(4)),

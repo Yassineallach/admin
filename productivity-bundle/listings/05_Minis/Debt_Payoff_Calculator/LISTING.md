@@ -4,14 +4,17 @@ Copy-paste ready. Every screenshot is a real render of the DEMO workbook.
 
 ## Photos (upload in this order)
 
+Files are in `images/`, 2700 × 2025 px (4:3), in the Brass Ledger layout. Every screenshot is a real render of the finished product.
+
 | # | File | Alt text |
 |---|---|---|
-| 1 | 01_hero.png | Debt Payoff Calculator spreadsheet shown on a laptop |
-| 2 | 02_main_feature.png | Debt Payoff Calculator: your fastest way out of debt |
-| 3 | 03_second_feature.png | Debt Payoff Calculator: a month-by-month plan |
-| 4 | 04_easy_start.png | Start tab with settings, instructions and links |
-| 5 | 05_whats_included.png | Files included and compatibility |
-| 6 | 06_excel_and_sheets.png | The Excel edition and the Google Sheets edition |
+| 1 | 01_hero.png | Debt Payoff Calculator: Know the date you will be debt-free |
+| 2 | 02_whats_included.png | What's included in Debt Payoff Calculator |
+| 3 | 03_main_tool.png | List your debts. The plan updates as you type |
+| 4 | 04_summary.png | A balance for every debt, every month |
+| 5 | 05_how_it_works.png | How Debt Payoff Calculator works in three steps |
+| 6 | 06_compatibility.png | Which apps Debt Payoff Calculator works with |
+| 7 | 07_what_you_receive.png | The files you receive with Debt Payoff Calculator |
 
 ## Title (124 / 140 characters)
 
@@ -50,7 +53,7 @@ Microsoft Excel, Google Sheets, digital download, spreadsheet template
 ## Description
 
 ```
-Find your debt-free date in minutes. List your debts, pick snowball or avalanche, add an extra payment — this calculator builds your month-by-month payoff plan automatically. Tested formulas: works any year, any currency.
+Know the date you will be debt-free. List your debts, pick snowball or avalanche, add an extra payment — this calculator builds your month-by-month payoff plan automatically. Tested formulas: works any year, any currency.
 
 ━━━━━━━━━━━━━━━━━━━━
 FEATURES
@@ -84,8 +87,8 @@ PLEASE NOTE
 ━━━━━━━━━━━━━━━━━━━━
 • This is a DIGITAL product. Nothing will be shipped.
 • For personal use. Please don't resell or share the files.
-• Want the complete system? This tracker is also included in the Ultimate Budget Spreadsheet (28 tabs) in my shop.
-• Questions? Send me a message — I'm happy to help.
+• This tracker is also part of the Ultimate Budget Spreadsheet (28 tabs) in my shop.
+• Questions? Send me a message and I will help.
 ```
 
 > **AI disclosure (check Etsy's current policy).** Parts of this product and its listing images were made with AI assistance. If Etsy still asks for it, add *"Designed by me with the help of AI tools."* to the description.
@@ -97,6 +100,6 @@ Upload everything in `etsy_upload/`: `Debt_Payoff_Calculator.zip` and `START_HER
 ## Seller checklist
 
 - [ ] Open the Excel DEMO file in real Excel and the Google Sheets file in Google Sheets once.
-- [ ] Upload the 6 images in order and add the alt text.
+- [ ] Upload the 7 images in order and add the alt text.
 - [ ] Paste the title, tags, description and materials. Set the price.
 - [ ] Upload the two files from `etsy_upload/`.

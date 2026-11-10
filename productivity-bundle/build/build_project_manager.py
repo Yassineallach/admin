@@ -177,23 +177,22 @@ class Builder:
         cl, cr = L(c), L(c2)
         for rr in range(r, r + 3):
             ws.merge_cells(f"{cl}{rr}:{cr}{rr}")
-            paint(ws, f"{cl}{rr}:{cr}{rr}", f=FILL_WHITE)
+            paint(ws, f"{cl}{rr}:{cr}{rr}", f=FILL_NAVY)
         ws[f"{cl}{r}"] = label
-        ws[f"{cl}{r}"].font = T.font(8, True, SECONDARY)
+        ws[f"{cl}{r}"].font = T.font(8, True, "C9D3CF")
         ws[f"{cl}{r}"].alignment = CENTER
         ws[f"{cl}{r + 1}"] = formula
-        ws[f"{cl}{r + 1}"].font = T.font(20, True, color)
+        ws[f"{cl}{r + 1}"].font = T.font(20, True, BRASS)
         ws[f"{cl}{r + 1}"].alignment = CENTER
         ws[f"{cl}{r + 1}"].number_format = numfmt
         if sub:
             ws[f"{cl}{r + 2}"] = sub
-        ws[f"{cl}{r + 2}"].font = T.font(8, False, SECONDARY, italic=True)
+        ws[f"{cl}{r + 2}"].font = T.font(8, False, "C9D3CF", italic=True)
         ws[f"{cl}{r + 2}"].alignment = CENTER
-        top = Side(style="medium", color=color)
+        gap = Side(style="medium", color=PAPER)
         for cc in range(c, c2 + 1):
-            ws.cell(row=r, column=cc).border = Border(top=top, left=THIN if cc == c else None, right=THIN if cc == c2 else None)
-            ws.cell(row=r + 1, column=cc).border = Border(left=THIN if cc == c else None, right=THIN if cc == c2 else None)
-            ws.cell(row=r + 2, column=cc).border = Border(bottom=THIN, left=THIN if cc == c else None, right=THIN if cc == c2 else None)
+            for rr in (r, r + 1, r + 2):
+                ws.cell(row=rr, column=cc).border = Border(left=gap if cc == c else None, right=gap if cc == c2 else None)
 
     def merge_style(self, ws, a, value=None, font=None, f=None, align=None, numfmt=None, border=BOX):
         if ":" in a and a.split(":")[0] != a.split(":")[1]:
@@ -232,7 +231,7 @@ class Builder:
                          value=("WELCOME TO THE ULTIMATE PROJECT MANAGER.   1) Fill in your workspace details below.   "
                                 "2) Edit the dropdown lists (team members, categories…).   3) Add projects on 'Project Overview', "
                                 "tasks on 'Variable Tasks' and 'Recurring Tasks'.   Dashboards, calendars, Kanban and Gantt update automatically.   "
-                                "Light-mint cells are inputs; grey cells are formulas — don't type over them. "
+                                "White cells with a border are inputs; shaded cells are formulas — don't type over them. "
                                 + ("This copy contains DEMO DATA: see Instructions › 'Removing demo data'." if self.demo else "")),
                          font=T.font(10, False, MIDNIGHT), align=LEFT_WRAP)
         for rr in range(5, 9):
@@ -865,8 +864,8 @@ class Builder:
         cf_formula(ws, grid, "AND(ROW(B9)>=9,MOD(ROW(B9)-9,5)=0,B9=$G$5)", BLUE, WHITE, True, stop=True)
         cf_formula(ws, grid, "AND(MOD(ROW(B9)-9,5)=0,MONTH(B9)<>$Q$5)", BG, MED_GRAY, stop=True)
         cf_formula(ws, grid, "P9=-1", DANGER_BG, DANGER, True, stop=True)
-        cat_cols = [SOFT_BLUE, SOFT_TEAL, SOFT_LAV, WARNING_BG, INFO_BG, "E8F6F3", "FDF0E6", "EEF3F2"]
-        cf_formula(ws, grid, "P9=99", SOFT_LAV, "5B3FA8", stop=True)
+        cat_cols = [SOFT_BLUE, SOFT_TEAL, SOFT_LAV, WARNING_BG, INFO_BG, "E7EDEA", "FBEFD9", "F3EFE7"]
+        cf_formula(ws, grid, "P9=99", SOFT_LAV, "7A5514", stop=True)
         for i, colr in enumerate(cat_cols):
             cf_formula(ws, grid, f'AND(ISNUMBER(P9),P9>0,P9<99,MOD(P9-1,8)={i})', colr)
         for c in range(16, 23):
@@ -995,7 +994,7 @@ class Builder:
                 cell.border = Border(left=THIN, right=THIN, bottom=Side(style="hair", color=BORDER))
         rN = r0 + len(HOURS) - 1
         grid = f"C{r0}:I{rN}"
-        for v, bg, fg in ((1, DANGER_BG, DANGER), (2, WARNING_BG, "A2581C"), (3, INFO_BG, MIDNIGHT), (4, SOFT_TEAL, SUCCESS),
+        for v, bg, fg in ((1, DANGER_BG, DANGER), (2, WARNING_BG, "9A5B14"), (3, INFO_BG, MIDNIGHT), (4, SOFT_TEAL, SUCCESS),
                           (5, SOFT_LAV, MIDNIGHT), (9, LIGHT_GRAY, SECONDARY)):
             cf_formula(ws, grid, f"L{r0}={v}", bg, fg)
         for c in range(12, 19):
@@ -1023,7 +1022,7 @@ class Builder:
                 ws[f"{c}{r}"].font = T.font(9)
                 ws[f"{c}{r}"].alignment = Alignment(horizontal="left", vertical="center", indent=1, shrink_to_fit=True)
                 ws[f"{c}{r}"].border = Border(left=THIN, right=THIN, bottom=Side(style="hair", color=BORDER))
-        cf_formula(ws, f"C{rD + 1}:I{rD + 3}", f'LEFT(C{rD + 1},1)="↻"', SOFT_LAV, "5B3FA8")
+        cf_formula(ws, f"C{rD + 1}:I{rD + 3}", f'LEFT(C{rD + 1},1)="↻"', SOFT_LAV, "7A5514")
         rW = rD + 6
         section(ws, T, rW, 2, 9, "DAILY WORKLOAD", color=TEAL)
         rows = [("Sched. hrs", lambda c: f'=SUMIFS({TS("I")},{TS("B")},{c}$10)', FMT_HRS),
@@ -1470,7 +1469,7 @@ class Builder:
             cf_formula(ws, rngc, f"${hc}8<>\"\"", soft)
             cf_formula(ws, f"{c2}8:{c2}{8 + CARDS * 3 - 1}", f'AND(ISNUMBER({c2}8),{c2}8<$Z$5,{j}<4)', None, DANGER, True)
             cf_formula(ws, f"{c}8:{c}{8 + CARDS * 3 - 1}", f'LEFT({c}8,1)="‼"', None, DANGER, True)
-            cf_formula(ws, f"{c}8:{c}{8 + CARDS * 3 - 1}", f'LEFT({c}8,1)="▲"', None, "C66A22", True)
+            cf_formula(ws, f"{c}8:{c}{8 + CARDS * 3 - 1}", f'LEFT({c}8,1)="▲"', None, "9A5B14", True)
         for c in range(18, 23):
             ws.column_dimensions[L(c)].hidden = True
         ws.freeze_panes = "A7"
@@ -1563,10 +1562,10 @@ class Builder:
         inbar = f"AND($B10<>\"\",{tl}$9+$BU$6-1>=$F10,{tl}$9<=$G10)"
         cf_formula(ws, bars, f'{tl}10="◆"', WARNING_BG, NAVY, True, stop=True)
         cf_formula(ws, bars, f'AND({inbar},$J10=$K$7)', TEAL, stop=True)
-        cf_formula(ws, bars, f'AND({inbar},$K10="Overdue",{tl}$9<$F10+($G10-$F10+1)*$I10)', "A92E36", stop=True)
+        cf_formula(ws, bars, f'AND({inbar},$K10="Overdue",{tl}$9<$F10+($G10-$F10+1)*$I10)', "8E2A21", stop=True)
         cf_formula(ws, bars, f'AND({inbar},$K10="Overdue")', DANGER, stop=True)
         cf_formula(ws, bars, f'AND({inbar},{tl}$9<$F10+($G10-$F10+1)*$I10)', BLUE, stop=True)
-        cf_formula(ws, bars, inbar, "A6DCD5", stop=True)
+        cf_formula(ws, bars, inbar, "C9D3CF", stop=True)
         cf_formula(ws, bars, f"AND($J$6>={tl}$9,$J$6<{tl}$9+$BU$6)", WARNING_BG)
         cf_formula(ws, bars, f"AND($BU$6=1,WEEKDAY({tl}$9,2)>5)", BG)
         ws["K7"] = f"={DONE}"
@@ -1576,7 +1575,7 @@ class Builder:
         cf_formula(ws, "K10:K69", 'K10="Due soon"', WARNING_BG, WARNING, True)
         ws.column_dimensions[helper].hidden = True
         # legend
-        leg = [(BLUE, "Progress"), ("A6DCD5", "Remaining"), (TEAL, "Completed"), (DANGER, "Overdue"), (WARNING_BG, "Today")]
+        leg = [(BLUE, "Progress"), ("C9D3CF", "Remaining"), (TEAL, "Completed"), (DANGER, "Overdue"), (WARNING_BG, "Today")]
         for i, (colr, t) in enumerate(leg):
             c = L(TL0 + i * 6)
             ws[f"{c}6"].fill = fill(colr)
@@ -1611,8 +1610,8 @@ class Builder:
                 "6. Open the All-in-One Dashboard — every number, chart and list updates automatically. Pick a Year / From / To month in its Period card.",
             ]),
             ("CELL COLOURS", [
-                "Light mint = input (type or choose from a dropdown).  Light grey = formula (don't type over it).  White = information.",
-                "Light teal = positive result.  Light red = warning / negative.  Lavender = optional or system list.",
+                "White with a border = input (type or choose from a dropdown).  Shaded = formula (don't type over it).",
+                "Green tint = positive result.  Red tint = warning or negative.  Brass tint = optional or system list.",
                 "Grey-headed helper columns power the dashboards. They are grouped and collapsed — click the small + above the column letters to see them. Never delete them.",
             ]),
             ("HOW TO ADD PROJECTS", [
@@ -1649,7 +1648,7 @@ class Builder:
             ]),
             ("REMOVING DEMO DATA", [
                 "Fastest: use the BLANK edition file supplied alongside this one — identical workbook, no demo rows.",
-                "Manual: on Project Overview, Project Budget, Variable Tasks, Recurring Tasks, Task Schedule, the Project Manager database and Decision Matrix, select the light-mint input cells that contain data and press Delete. Never delete whole rows or grey columns.",
+                "Manual: on Project Overview, Project Budget, Variable Tasks, Recurring Tasks, Task Schedule, the Project Manager database and Decision Matrix, select the white input cells that contain data and press Delete. Never delete whole rows or shaded columns.",
                 "Then edit Setup › Team Members and the workspace details. Clear Setup › Today's date override if you set one.",
             ]),
             ("TROUBLESHOOTING", [

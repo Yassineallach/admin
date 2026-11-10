@@ -71,7 +71,7 @@ The notebook is organised in OneNote like this:
 
 - In the 2027 edition, week pages are dated Monday to Sunday (ISO weeks). Week 53 is a spare page; fill in your own dates.
 - The undated edition has the same 226 pages with blank calendar grids and week dates: start any month, reuse it any year.
-- Colour code: teal = year & months, blue = weekly & meetings, green = tasks, lavender = goals & notes, orange = time & ideas, red = money.
+- Colour code: each section has its own colour, used on the index and on that section's pages.
 - Search everything in OneNote with **Ctrl+E** (Mac: **Cmd+Option+F**).
 
 ## FAQ

@@ -59,14 +59,14 @@ Every tab has the same sidebar on the left: click an icon to jump to that tab (h
 
 ### Cell colours
 
-| Colour | Meaning |
+| Cell | Meaning |
 |---|---|
-| Light mint | Input: type a value or choose one from the dropdown |
-| Light grey | Formula: don't overwrite |
-| White | Information |
-| Light teal | Positive result |
-| Light red | Warning or negative result |
-| Lavender | Optional or system list |
+| White with a border | Type here, or pick from the dropdown |
+| Shaded (paper tint) | Calculated: don't type over it |
+| Brass tint | Optional, or a system list |
+| Green tint | Positive result, done, or income |
+| Red tint | Warning: overdue, over budget, or a negative result |
+| Green block with a brass figure | A result: totals and key numbers |
 
 ## How the automation works (formula guide)
 
@@ -89,7 +89,7 @@ Every tab has the same sidebar on the left: click an icon to jump to that tab (h
   - The base date is the later of today and the day after *Last Completed*. A row shows "Ended" after the End Date and "Paused" when its status is Paused.
 - **Gantt.** Conditional-formatting rules compare each timeline column's date with the task's start and end dates.
   - Darker blue shows the share of the bar covered by progress.
-  - Teal means completed, red means overdue, and ◆ marks a milestone (start date = due date).
+  - Green means completed, red means overdue, and ◆ marks a milestone (start date = due date).
   - The amber column is today.
 - **Currency.** Amounts are stored as plain numbers. The Setup currency symbol appears in KPI labels.
 
@@ -97,7 +97,7 @@ Every tab has the same sidebar on the left: click an icon to jump to that tab (h
 
 Rows marked **DEMO DATA** belong to a fictional company, "Northwind Studio". The DEMO file's *Today's date override* (Setup) is set to Nov 7, 2026 so the demo always looks current; clear that cell to use the real date. The demo has 8 projects, 60 tasks, 18 budget lines, 10 recurring tasks, 22 schedule blocks, 25 project details and 1 decision.
 
-**Remove it:** the easiest way is to start from the BLANK file. To clear the demo file by hand, select the light-mint cells that contain data on Project Overview, Project Budget, Variable Tasks, Recurring Tasks, Task Schedule, the Project Manager database and Decision Matrix, then press Delete. Never delete whole rows or the grey helper columns.
+**Remove it:** the easiest way is to start from the BLANK file. To clear the demo file by hand, select the white input cells that contain data on Project Overview, Project Budget, Variable Tasks, Recurring Tasks, Task Schedule, the Project Manager database and Decision Matrix, then press Delete. Never delete whole rows or the shaded helper columns.
 
 ## Capacity
 

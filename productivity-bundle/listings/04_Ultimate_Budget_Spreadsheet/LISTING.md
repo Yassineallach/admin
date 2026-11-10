@@ -6,20 +6,19 @@ Copy-paste ready. Fields are in the order Etsy's listing form asks for them.
 
 ## Photos (upload in this order)
 
-Files are in `images/`, 2400 × 1800 px (4:3). The first image is the thumbnail. Every screenshot is a real render of the DEMO workbook.
+Files are in `images/`, 2700 × 2025 px (4:3), in the Brass Ledger layout. Every screenshot is a real render of the finished product.
 
 | # | File | Alt text |
 |---|---|---|
-| 1 | 01_hero.png | Budget spreadsheet dashboard on a laptop with income, expenses, savings KPIs and charts |
-| 2 | 02_whats_included.png | The 28 tabs in four sections: transactions, dashboards, monthly insights and wealth-building tools |
-| 3 | 03_dashboard.png | All-in-one budget dashboard with 8 KPI cards, 6 charts, upcoming bills and account balances |
-| 4 | 04_monthly_budgets.png | A monthly budget tab with income, fixed and variable expenses, savings and debt payments vs budget |
-| 5 | 05_automation.png | Recurring transactions and the transaction log that update every budget automatically |
-| 6 | 06_calendar_paycheck.png | Automated financial calendar with income, bills and savings by day, plus the paycheck planner |
-| 7 | 07_debt_calculator.png | Debt calculator with snowball or avalanche payoff plan and debt-free date |
-| 8 | 08_savings.png | Sinking funds savings goals with progress, and the 50/30/20 budget dashboard |
-| 9 | 09_wealth.png | Net worth tracker, investment growth forecast and no-spend challenge tracker |
-| 10 | 10_excel_and_sheets.png | The dashboard in the Excel edition and in the Google Sheets edition |
+| 1 | 01_hero.png | Ultimate Budget Spreadsheet: Know where your money went, and what is left |
+| 2 | 02_whats_included.png | What's included in Ultimate Budget Spreadsheet |
+| 3 | 03_main_tool.png | Budget against actual for every category |
+| 4 | 04_summary.png | Income, spending and savings on one page |
+| 5 | 05_how_it_works.png | How Ultimate Budget Spreadsheet works in three steps |
+| 6 | 06_compatibility.png | Which apps Ultimate Budget Spreadsheet works with |
+| 7 | 07_what_you_receive.png | The files you receive with Ultimate Budget Spreadsheet |
+
+The first image is the thumbnail shown in search results.
 
 ## Video (optional, recommended)
 
@@ -75,7 +74,7 @@ Microsoft Excel, Google Sheets, digital download, spreadsheet template
 ## Description
 
 ```
-Tested formulas that work any year — start in any month. Take control of your money with one connected spreadsheet. Log income and spending once — 12 monthly budgets, an all-in-one dashboard, a calendar, debt payoff plan and savings goals all update automatically.
+Know where your money went, and what is left. Log income and spending once — 12 monthly budgets, an all-in-one dashboard, a calendar, debt payoff plan and savings goals all update automatically. Works for any year, and the budget year can start in any month.
 
 Works in Microsoft Excel and Google Sheets (both editions included). No macros, no add-ons, no formulas to write.
 
@@ -138,7 +137,7 @@ PLEASE NOTE
 • It's a planning tool, not financial advice. The investment forecast is a hypothetical projection.
 • For personal use. Please don't resell or share the files.
 • Save with the 3-in-1 Productivity Bundle in my shop: Project Manager + Weekly Planner Pro + Budget Spreadsheet.
-• Questions? Send me a message — I'm happy to help.
+• Questions? Send me a message and I will help.
 ```
 
 > **AI disclosure (check Etsy's current policy).** Parts of this product and its listing images were made with AI assistance. If Etsy's Creativity Standards still ask for it when you publish, add a line such as *"Designed by me with the help of AI tools."* to the end of the description.
@@ -178,7 +177,7 @@ Run `python3 build/build_listing_package_bg.py`, then upload everything in `etsy
 - [ ] Upload the Google Sheets files to Google Drive, convert them and check the dashboard charts.
   - Build "make a copy" links by replacing `/edit…` with `/copy` in each sheet's URL.
   - Paste the links into `listing_config.json`, then run `python3 build/build_listing_package_bg.py`.
-- [ ] Upload the 10 images in order and add the alt text.
+- [ ] Upload the 7 images in order and add the alt text.
 - [ ] Paste the title, tags, description and materials. Set the price.
 - [ ] Upload the two files from `etsy_upload/`.
 - [ ] Preview the listing on mobile.

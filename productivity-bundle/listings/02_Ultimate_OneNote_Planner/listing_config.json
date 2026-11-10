@@ -1,5 +1,5 @@
 {
   "_help": "Optional. shop_name appears in START_HERE.pdf. onenote_shared_notebook_link: a OneDrive view link to a copy of the notebook, for buyers on OneNote for Mac/web/iPad. Leave empty if you don't offer one. Then run: python3 build/build_listing_package_planner.py",
-  "shop_name": "",
+  "shop_name": "Brass Ledger",
   "onenote_shared_notebook_link": ""
 }

@@ -51,9 +51,9 @@ NAV = [(S_SET, "gear", "Setup"), (S_BA, "bank", "Banks"), (S_RT, "repeat", "Recu
        (S_SF, "piggy", "Funds"), (S_DC, "card", "Debt"), (S_NW, "scale", "Worth"), (S_IF, "trend", "Invest"),
        (S_NS, "ban", "No-spend")]
 
-# finance colours (spec): teal income, red expenses, blue savings, lavender goals
-C_INC, C_EXP, C_SAV, C_GOAL, C_DEBT = "14958B", "CF3A43", "2F6FAA", "9B7BE0", "B26B00"
-INC_BG, EXP_BG, SAV_BG, GOAL_BG = "E1F3F0", "FBE3E5", "E3EEF8", "EFEAFB"
+# finance colours (Brass Ledger): green income, red expenses, brass savings, ledger green goals
+C_INC, C_EXP, C_SAV, C_GOAL, C_DEBT = "2E7D4F", "B3382C", "A87620", "1F3D36", "7A4B1E"
+INC_BG, EXP_BG, SAV_BG, GOAL_BG = "E4EFE8", "F8E4E0", "F6EBD3", "E7EDEA"
 FMT_M = '#,##0.00'
 FMT_M0 = '#,##0'
 
@@ -162,7 +162,7 @@ class Builder:
         c.alignment = align or Alignment(vertical="center", indent=1)
         return c
 
-    def head(self, ws, r, c1, heads, fill_="E2F2EF", color=MIDNIGHT, height=26):
+    def head(self, ws, r, c1, heads, fill_="EFEAE0", color=MIDNIGHT, height=26):
         """heads: list of (text, span) or text."""
         c = c1
         for h in heads:
@@ -177,22 +177,7 @@ class Builder:
         ws.row_dimensions[r].height = height
 
     def tile(self, ws, r, c1, c2, label, formula, numfmt=None, accent=BLUE, size=15, color=DARK):
-        top = Side(style="medium", color=accent)
-        for rr in (r, r + 1):
-            if c2 > c1:
-                ws.merge_cells(f"{L(c1)}{rr}:{L(c2)}{rr}")
-            for cc in range(c1, c2 + 1):
-                ws.cell(row=rr, column=cc).fill = FILL_WHITE
-                ws.cell(row=rr, column=cc).border = Border(top=top if rr == r else None, bottom=THIN if rr == r + 1 else None,
-                                                           left=THIN if cc == c1 else None, right=THIN if cc == c2 else None)
-        lc = ws.cell(row=r, column=c1, value=label)
-        lc.font = self.T.font(8, True, SECONDARY)
-        lc.alignment = Alignment(vertical="bottom", indent=1)
-        vc = ws.cell(row=r + 1, column=c1, value=formula)
-        vc.font = self.T.font(size, True, color)
-        vc.alignment = Alignment(horizontal="left", vertical="center", indent=1, shrink_to_fit=True)
-        if numfmt:
-            vc.number_format = numfmt
+        green_tile(ws, self.T, r, c1, c2, label, formula, numfmt, size=15)
         ws.row_dimensions[r].height = 18
         ws.row_dimensions[r + 1].height = 30
 
@@ -258,7 +243,7 @@ class Builder:
             "starts.   2) Edit income and expense categories and set a monthly budget for each.   3) Add your accounts on Bank "
             "Accounts, savings goals on Sinking Funds and debts on Debt Calculator.   4) Log money on Variable Transactions, "
             "Recurring Transactions and Payments — every dashboard, month and chart updates by itself.   "
-            "Light-mint cells are inputs; grey cells calculate. "
+            "White cells with a border are inputs; shaded cells calculate. "
             + ("This copy contains DEMO DATA: use the BLANK file to start fresh." if self.demo else "")))
         paint(ws, "B5:K8", f=fill(SOFT_BLUE))
         c.font = T.font(10, False, MIDNIGHT)
@@ -311,7 +296,7 @@ class Builder:
                 "Annual Totals adds everything up by category and month; the 12 month tabs, dashboards and charts read from it.",
                 "Expense categories: Fixed or Variable (month tabs), Needs or Wants (50/30/20).",
                 "Savings transfers move money into the account a Sinking Fund is held in.",
-                "Colours: teal = income, red = expenses, blue = savings, lavender = goals."]
+                "Colours: green = income, red = expenses, brass = savings."]
         for i, t in enumerate(flow):
             r = 11 + i
             c = self.merge(ws, f"H{r}:K{r}", "•  " + t)
@@ -398,13 +383,13 @@ class Builder:
         for c, (h, items) in system.items():
             if c == "Z":
                 continue
-            self.head(ws, 11, ord(c) - 64, [h], fill_="EFEAFB", color="4B3A8C", height=22)
+            self.head(ws, 11, ord(c) - 64, [h], fill_="F6EBD3", color="7A5514", height=22)
             for i in range(12):
                 ws[f"{c}{12 + i}"] = items[i] if i < len(items) else None
             paint(ws, f"{c}12:{c}23", f=FILL_OPT, font=T.font(10), border=_C.CELL_BOX, align=CENTER)
         # liability types under the asset types (column Y rows 18-20)
-        self.label(ws, "Y18", "Liability types", 9, True, "4B3A8C", CENTER)
-        ws["Y18"].fill = fill("EFEAFB")
+        self.label(ws, "Y18", "Liability types", 9, True, "7A5514", CENTER)
+        ws["Y18"].fill = fill("F6EBD3")
         for i, t in enumerate(["Credit cards", "Loans", "Other liabilities"]):
             ws[f"Y{19 + i}"] = t
         for r in range(12, 24):
@@ -670,7 +655,7 @@ class Builder:
         cf_formula(ws, f"J{PY1}:J{PYN}", f'LEFT(J{PY1},7)="Overdue"', EXP_BG, C_EXP, True)
         cf_formula(ws, f"J{PY1}:J{PYN}", f'OR(J{PY1}="Due today",LEFT(J{PY1},6)="Due in")', WARNING_BG, WARNING, True)
         cf_formula(ws, f"J{PY1}:J{PYN}", f'J{PY1}="✓ Paid"', INC_BG, C_INC, True)
-        cf_formula(ws, f"B{PY1}:H{PYN}", f'$E{PY1}="Paid"', font_color="8A9B99")
+        cf_formula(ws, f"B{PY1}:H{PYN}", f'$E{PY1}="Paid"', font_color="8C8778")
         for c in "KLMNO":
             ws.column_dimensions[c].hidden = True
         self.table(ws, "Payments", f"B8:J{PYN}")
@@ -963,7 +948,7 @@ class Builder:
         dn.set_categories(Reference(ws, min_col=14, min_row=sr + 1, max_row=sr + 4))
         dn.holeSize = 55
         s = dn.series[0]
-        for i, colr in enumerate((C_EXP, "F08A8F", C_SAV, C_DEBT)):
+        for i, colr in enumerate((C_EXP, "D98A80", C_SAV, C_DEBT)):
             pt = DataPoint(idx=i)
             pt.graphicalProperties.solidFill = colr
             s.dPt.append(pt)
@@ -1090,7 +1075,7 @@ class Builder:
         dn.add_data(Reference(ws, min_col=16, min_row=10, max_row=13), titles_from_data=False)
         dn.set_categories(Reference(ws, min_col=15, min_row=10, max_row=13))
         dn.holeSize = 55
-        for i, colr in enumerate((C_EXP, "F08A8F", C_SAV, C_DEBT)):
+        for i, colr in enumerate((C_EXP, "D98A80", C_SAV, C_DEBT)):
             pt = DataPoint(idx=i)
             pt.graphicalProperties.solidFill = colr
             dn.series[0].dPt.append(pt)
@@ -1152,7 +1137,7 @@ class Builder:
             ws[f"D{r}"].number_format = FMT_SDATE
             ws[f"E{r}"].number_format = FMT_M
             ws.row_dimensions[r].height = 19
-        ws[f"B{lr + 2}"].value = f'=IFERROR(INDEX({PY("B")},MATCH(SMALL({PY("O")},1),{PY("O")},0)),"No unpaid bills — nice!")'
+        ws[f"B{lr + 2}"].value = f'=IFERROR(INDEX({PY("B")},MATCH(SMALL({PY("O")},1),{PY("O")},0)),"No unpaid bills")'
         cf_formula(ws, f"F{lr + 2}:G{lr + 7}", f'LEFT($F{lr + 2},7)="Overdue"', EXP_BG, C_EXP, True)
         cards.append((2, lr, 7, lr + 7))
         section(ws, T, lr, 8, 13, "ACCOUNT BALANCES")
@@ -1381,7 +1366,7 @@ class Builder:
         ws.row_dimensions[9].height = 10
         section(ws, T, 10, 2, 8, "YOUR SPLIT VS THE RULE")
         self.head(ws, 11, 2, ["Bucket", "Target %", "Recommended", "Actual", "% of income", "Difference", "Status"])
-        rows = [("Needs", 0.5, "Needs", C_EXP), ("Wants", 0.3, "Wants", "F08A8F"), ("Savings & debt repayment", 0.2, "Savings & Debt", C_SAV)]
+        rows = [("Needs", 0.5, "Needs", C_EXP), ("Wants", 0.3, "Wants", "D98A80"), ("Savings & debt repayment", 0.2, "Savings & Debt", C_SAV)]
         for k, (lab, pct, bucket, color) in enumerate(rows):
             r = 12 + k
             self.label(ws, f"B{r}", lab, 10, True, DARK)
@@ -1433,7 +1418,7 @@ class Builder:
         dn.add_data(Reference(ws, min_col=5, min_row=12, max_row=14), titles_from_data=False)
         dn.set_categories(Reference(ws, min_col=2, min_row=12, max_row=14))
         dn.holeSize = 55
-        for i, colr in enumerate((C_EXP, "F08A8F", C_SAV)):
+        for i, colr in enumerate((C_EXP, "D98A80", C_SAV)):
             pt = DataPoint(idx=i)
             pt.graphicalProperties.solidFill = colr
             dn.series[0].dPt.append(pt)
@@ -1442,7 +1427,7 @@ class Builder:
         place_chart(ws, dn, 6, 19, 8, 33)
         # category lists
         section(ws, T, 10, 10, 11, "NEEDS  (this period)", color=C_EXP)
-        section(ws, T, 33 - 10, 10, 11, "WANTS  (this period)", color="F08A8F")
+        section(ws, T, 33 - 10, 10, 11, "WANTS  (this period)", color="D98A80")
         amt = lambda cell: (f'IF({cell}="","",IF({sel}=0,SUMIFS({MX("R")},{MX("B")},{cell}),'
                             f'SUMIFS(INDEX({MX_MONTHS},0,{sel}),{MX("B")},{cell})))')
         for lst, r0, n in (("needs", 11, 11), ("wants", 24, 12)):
@@ -1454,7 +1439,7 @@ class Builder:
                 self.calc(S, f"K{r}", FMT_M, RIGHT)
                 ws.row_dimensions[r].height = max(ws.row_dimensions[r].height or 18, 18)
         cf_databar_amt(ws, "K11:K21", C_EXP)
-        cf_databar_amt(ws, "K24:K35", "F08A8F")
+        cf_databar_amt(ws, "K24:K35", "D98A80")
         ws.column_dimensions["O"].hidden = ws.column_dimensions["P"].hidden = True
         ws.freeze_panes = "A6"
         skin(ws, 11, 36, cards=[(2, 7, 8, 8), (2, 10, 8, 16), (2, 18, 8, 33), (10, 10, 11, 21), (10, 23, 11, 35)], hide_headers=True)
@@ -1621,7 +1606,7 @@ class Builder:
         ch.add_data(Reference(ws, min_col=9, min_row=8, max_row=SFN), titles_from_data=True)
         ch.add_data(Reference(ws, min_col=10, min_row=8, max_row=SFN), titles_from_data=True)
         ch.set_categories(Reference(ws, min_col=2, min_row=SF1, max_row=SFN))
-        self.chart_style(ch, None, [C_SAV, "D6E4F2"])
+        self.chart_style(ch, None, [C_SAV, "EADFC8"])
         ch.y_axis.majorGridlines = None
         ch.x_axis.delete = ch.y_axis.delete = False
         ch.x_axis.scaling.orientation = "maxMin"
@@ -1904,7 +1889,7 @@ class Builder:
                                       "end of each period, and taxes and fees are ignored. Real markets go up and down; you could get back less "
                                       "than you invest. This is not financial advice.")
         paint(ws, "B13:C16", f=fill(GOAL_BG))
-        c_.font = T.font(9, True, "4B3A8C")
+        c_.font = T.font(9, True, "7A5514")
         c_.alignment = Alignment(wrap_text=True, vertical="center", indent=1)
         self.tiles(ws, 5, [("ESTIMATED FUTURE VALUE", "=" + fv("$C$10"), FMT_M0, C_GOAL, C_GOAL),
                            ("TOTAL CONTRIBUTED", "=" + contrib("$C$10"), FMT_M0, C_SAV)], c1=5, width=2)
@@ -2018,7 +2003,7 @@ class Builder:
         cf_formula(ws, grid, f'AND(ISNUMBER(I13),{st}="✓ No spend")', C_INC, WHITE, True)
         cf_formula(ws, grid, f'AND(ISNUMBER(I13),{st}="✗ Spent")', C_EXP, WHITE, True)
         cf_formula(ws, grid, f'AND(ISNUMBER(I13),{st}="★ Exception")', C_GOAL, WHITE, True)
-        cf_formula(ws, grid, "ISNUMBER(I13)", "E8EEED", SECONDARY)
+        cf_formula(ws, grid, "ISNUMBER(I13)", "EFEAE0", SECONDARY)
         for r in range(13, 19):
             ws.row_dimensions[r].height = 20 if r > 13 else ws.row_dimensions[r].height
         ws.row_dimensions[16].height = ws.row_dimensions[16].height or 20
@@ -2048,7 +2033,7 @@ class Builder:
         add_dv(ws, f"F{D1}:F{DN}", "decimal", "greaterThanOrEqual", "0")
         cf_formula(ws, f"D{D1}:D{DN}", f'D{D1}="✓ No spend"', INC_BG, C_INC, True)
         cf_formula(ws, f"D{D1}:D{DN}", f'D{D1}="✗ Spent"', EXP_BG, C_EXP, True)
-        cf_formula(ws, f"D{D1}:D{DN}", f'D{D1}="★ Exception"', GOAL_BG, "4B3A8C", True)
+        cf_formula(ws, f"D{D1}:D{DN}", f'D{D1}="★ Exception"', GOAL_BG, "7A5514", True)
         cf_formula(ws, f"G{D1}:G{DN}", f'AND(ISNUMBER(G{D1}),G{D1}>0)', WARNING_BG, WARNING, True)
         ws.column_dimensions["H"].hidden = True
         self.note(ws, f"I{20}:R{24}", "Wants in transactions = 'Wants' spending you logged on that date in Variable Transactions — a "

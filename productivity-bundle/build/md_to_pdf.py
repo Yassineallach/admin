@@ -12,17 +12,19 @@ from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import mm
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
-from reportlab.platypus import ListFlowable, ListItem, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+from reportlab.platypus import Flowable, ListFlowable, ListItem, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from common import BG, BLUE, BORDER, DARK, LIGHT_GRAY, MIDNIGHT, NAVY, SECONDARY  # noqa: E402
+import brand as BR  # noqa: E402
 
-FONT_DIR = Path("/usr/share/fonts/truetype/liberation")
-pdfmetrics.registerFont(TTFont("Body", str(FONT_DIR / "LiberationSans-Regular.ttf")))
-pdfmetrics.registerFont(TTFont("Body-Bold", str(FONT_DIR / "LiberationSans-Bold.ttf")))
-pdfmetrics.registerFont(TTFont("Body-Oblique", str(FONT_DIR / "LiberationSans-Italic.ttf")))
+GREEN, BRASS, PAPER, INK, INK2, BORDER, BRASS_DARK = BR.GREEN, BR.BRASS, BR.PAPER, BR.INK, BR.INK2, BR.BORDER, BR.BRASS_DARK
+pdfmetrics.registerFont(TTFont("Body", str(BR.INTER[400])))
+pdfmetrics.registerFont(TTFont("Body-Bold", str(BR.INTER[700])))
+pdfmetrics.registerFont(TTFont("Body-Semi", str(BR.INTER[600])))
+pdfmetrics.registerFont(TTFont("Head", str(BR.FRAUNCES)))
 pdfmetrics.registerFont(TTFont("Sym", "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"))
-pdfmetrics.registerFontFamily("Body", normal="Body", bold="Body-Bold", italic="Body-Oblique", boldItalic="Body-Bold")
+pdfmetrics.registerFontFamily("Body", normal="Body", bold="Body-Bold", italic="Body", boldItalic="Body-Bold")
+_CMAP = set(pdfmetrics.getFont("Body").face.charToGlyph)      # characters Inter (latin) can draw
 
 
 def c(h):
@@ -30,22 +32,28 @@ def c(h):
 
 
 ST = {
-    "h1": ParagraphStyle("h1", fontName="Body-Bold", fontSize=20, leading=25, textColor=colors.white),
-    "h2": ParagraphStyle("h2", fontName="Body-Bold", fontSize=13, leading=17, textColor=c(NAVY), spaceBefore=10, spaceAfter=4),
-    "h3": ParagraphStyle("h3", fontName="Body-Bold", fontSize=11, leading=14, textColor=c(MIDNIGHT), spaceBefore=6, spaceAfter=2),
-    "p": ParagraphStyle("p", fontName="Body", fontSize=9.5, leading=13.5, textColor=c(DARK), alignment=TA_LEFT, spaceAfter=4),
-    "cell": ParagraphStyle("cell", fontName="Body", fontSize=8.3, leading=10.5, textColor=c(DARK)),
-    "cellh": ParagraphStyle("cellh", fontName="Body-Bold", fontSize=8.3, leading=10.5, textColor=colors.white),
+    "kicker": ParagraphStyle("kicker", fontName="Body-Bold", fontSize=7.5, leading=10, textColor=c(BRASS)),
+    "h1": ParagraphStyle("h1", fontName="Head", fontSize=24, leading=28, textColor=c(PAPER)),
+    "h2": ParagraphStyle("h2", fontName="Head", fontSize=15, leading=19, textColor=c(GREEN), spaceBefore=12, spaceAfter=5),
+    "h3": ParagraphStyle("h3", fontName="Body-Bold", fontSize=8, leading=11, textColor=c(BRASS_DARK), spaceBefore=8, spaceAfter=3),
+    "p": ParagraphStyle("p", fontName="Body", fontSize=9.5, leading=13.8, textColor=c(INK), alignment=TA_LEFT, spaceAfter=4),
+    "cell": ParagraphStyle("cell", fontName="Body", fontSize=8.3, leading=10.8, textColor=c(INK)),
+    "cellh": ParagraphStyle("cellh", fontName="Body-Bold", fontSize=8.3, leading=10.8, textColor=c(PAPER)),
 }
+
+
+def spaced(t):
+    """Uppercase kicker with letter-spacing of about 0.28em (a non-breaking space between letters, three between words)."""
+    return "\u00a0\u00a0\u00a0".join("\u00a0".join(w) for w in t.upper().split())
 
 
 def inline(t: str) -> str:
     t = t.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
     t = re.sub(r"\*\*(.+?)\*\*", r"<b>\1</b>", t)
-    t = re.sub(r"(?<!\*)\*(?!\s)(.+?)(?<!\s)\*(?!\*)", r"<i>\1</i>", t)
-    t = re.sub(r"([◆▲‼⋮⌂✓▼])", r'<font name="Sym">\1</font>', t)
-    t = re.sub(r"`(.+?)`", rf'<font color="#{BLUE}">\1</font>', t)
-    return t
+    t = re.sub(r"(?<!\*)\*(?!\s)(.+?)(?<!\s)\*(?!\*)", r"\1", t)
+    t = re.sub(r"`(.+?)`", rf'<font color="#{BRASS_DARK}">\1</font>', t)
+    # anything Inter can't draw (symbols such as ✓ ⌂ ▲) falls back to the symbol font
+    return "".join(ch if (ord(ch) in _CMAP or ch in "<>/=\"#&; ") else f'<font name="Sym">{ch}</font>' for ch in t)
 
 
 def table(rows):
@@ -57,8 +65,8 @@ def table(rows):
     widths = [avail * (min(x, 60) + 6) / tot for x in lens]
     t = Table(data, colWidths=widths, repeatRows=1)
     t.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, 0), c(NAVY)),
-        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, c(BG)]),
+        ("BACKGROUND", (0, 0), (-1, 0), c(GREEN)),
+        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, c("F3EFE7")]),
         ("LINEBELOW", (0, 0), (-1, -1), 0.4, c(BORDER)),
         ("VALIGN", (0, 0), (-1, -1), "TOP"),
         ("TOPPADDING", (0, 0), (-1, -1), 3), ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
@@ -66,20 +74,48 @@ def table(rows):
     return t
 
 
-def render(md_path: Path, pdf_path: Path, footer: str = "Ultimate Productivity Bundle"):
+class DoubleRule(Flowable):
+    """Short brass double rule (the brand's mark under headlines)."""
+
+    def __init__(self, width=60, em=14, color=BRASS):
+        super().__init__()
+        self.w, self.em, self.color = width, em, color
+        self.height = em * 0.147 + 2
+
+    def wrap(self, aw, ah):
+        return self.w, self.height
+
+    def draw(self):
+        cv, em = self.canv, self.em
+        cv.setFillColor(c(self.color))
+        cv.rect(0, self.height - 0.075 * em, self.w, 0.075 * em, stroke=0, fill=1)
+        cv.rect(0, self.height - 0.147 * em, self.w, 0.022 * em, stroke=0, fill=1)
+
+
+def render(md_path: Path, pdf_path: Path, footer: str = "Brass Ledger"):
     lines = md_path.read_text(encoding="utf-8").splitlines()
     story, i = [], 0
     while i < len(lines):
         ln = lines[i]
         if ln.startswith("# "):
-            t = Table([[Paragraph(inline(ln[2:]), ST["h1"])]], colWidths=[A4[0] - 36 * mm])
-            t.setStyle(TableStyle([("BACKGROUND", (0, 0), (-1, -1), c(NAVY)), ("TOPPADDING", (0, 0), (-1, -1), 10),
-                                   ("BOTTOMPADDING", (0, 0), (-1, -1), 10), ("LEFTPADDING", (0, 0), (-1, -1), 10)]))
-            story += [t, Spacer(1, 8)]
+            title = ln[2:]
+            kick = "Guide"
+            for sep in (" — ", " - "):
+                if sep in title:
+                    a_, b_ = title.split(sep, 1)
+                    kick, title = (a_, b_) if len(a_) < len(b_) else (b_, a_)
+                    break
+            t = Table([[Paragraph(spaced(kick), ST["kicker"])], [Paragraph(inline(title), ST["h1"])], [DoubleRule(90, 24)]],
+                      colWidths=[A4[0] - 36 * mm])
+            t.setStyle(TableStyle([("BACKGROUND", (0, 0), (-1, -1), c(GREEN)), ("LEFTPADDING", (0, 0), (-1, -1), 16),
+                                   ("TOPPADDING", (0, 0), (-1, 0), 16), ("BOTTOMPADDING", (0, 0), (-1, 0), 2),
+                                   ("TOPPADDING", (0, 1), (-1, 1), 0), ("BOTTOMPADDING", (0, 1), (-1, 1), 6),
+                                   ("TOPPADDING", (0, 2), (-1, 2), 2), ("BOTTOMPADDING", (0, 2), (-1, 2), 16)]))
+            story += [t, Spacer(1, 12)]
         elif ln.startswith("## "):
             story.append(Paragraph(inline(ln[3:]), ST["h2"]))
         elif ln.startswith("### "):
-            story.append(Paragraph(inline(ln[4:]), ST["h3"]))
+            story.append(Paragraph(spaced(ln[4:]), ST["h3"]))
         elif ln.startswith("|"):
             rows = []
             while i < len(lines) and lines[i].startswith("|"):
@@ -97,7 +133,7 @@ def render(md_path: Path, pdf_path: Path, footer: str = "Ultimate Productivity B
                 items.append(ListItem(Paragraph(inline(txt), ST["p"]), leftIndent=12 + indent * 4))
                 i += 1
             story.append(ListFlowable(items, bulletType="1" if numbered else "bullet", start="1" if numbered else None,
-                                      bulletFontName="Body", bulletFontSize=8, bulletColor=c(BLUE), leftIndent=12))
+                                      bulletFontName="Body-Bold", bulletFontSize=8, bulletColor=c(BRASS_DARK), leftIndent=12))
             continue
         elif ln.startswith(">"):
             quote = []
@@ -112,7 +148,7 @@ def render(md_path: Path, pdf_path: Path, footer: str = "Ultimate Productivity B
                     paras.append(" ".join(cur))
                     cur = []
             t = Table([[Paragraph(inline(q), ST["p"])] for q in paras], colWidths=[A4[0] - 36 * mm])
-            t.setStyle(TableStyle([("BACKGROUND", (0, 0), (-1, -1), c(BG)), ("LINEBEFORE", (0, 0), (0, -1), 3, c(BLUE)),
+            t.setStyle(TableStyle([("BACKGROUND", (0, 0), (-1, -1), colors.white), ("LINEBEFORE", (0, 0), (0, -1), 3, c(BRASS)),
                                    ("LEFTPADDING", (0, 0), (-1, -1), 10), ("TOPPADDING", (0, 0), (-1, -1), 5),
                                    ("BOTTOMPADDING", (0, 0), (-1, -1), 3)]))
             story += [t, Spacer(1, 6)]
@@ -123,16 +159,28 @@ def render(md_path: Path, pdf_path: Path, footer: str = "Ultimate Productivity B
 
     def on_page(cv, doc):
         cv.saveState()
-        cv.setFillColor(c(SECONDARY))
+        cv.setFillColor(c(PAPER))
+        cv.rect(0, 0, A4[0], A4[1], stroke=0, fill=1)
+        # logo bottom-left: wordmark with its brass double rule
+        x, y, em = 18 * mm, 10.5 * mm, 11
+        cv.setFillColor(c(GREEN))
+        cv.setFont("Head", em)
+        cv.drawString(x, y, BR.NAME)
+        w = pdfmetrics.stringWidth(BR.NAME, "Head", em)
+        cv.setFillColor(c(BRASS))
+        cv.rect(x, y - 0.24 * em, w, 0.075 * em, stroke=0, fill=1)
+        cv.rect(x, y - 0.24 * em - 0.072 * em, w, 0.022 * em, stroke=0, fill=1)
+        cv.setFillColor(c(INK2))
         cv.setFont("Body", 7.5)
-        cv.drawString(18 * mm, 10 * mm, footer)
+        if footer and footer != BR.NAME:
+            cv.drawCentredString(A4[0] / 2, 10 * mm, footer.replace("Ultimate Productivity Bundle", BR.NAME))
         cv.drawRightString(A4[0] - 18 * mm, 10 * mm, f"Page {doc.page}")
-        cv.setStrokeColor(c(LIGHT_GRAY))
-        cv.line(18 * mm, 13 * mm, A4[0] - 18 * mm, 13 * mm)
+        cv.setStrokeColor(c(BORDER))
+        cv.line(18 * mm, 15.5 * mm, A4[0] - 18 * mm, 15.5 * mm)
         cv.restoreState()
 
     doc = SimpleDocTemplate(str(pdf_path), pagesize=A4, leftMargin=18 * mm, rightMargin=18 * mm, topMargin=16 * mm,
-                            bottomMargin=18 * mm, title=md_path.stem.replace("_", " "))
+                            bottomMargin=20 * mm, title=md_path.stem.replace("_", " "))
     doc.build(story, onFirstPage=on_page, onLaterPages=on_page)
 
 

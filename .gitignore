@@ -15,3 +15,6 @@ productivity-bundle/dist/02_Ultimate_OneNote_Planner/OneNote_Import/
 productivity-bundle/dist/02_Ultimate_OneNote_Planner/Preview_HTML/
 productivity-bundle/listings/**/video/
 productivity-bundle/listings/pins/*.png
+
+# brand reference art (sent to the owner, not stored here)
+productivity-bundle/brand/*.png

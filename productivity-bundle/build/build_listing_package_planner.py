@@ -28,7 +28,7 @@ ONEPKG = "Ultimate_Planner_2027.onepkg"
 
 
 def start_here_md(cfg, has_onepkg):
-    thanks = f"Thank you for your purchase{' from ' + cfg['shop_name'] if cfg.get('shop_name') else ''}!"
+    thanks = f"Thank you for your purchase{' from ' + cfg['shop_name'] if cfg.get('shop_name') else ''}."
     shared = cfg.get("onenote_shared_notebook_link", "")
     onenote_row = ("| **OneNote for Windows** (Microsoft 365 / desktop) | **Ultimate_Planner_2027.onepkg**: double-click it and choose where to keep the notebook (pick OneDrive to sync it to your phone) |\n"
                    if has_onepkg else "")
@@ -58,7 +58,7 @@ The full **User Guide** is in Planner_User_Guide.pdf.
 
 ## Need help?
 
-Send me a message on Etsy. I'm happy to help you get set up.
+Send me a message on Etsy and I will help you get set up.
 """
 
 

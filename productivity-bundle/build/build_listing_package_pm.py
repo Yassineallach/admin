@@ -23,7 +23,7 @@ OUT = LST / "etsy_upload"
 
 def start_here_md(cfg):
     demo, blank = cfg.get("google_sheets_demo_copy_link", ""), cfg.get("google_sheets_blank_copy_link", "")
-    thanks = f"Thank you for your purchase{' from ' + cfg['shop_name'] if cfg.get('shop_name') else ''}!"
+    thanks = f"Thank you for your purchase{' from ' + cfg['shop_name'] if cfg.get('shop_name') else ''}."
     if demo or blank:
         sheets = ("**Google Sheets: quickest way.** Click a link below while signed in to Google and choose *Make a copy*. "
                   "The copy is yours and saves in your Google Drive.\n\n"
@@ -59,13 +59,13 @@ def start_here_md(cfg):
 
 ## Tips
 
-- Light-mint cells are for your input; grey cells are formulas, so don't type over them.
+- White cells with a border are for your input; shaded cells are formulas, so don't type over them.
 - The DEMO file is fixed to a sample date so the demo always looks current. Clear Setup › *Today's date override* to use the real date.
 - The full **User Guide** (PDF) is inside the ZIP, in the Guides folder.
 
 ## Need help?
 
-Send me a message on Etsy. I'm happy to help you get set up.
+Send me a message on Etsy and I will help you get set up.
 """
 
 

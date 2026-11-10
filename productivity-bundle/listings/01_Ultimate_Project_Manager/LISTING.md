@@ -6,20 +6,19 @@ Copy-paste ready. Fields are in the order Etsy's listing form asks for them.
 
 ## Photos (upload in this order)
 
-Files are in `images/`, 2400 × 1800 px (4:3). The first image is the thumbnail shown in search results.
+Files are in `images/`, 2700 × 2025 px (4:3), in the Brass Ledger layout. Every screenshot is a real render of the finished product.
 
-| # | File | Alt text (Etsy lets you add one per photo) |
+| # | File | Alt text |
 |---|---|---|
-| 1 | 01_hero.png | Project management spreadsheet template shown on a laptop: teal dashboard with KPI tiles, charts and an icon sidebar |
-| 2 | 02_whats_included.png | List of the 15 tabs and the 5 files included in the project manager template |
-| 3 | 03_dashboard.png | All-in-one project dashboard with KPI tiles, six charts, task lists and a performance table |
-| 4 | 04_calendars.png | Monthly and weekly calendar tabs showing tasks, deadlines and recurring work |
-| 5 | 05_kanban_gantt.png | Kanban board with five status columns and a Gantt chart timeline |
-| 6 | 06_projects_budget.png | Project detail view, project portfolio table and project budget tab |
-| 7 | 07_tasks.png | Task database and recurring tasks tabs with feature list |
-| 8 | 08_decisions.png | Weighted decision matrix and Eisenhower priority matrix |
-| 9 | 09_how_it_works.png | Three set-up steps and compatibility with Excel and Google Sheets |
-| 10 | 10_excel_and_sheets.png | The dashboard in the Excel edition and in the Google Sheets edition |
+| 1 | 01_hero.png | Ultimate Project Manager: See every project, task and deadline in one place |
+| 2 | 02_whats_included.png | What's included in Ultimate Project Manager |
+| 3 | 03_main_tool.png | Log a task once. Every view picks it up |
+| 4 | 04_summary.png | Know what is due, late and over budget |
+| 5 | 05_how_it_works.png | How Ultimate Project Manager works in three steps |
+| 6 | 06_compatibility.png | Which apps Ultimate Project Manager works with |
+| 7 | 07_what_you_receive.png | The files you receive with Ultimate Project Manager |
+
+The first image is the thumbnail shown in search results.
 
 ## Video (optional, recommended)
 
@@ -128,7 +127,7 @@ PLEASE NOTE
 • For personal or internal business use. Please don't resell or share the files.
 • Colours may look slightly different on different screens.
 • Save with the 3-in-1 Productivity Bundle in my shop: Project Manager + Weekly Planner Pro + Budget Spreadsheet.
-• Questions? Send me a message — I'm happy to help you get set up.
+• Questions? Send me a message and I will help you get set up.
 ```
 
 > **AI disclosure (check Etsy's current policy).** Parts of this product and its listing images were made with AI assistance. Etsy's Creativity Standards ask sellers to be open about how items are made. If that still applies when you publish, add a line such as *"Designed by me with the help of AI tools."* to the end of the description.
@@ -166,7 +165,7 @@ Etsy allows up to 5 files of 20 MB each. Upload everything in `etsy_upload/`:
 
 - [ ] Open the Excel DEMO file in real Excel (Windows or Mac). Confirm it opens without a "repair" message and that the sidebar icons switch tabs.
 - [ ] Upload the Google Sheets DEMO and BLANK files to your Google Drive and convert them (File › Save as Google Sheets). Build "make a copy" links by replacing `/edit…` with `/copy` in each sheet's URL, paste them into `listing_config.json`, and run `python3 build/build_listing_package_pm.py` to refresh START_HERE.pdf.
-- [ ] Upload the 10 images in order and add the alt text.
+- [ ] Upload the 7 images in order and add the alt text.
 - [ ] Paste the title, tags, description and materials.
 - [ ] Set the price and an optional launch sale.
 - [ ] Upload the two files from `etsy_upload/`.

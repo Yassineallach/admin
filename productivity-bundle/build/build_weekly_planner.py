@@ -105,29 +105,14 @@ class Builder:
         c.alignment = align or Alignment(vertical="center", indent=1)
         return c
 
-    def subhead(self, ws, a, text, color=MIDNIGHT, fill_="E2F2EF", align=None):
+    def subhead(self, ws, a, text, color=MIDNIGHT, fill_="EFEAE0", align=None):
         c = self.merge(ws, a, text)
         paint(ws, a, f=fill(fill_), border=_C.CELL_BOX)
         c.font = self.T.font(9, True, color)
         c.alignment = align or Alignment(vertical="center", indent=1)
 
     def tile(self, ws, r, c1, c2, label, formula, numfmt=None, accent=BLUE):
-        top = Side(style="medium", color=accent)
-        for rr in (r, r + 1):
-            if c2 > c1:
-                ws.merge_cells(f"{L(c1)}{rr}:{L(c2)}{rr}")
-            for cc in range(c1, c2 + 1):
-                ws.cell(row=rr, column=cc).fill = FILL_WHITE
-                ws.cell(row=rr, column=cc).border = Border(top=top if rr == r else None, bottom=THIN if rr == r + 1 else None,
-                                                           left=THIN if cc == c1 else None, right=THIN if cc == c2 else None)
-        lc = ws.cell(row=r, column=c1, value=label)
-        lc.font = self.T.font(8, True, SECONDARY)
-        lc.alignment = Alignment(vertical="bottom", indent=1)
-        vc = ws.cell(row=r + 1, column=c1, value=formula)
-        vc.font = self.T.font(15, True, DARK)
-        vc.alignment = Alignment(horizontal="left", vertical="center", indent=1, shrink_to_fit=True)
-        if numfmt:
-            vc.number_format = numfmt
+        green_tile(ws, self.T, r, c1, c2, label, formula, numfmt, size=15)
         ws.row_dimensions[r].height = 18
         ws.row_dimensions[r + 1].height = 30
 
@@ -141,8 +126,8 @@ class Builder:
         c = self.merge(ws, "B5:L8", (
             "WELCOME TO WEEKLY PLANNER PRO.   1) Fill in your details and preferences below.   2) Set the date Week 1 starts "
             "(blank = this week). Weeks 2–6 follow on automatically.   3) Plan each week on the Week 1 … Week 6 tabs and see "
-            "the month on Monthly Calendar.   Light-mint cells are for typing; grey cells calculate by themselves. "
-            "To reuse a week tab later, type a new start date on it and clear its mint cells. "
+            "the month on Monthly Calendar.   White cells with a border are for typing; shaded cells calculate by themselves. "
+            "To reuse a week tab later, type a new start date on it and clear its white input cells. "
             + ("This copy contains DEMO DATA — use the BLANK file to start fresh." if self.demo else "")))
         paint(ws, "B5:L8", f=fill(SOFT_BLUE))
         c.font = T.font(10, False, MIDNIGHT)
@@ -253,7 +238,7 @@ class Builder:
                                    "October", "November", "December"]),
                   "K": ("Marks", ["✓", "✗"]), "L": ("Years", list(range(2025, 2037)))}
         for c, (head, items) in {**lists, **system}.items():
-            self.subhead(ws, f"{c}27", head, align=CENTER, fill_="E2F2EF" if c in lists else "EFEAFB")
+            self.subhead(ws, f"{c}27", head, align=CENTER, fill_="EFEAE0" if c in lists else "F6EBD3")
             n = HAB_N if c == "F" else LRN - LR1 + 1
             for i in range(LRN - LR1 + 1):
                 ws[f"{c}{LR1 + i}"] = items[i] if i < len(items) and i < n else None
@@ -283,14 +268,14 @@ class Builder:
             "Schedule — each day card shows 10 time slots from your working hours (start time + slot length).",
             "Monthly Calendar — pick a year and month. It shows your important dates (★), deadlines (⚑), the tasks you planned "
             "on the week tabs (☑ done/total), each week's main goal and your priorities for that month.",
-            "Reusing a week tab — type the new start date, then select its mint cells and press Delete. In Excel you can type "
+            "Reusing a week tab — type the new start date, then select its white input cells and press Delete. In Excel you can type "
             "the tab's name with '_Inputs' (e.g. Week1_Inputs) in the Name Box to select all of them at once."
             if self.ed == "excel" else
-            "Reusing a week tab — type the new start date, then select its mint cells and press Delete. Grey cells hold "
+            "Reusing a week tab — type the new start date, then select its white input cells and press Delete. Shaded cells hold "
             "formulas: leave them in place.",
             "Protection — " + ("tabs are protected (no password) so formulas can't be overwritten by accident: Review › "
                                "Unprotect Sheet if you want to change the layout." if self.ed == "excel" else
-                               "nothing is locked in the Google Sheets edition; avoid typing over grey cells."),
+                               "nothing is locked in the Google Sheets edition; avoid typing over shaded cells."),
         ]
         for i, t in enumerate(tips):
             r = 42 + i
@@ -393,7 +378,7 @@ class Builder:
 
         # ---- day cards
         cards = [(2, 5, 12, 10), (2, 12, 12, 17)]
-        st_rule_font = Font(color="8A9B99", strike=True)
+        st_rule_font = Font(color="8C8778", strike=True)
         for d in range(7):
             r0 = DAY_ROW[d]
             rb1, rbn = r0 + 2, r0 + 1 + BODY
@@ -428,15 +413,15 @@ class Builder:
                 self.merge(ws, f"C{rr}:D{rr}")
                 self.inp(name, f"C{rr}:D{rr}")
             add_list_dv(ws, f"B{r0 + 2}:B{r0 + 4}", SL("K", LR1 + 1))
-            self.subhead(ws, f"B{r0 + 5}", "Time", align=CENTER, fill_="EFEAFB")
-            self.subhead(ws, f"C{r0 + 5}:D{r0 + 5}", "Appointments", fill_="EFEAFB")
+            self.subhead(ws, f"B{r0 + 5}", "Time", align=CENTER, fill_="F6EBD3")
+            self.subhead(ws, f"C{r0 + 5}:D{r0 + 5}", "Appointments", fill_="F6EBD3")
             for i in range(3):
                 rr = r0 + 6 + i
                 self.inp(name, f"B{rr}", "h:mm AM/PM", CENTER)
                 self.merge(ws, f"C{rr}:D{rr}")
                 self.inp(name, f"C{rr}:D{rr}")
             add_dv(ws, f"B{r0 + 6}:B{r0 + 8}", "time", "between", "0", "0.999999", error="Enter a time such as 9:30 AM.")
-            self.subhead(ws, f"B{r0 + 9}:D{r0 + 9}", "Notes", fill_="EFEAFB")
+            self.subhead(ws, f"B{r0 + 9}:D{r0 + 9}", "Notes", fill_="F6EBD3")
             self.merge(ws, f"B{r0 + 10}:D{r0 + 11}")
             self.inp(name, f"B{r0 + 10}:D{r0 + 11}", align=LEFT_WRAP)
             for i in range(BODY):
@@ -457,7 +442,7 @@ class Builder:
             cf_formula(ws, f"I{rb1}:I{rbn}", f'AND($I{rb1}<>"",$I{rb1}=$N$5)', SOFT_TEAL, TEAL, True)
             cf_formula(ws, f"H{rb1}:H{rbn}", f'AND($H{rb1}<>"",$H{rb1}=$N$6)', DANGER_BG, DANGER, True)
             cf_formula(ws, f"B{r0 + 2}:B{r0 + 4}", f'B{r0 + 2}="✓"', SOFT_TEAL, TEAL, True)
-            cf_formula(ws, f"C{r0 + 2}:D{r0 + 4}", f'$B{r0 + 2}="✓"', font_color="8A9B99")
+            cf_formula(ws, f"C{r0 + 2}:D{r0 + 4}", f'$B{r0 + 2}="✓"', font_color="8C8778")
             ws.row_dimensions[r0 + 12].height = 12
             cards.append((2, r0, 12, rbn))
         cf_formula(ws, "B15:B17", 'B15="✓"', SOFT_TEAL, TEAL, True)
@@ -691,7 +676,7 @@ class Builder:
                 ws[f"{c}{base + 3}"] = f'=IF({inm},IF(({cnt})=0,"","☑ "&({dn})&"/"&({cnt})&" tasks done"),"")'
                 more = f"MAX(0,COUNTIF($B${IMP1}:$B${IMPN},{date})-1)+MAX(0,COUNTIF($F${IMP1}:$F${IMPN},{date})-1)"
                 ws[f"{c}{base + 4}"] = f'=IF(AND({inm},{more}>0),"+"&({more})&" more","")'
-                fonts = {1: T.font(9, True, "B26B00"), 2: T.font(9, True, LAVENDER), 3: T.font(9, False, TEAL), 4: T.font(8, False, SECONDARY)}
+                fonts = {1: T.font(9, True, "7A4B1E"), 2: T.font(9, True, LAVENDER), 3: T.font(9, False, TEAL), 4: T.font(8, False, SECONDARY)}
                 for k in range(1, 5):
                     cell = ws[f"{c}{base + k}"]
                     cell.font = fonts[k]
@@ -707,7 +692,7 @@ class Builder:
             idx = f"SUMPRODUCT(MAX(($U$5:$U$10>=B{base})*($U$5:$U$10<=B{base}+6)*$T$5:$T$10))"
             self.merge(ws, f"I{base}:I{base + 4}",
                        f'=IF({idx}=0,"",INDEX($V$5:$V$10,{idx})&CHAR(10)&"— Week "&{idx}&IF(INDEX($W$5:$W$10,{idx})="",""," · "&TEXT(INDEX($W$5:$W$10,{idx}),"0%")&" done"))')
-            paint(ws, f"I{base}:I{base + 4}", f=fill(SOFT_LAV), font=T.font(9, True, "4B3A8C"),
+            paint(ws, f"I{base}:I{base + 4}", f=fill(SOFT_LAV), font=T.font(9, True, "7A5514"),
                   align=Alignment(wrap_text=True, vertical="center", indent=1),
                   border=Border(left=THIN, right=THIN, top=THIN, bottom=THIN))
             cf_formula(ws, f"B{base}:H{base}", f"B{base}=$Q$9", BLUE, WHITE, True, stop=True)
@@ -748,9 +733,9 @@ class Builder:
             ws.row_dimensions[r].height = 18
         cf_formula(ws, f"L{G0 + 9}", f"L{G0 + 9}>0", DANGER_BG, DANGER, True)
         section(ws, T, G0 + 14, 11, 12, "LEGEND", color=LAVENDER)
-        leg = [(BLUE, "Today", WHITE), (BG, "Other month", MED_GRAY), (WHITE, "★ Important date", "B26B00"),
+        leg = [(BLUE, "Today", WHITE), (BG, "Other month", MED_GRAY), (WHITE, "★ Important date", "7A4B1E"),
                (WHITE, "⚑ Deadline", LAVENDER), (DANGER_BG, "⚑ Overdue deadline", DANGER), (WHITE, "☑ Tasks from week tabs", TEAL),
-               (SOFT_LAV, "Week goal (from week tab)", "4B3A8C")]
+               (SOFT_LAV, "Week goal (from week tab)", "7A5514")]
         for i, (colr, t, fc) in enumerate(leg):
             r = G0 + 15 + i
             ws[f"K{r}"] = t

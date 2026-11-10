@@ -47,19 +47,19 @@ def cells(ws, T, quote, current, last_row, c1=1, c2=1, row_px=None, nav=None):
             ws.merge_cells(f"{L(c1)}{r}:{L(c2)}{r}")
         cell = ws.cell(row=r, column=c1)
         cell.value = f'=HYPERLINK("#{quote(tab)}!A1","{short}")'
-        cell.font = T.font(8, True, "A9D8D1" if tab == current else WHITE)
+        cell.font = T.font(8, True, "C9D3CF" if tab == current else WHITE)
         cell.alignment = Alignment(horizontal="center", vertical="center")
 
 
 def draw(layer, current, height_px, nav=None):
     """Excel: gradient bar + icons with hyperlinks/tooltips; the current tab's icon sits in a mint circle."""
-    layer.shape(0, 0, BAR_W, height_px, radius=0.2, fill=None, grad=([(0, "0F6E68"), (100, "0B4F4C")], 90), name="Sidebar")
+    layer.shape(0, 0, BAR_W, height_px, radius=0.2, fill=None, grad=([(0, "2B5148"), (100, "1F3D36")], 90), name="Sidebar")
     for i, (tab, icon, _short) in enumerate(nav or NAV):
         cy = icon_centre(i)
         make = icons.ICONS[icon] if isinstance(icon, str) else icon
         if tab == current:
-            layer.shape(6, cy - 21, 48, cy + 21, geom="ellipse", fill="E1F3F0", name="Active")
-            png = make(c="0F6E68", size=64)
+            layer.shape(6, cy - 21, 48, cy + 21, geom="ellipse", fill="E7EDEA", name="Active")
+            png = make(c="2B5148", size=64)
         else:
             png = make(c="FFFFFF", size=64)
         layer.picture(13, cy - 14, 41, cy + 14, png, link_sheet=None if tab == current else tab, tooltip=tab)

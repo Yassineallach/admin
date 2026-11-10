@@ -129,7 +129,7 @@ class Layer:
                f'</xdr:sp><xdr:clientData fLocksWithSheet="1" fPrintsWithSheet="1"/></xdr:twoCellAnchor>')
         self.items.append(Item(layer, xml, box=(x0, y0, x1, y1)))
 
-    def text(self, x0, y0, x1, y1, text=None, textlink=None, size=11, bold=False, color="1F3533", align="l",
+    def text(self, x0, y0, x1, y1, text=None, textlink=None, size=11, bold=False, color="222222", align="l",
              anchor="ctr", layer="front", cached=""):
         """Text box. `textlink` = absolute same-sheet reference such as '$BV$5' (live text from that cell)."""
         sid = self.nid()

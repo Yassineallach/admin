@@ -41,7 +41,7 @@ The Excel edition has a clickable icon sidebar drawn with Excel shapes. Google S
 - **Charts:** productivity score by day and tasks completed by day.
 - **Weekly reflection:** what went well, what was challenging, what you learned, your focus for next week, and a 1–10 rating shown as stars.
 
-The row of links under the overview jumps to any day, the trackers or the reflection. Today's day card turns teal.
+The row of links under the overview jumps to any day, the trackers or the reflection. Today's day card turns green.
 
 ## Getting started (5 minutes)
 
@@ -53,22 +53,23 @@ The row of links under the overview jumps to any day, the trackers or the reflec
 
 ### Cell colours
 
-| Colour | Meaning |
+| Cell | Meaning |
 |---|---|
-| Light mint | Type here |
-| Grey | Calculated: don't type over it |
-| Lavender | Optional, or a system list |
-| Teal tint | Done or good result |
-| Light red | Warning: overdue, or a habit or goal missed |
+| White with a border | Type here, or pick from the dropdown |
+| Shaded (paper tint) | Calculated: don't type over it |
+| Brass tint | Optional, or a system list |
+| Green tint | Positive result, done, or income |
+| Red tint | Warning: overdue, over budget, or a negative result |
+| Green block with a brass figure | A result: totals and key numbers |
 
 ## Reusing a week tab
 
 Each week tab is independent. To use one for any other week:
 
 1. Type the new week's date in **Week starts on (optional)**. Any day of that week works; it moves back to your week-start day.
-2. Clear the old entries: select the mint cells and press Delete.
+2. Clear the old entries: select the white input cells and press Delete.
    - **Excel shortcut:** type `Week1_Inputs` (or Week2_Inputs, and so on) in the Name Box, top left, and press Enter. This selects every input cell on that tab. Then press Delete.
-   - Grey cells hold formulas, so leave them in place.
+   - Shaded cells hold formulas, so leave them in place.
 3. To return a tab to its automatic date, clear its **Week starts on** cell.
 
 For a fresh six weeks, change **Setup › Week 1 starts on** and clear the week tabs. Or keep a clean copy of the BLANK file and duplicate it.
@@ -101,7 +102,7 @@ The DEMO files show Jordan Lee's six weeks starting Monday 2 Nov 2026. The demo'
 Every tab's subtitle says **DEMO DATA**.
 
 **Remove it:** start from the BLANK file. To clear the demo file by hand:
-1. Clear the mint cells on each week tab (see *Reusing a week tab*).
+1. Clear the white input cells on each week tab (see *Reusing a week tab*).
 2. Clear the Important Dates, Task Deadlines and Monthly Priorities tables on Monthly Calendar.
 3. On Setup, clear your details and the **Today's date override**.
 

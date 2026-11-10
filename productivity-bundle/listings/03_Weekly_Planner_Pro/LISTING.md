@@ -6,20 +6,19 @@ Copy-paste ready. Fields are in the order Etsy's listing form asks for them.
 
 ## Photos (upload in this order)
 
-Files are in `images/`, 2400 × 1800 px (4:3). The first image is the thumbnail shown in search results. Every screenshot is a real render of the DEMO workbook.
+Files are in `images/`, 2700 × 2025 px (4:3), in the Brass Ledger layout. Every screenshot is a real render of the finished product.
 
 | # | File | Alt text |
 |---|---|---|
-| 1 | 01_hero.png | Weekly planner spreadsheet on a laptop: week overview with progress tiles, priorities and a Monday day card |
-| 2 | 02_whats_included.png | The 8 tabs (Setup, Week 1 to Week 6, Monthly Calendar), what every week tab contains, and the 5 files included |
-| 3 | 03_week_overview.png | Week overview with week number, dates, main goal, top 3 priorities and eight live progress tiles |
-| 4 | 04_day_cards.png | A day card with top priorities, a task checklist with category, priority and status, a time schedule and appointments |
-| 5 | 05_trackers.png | Habit tracker, water and exercise trackers, productivity score and two charts |
-| 6 | 06_monthly_calendar.png | Monthly calendar with important dates, deadlines, tasks from the week tabs, week goals and monthly priorities |
-| 7 | 07_reflection.png | Weekly reflection prompts with a star rating |
-| 8 | 08_setup.png | Setup tab with preferences, working hours and a six-week overview with progress |
-| 9 | 09_how_it_works.png | Three set-up steps and compatibility with Excel and Google Sheets |
-| 10 | 10_excel_and_sheets.png | A week tab in the Excel edition and in the Google Sheets edition |
+| 1 | 01_hero.png | Weekly Planner Pro: Plan the week and see what got done |
+| 2 | 02_whats_included.png | What's included in Weekly Planner Pro |
+| 3 | 03_main_tool.png | One card per day: priorities, tasks, schedule |
+| 4 | 04_summary.png | Your month fills itself from the week tabs |
+| 5 | 05_how_it_works.png | How Weekly Planner Pro works in three steps |
+| 6 | 06_compatibility.png | Which apps Weekly Planner Pro works with |
+| 7 | 07_what_you_receive.png | The files you receive with Weekly Planner Pro |
+
+The first image is the thumbnail shown in search results.
 
 ## Video (optional, recommended)
 
@@ -129,7 +128,7 @@ PLEASE NOTE
 • Undated: weeks follow the start date you choose, so you can use it any year.
 • For personal use. Please don't resell or share the files.
 • Save with the 3-in-1 Productivity Bundle in my shop: Project Manager + Weekly Planner Pro + Budget Spreadsheet.
-• Questions? Send me a message — I'm happy to help.
+• Questions? Send me a message and I will help.
 ```
 
 > **AI disclosure (check Etsy's current policy).** Parts of this product and its listing images were made with AI assistance. If Etsy's Creativity Standards still ask for it when you publish, add a line such as *"Designed by me with the help of AI tools."* to the end of the description.
@@ -140,7 +139,7 @@ PLEASE NOTE
 
 **Is it dated?** No. Weeks follow the start date you type on Setup, and each week tab can also take its own date.
 
-**Can I plan more than six weeks?** Yes. Reuse a week tab: type the new date and clear its mint cells. In Excel, the Name Box shortcut (Week1_Inputs) selects them all at once. Or duplicate the file.
+**Can I plan more than six weeks?** Yes. Reuse a week tab: type the new date and clear its white input cells. In Excel, the Name Box shortcut (Week1_Inputs) selects them all at once. Or duplicate the file.
 
 **Does my week start on Sunday?** Pick Sunday on Setup. The week tabs and the calendar both follow it.
 
@@ -169,7 +168,7 @@ Run `python3 build/build_listing_package_wp.py`, then upload everything in `etsy
 - [ ] Upload the Google Sheets files to Google Drive and convert them (File › Save as Google Sheets).
   - Build "make a copy" links by replacing `/edit…` with `/copy` in each sheet's URL.
   - Paste the links into `listing_config.json`, then run `python3 build/build_listing_package_wp.py`.
-- [ ] Upload the 10 images in order and add the alt text.
+- [ ] Upload the 7 images in order and add the alt text.
 - [ ] Paste the title, tags, description and materials. Set the price.
 - [ ] Upload the two files from `etsy_upload/`.
 - [ ] Preview the listing on mobile.

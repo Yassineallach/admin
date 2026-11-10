@@ -4,16 +4,19 @@ Three templates in one listing: Ultimate Project Manager, Weekly Planner Pro and
 
 ## Photos (upload in this order)
 
+Files are in `images/`, 2700 × 2025 px (4:3), in the Brass Ledger layout. Every screenshot is a real render of the finished product.
+
 | # | File | Alt text |
 |---|---|---|
-| 1 | 01_hero.png | Productivity bundle of three spreadsheet templates: project manager, weekly planner and budget |
-| 2 | 02_whats_included.png | The three templates with their main features and the files included |
-| 3 | 03_ultimate_project_manager.png | Project manager dashboard with KPIs, charts and an icon sidebar |
-| 4 | 04_weekly_planner_pro.png | Weekly planner with week overview, progress tiles and day cards |
-| 5 | 05_ultimate_budget_spreadsheet.png | Budget dashboard with income, expenses, savings and charts |
-| 6 | 06_better_together.png | Bundle price compared with buying the three templates separately |
+| 1 | 01_hero.png | Ultimate Productivity Bundle: Run your projects, your week and your money |
+| 2 | 02_whats_included.png | What's included in Ultimate Productivity Bundle |
+| 3 | 03_main_tool.png | See every project, task and deadline in one place |
+| 4 | 04_summary.png | Know where your money went, and what is left |
+| 5 | 05_how_it_works.png | How Ultimate Productivity Bundle works in three steps |
+| 6 | 06_compatibility.png | Which apps Ultimate Productivity Bundle works with |
+| 7 | 07_what_you_receive.png | The files you receive with Ultimate Productivity Bundle |
 
-Add more photos from the single listings if you like (Etsy allows up to 20). Video: reuse one of the single listings' videos.
+Add more photos from the single listings if you like (Etsy allows up to 20).
 
 ## Title (132 / 140 characters)
 
@@ -48,13 +51,13 @@ Microsoft Excel, Google Sheets, digital download, spreadsheet template
 
 - **List $29.99**: 32% less than the three list prices added up ($43.97).
 - **Launch at about $16.99** while the single listings are at their launch prices ($23.97 together), so the bundle is always the better deal.
-- Keep the bundle cheaper than the sum of whatever the three singles cost at that moment. Image 6 shows the list prices: rebuild it with `python3 build/build_bundle.py` if you change them.
+- Keep the bundle cheaper than the sum of whatever the three singles cost at that moment. The images show no prices, so you can change prices without rebuilding them.
 - Etsy fees at $16.99 ≈ $2.06 per sale (US rates).
 
 ## Description
 
 ```
-Three complete templates to run your projects, your week and your money — at one bundle price. Each one updates itself as you type and works in Microsoft Excel and Google Sheets. No macros, no add-ons, no formulas to write. Tested formulas that work any year.
+Run your projects, your week and your money from three workbooks, at one price. Each one updates itself as you type and works in Microsoft Excel and Google Sheets. No macros, no add-ons, no formulas to write. They work in any year.
 
 ━━━━━━━━━━━━━━━━━━━━
 1. ULTIMATE PROJECT MANAGER — 15 TABS
@@ -100,7 +103,7 @@ PLEASE NOTE
 • This is a DIGITAL product. Nothing will be shipped.
 • The budget template is a planning tool, not financial advice.
 • For personal or internal business use. Please don't resell or share the files.
-• Questions? Send me a message — I'm happy to help.
+• Questions? Send me a message and I will help.
 ```
 
 > **AI disclosure (check Etsy's current policy).** Parts of these products and the listing images were made with AI assistance. If Etsy still asks for it, add *"Designed by me with the help of AI tools."* to the description.
@@ -112,7 +115,7 @@ Upload everything in `etsy_upload/`: `Ultimate_Productivity_Bundle.zip` and `STA
 ## Seller checklist
 
 - [ ] Publish the three single listings first, then this one.
-- [ ] Upload the 6 images in order and add the alt text.
+- [ ] Upload the 7 images in order and add the alt text.
 - [ ] Paste the title, tags, description and materials. Set the price below the sum of the singles.
 - [ ] Upload the two files from `etsy_upload/`.
 - [ ] Mention the bundle in each single listing's description ("Save with the 3-in-1 bundle in my shop").

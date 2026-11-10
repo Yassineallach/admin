@@ -322,7 +322,7 @@ class Mini(BB.Builder):
         c_ = self.merge(ws, "B17:E19", "HYPOTHETICAL PROJECTIONS — NOT A GUARANTEE. Constant returns are assumed; real returns vary and can be "
                                       "negative. Taxes and fees are ignored. Not financial advice.")
         paint(ws, "B17:E19", f=fill(GOAL_BG))
-        c_.font = T.font(9, True, "4B3A8C")
+        c_.font = T.font(9, True, "7A5514")
         c_.alignment = Alignment(wrap_text=True, vertical="center", indent=1)
         section(ws, T, 5, 7, 10, "CHECKPOINTS", color=C_GOAL)
         self.head(ws, 6, 7, ["Year", "Conservative", "Moderate", "Optimistic"])
@@ -564,7 +564,7 @@ class Mini(BB.Builder):
         ch.add_data(Reference(ws, min_col=10, min_row=8, max_row=FN), titles_from_data=True)
         ch.add_data(Reference(ws, min_col=11, min_row=8, max_row=FN), titles_from_data=True)
         ch.set_categories(Reference(ws, min_col=2, min_row=F1, max_row=FN))
-        self.chart_style(ch, None, [C_SAV, "D6E4F2"])
+        self.chart_style(ch, None, [C_SAV, "EADFC8"])
         ch.y_axis.majorGridlines = None
         ch.x_axis.delete = ch.y_axis.delete = False
         ch.x_axis.scaling.orientation = "maxMin"
@@ -652,7 +652,7 @@ class Mini(BB.Builder):
             ws.row_dimensions[7].height = 10
             # header rows: day number (7) and weekday letter (8)
             self.label(ws, "B8", "Habit", 9, True, MIDNIGHT)
-            ws["B8"].fill = fill("E2F2EF")
+            ws["B8"].fill = fill("EFEAE0")
             for d in range(31):
                 c = L(D1 + d)
                 ws[f"{c}7"] = f'=IF({d + 1}>$AU$3,"",{d + 1})'
@@ -660,12 +660,12 @@ class Mini(BB.Builder):
                 for rr in (7, 8):
                     ws[f"{c}{rr}"].alignment = CENTER
                     ws[f"{c}{rr}"].font = T.font(8, True, MIDNIGHT if rr == 7 else SECONDARY)
-                    ws[f"{c}{rr}"].fill = fill("E2F2EF")
+                    ws[f"{c}{rr}"].fill = fill("EFEAE0")
             for c, h in ((cD, "Done"), (cP, "Rate"), (cG, "Goal")):
                 ws[f"{c}8"] = h
                 ws[f"{c}8"].font = T.font(9, True, MIDNIGHT)
                 ws[f"{c}8"].alignment = CENTER
-                ws[f"{c}8"].fill = fill("E2F2EF")
+                ws[f"{c}8"].fill = fill("EFEAE0")
             ws.row_dimensions[7].height = 16
             ws.row_dimensions[8].height = 16
             marks = habit_marks(mi) if self.demo and mi <= ANCHOR.month else None
@@ -688,7 +688,7 @@ class Mini(BB.Builder):
             self.unlocked[S].append(f"{L(D1)}{H1}:{L(D1 + 30)}{HN}")
             add_list_dv(ws, f"{L(D1)}{H1}:{L(D1 + 30)}{HN}", '"✓,✗"')
             grid = f"{L(D1)}{H1}:{L(D1 + 30)}{HN}"
-            cf_formula(ws, grid, f'{L(D1)}${7}=""', "EEF2F1", stop=True)
+            cf_formula(ws, grid, f'{L(D1)}${7}=""', "F3EFE7", stop=True)
             cf_formula(ws, grid, f'{L(D1)}{H1}="✓"', C_INC, WHITE, True)
             cf_formula(ws, grid, f'{L(D1)}{H1}="✗"', EXP_BG, C_EXP)
             cf_formula(ws, f"{L(D1)}7:{L(D1 + 30)}8", f'AND({L(D1)}$7<>"",$AU$2+N({L(D1)}$7)-1=$AU$4)', TEAL, WHITE, True)
@@ -705,7 +705,7 @@ class Mini(BB.Builder):
                 ws[f"{c}{rd}"].alignment = CENTER
             ws.conditional_formatting.add(f"{L(D1)}{rd}:{L(D1 + 30)}{rd}",
                                           ColorScaleRule(start_type="num", start_value=0, start_color="FFFFFF",
-                                                         end_type="num", end_value=1, end_color="7FD3C6"))
+                                                         end_type="num", end_value=1, end_color="8FBF9F"))
             ws.row_dimensions[rd].height = 20
             cr = rd + 2
             section(ws, T, cr, 2, D1 + 34, "DAILY COMPLETION")
@@ -756,9 +756,9 @@ class Mini(BB.Builder):
             c = L(3 + m)
             ws[f"{c}{r}"] = f'=IF(COUNT({c}{Y1}:{c}{YN})=0,"",AVERAGE({c}{Y1}:{c}{YN}))'
         self.calc(S, f"C{r}:O{r}", FMT_PCT, CENTER, NAVY, True)
-        ws.conditional_formatting.add(f"C{Y1}:N{YN}", ColorScaleRule(start_type="num", start_value=0, start_color="FBE3E5",
-                                                                    mid_type="num", mid_value=0.5, mid_color="FFF6DD",
-                                                                    end_type="num", end_value=1, end_color="7FD3C6"))
+        ws.conditional_formatting.add(f"C{Y1}:N{YN}", ColorScaleRule(start_type="num", start_value=0, start_color="F8E4E0",
+                                                                    mid_type="num", mid_value=0.5, mid_color="FBF3E0",
+                                                                    end_type="num", end_value=1, end_color="8FBF9F"))
         cf_databar(ws, f"O{Y1}:O{YN}", C_INC)
         cr = r + 2
         section(ws, T, cr, 2, 15, "MONTHLY AVERAGE")
