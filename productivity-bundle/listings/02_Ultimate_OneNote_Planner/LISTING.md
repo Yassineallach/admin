@@ -1,14 +1,6 @@
-# Etsy listing — Ultimate Planner 2027
+# Etsy listing — Ultimate Planner 2027 (OneNote notebook + PDF)
 
-There are two versions of this listing. **Version A is ready to publish now.** Version B needs the OneNote notebook file, which only you can export.
-
-| | Version A — PDF planner (ready now) | Version B — OneNote notebook + PDF |
-|---|---|---|
-| Buyer downloads | 2027 PDF, undated PDF, user guide, Start Here | The same plus `Ultimate_Planner_2027.onepkg` |
-| Extra work for you | None | Run the import script, export from OneNote for Windows, test the links (Seller Guide) |
-| Images | Already generated for this version | Rerun `python3 build/listing_images_planner.py` after adding the .onepkg |
-
-The images, the buyer guide and START_HERE.pdf switch automatically: they only mention the OneNote notebook when the `.onepkg` file is in this folder.
+Copy-paste ready. This is the full version with the OneNote notebook.
 
 ---
 
@@ -18,7 +10,7 @@ Files are in `images/`, 2700 × 2025 px (4:3), in the Brass Ledger layout. Every
 
 | # | File | Alt text |
 |---|---|---|
-| 1 | 01_hero.png | Ultimate Planner 2027: Your year, your weeks and your work notes in one file |
+| 1 | 01_hero.png | Ultimate Planner 2027: Your year, your weeks and your work notes in one place |
 | 2 | 02_whats_included.png | What's included in Ultimate Planner 2027 |
 | 3 | 03_main_tool.png | One page for the week: goals, plan, habits |
 | 4 | 04_summary.png | Every page is one tap from the index |
@@ -30,32 +22,32 @@ The first image is the thumbnail shown in search results.
 
 ## Video (optional, recommended)
 
-Upload `video/listing_video.mp4`: a 14-second silent slideshow of the listing images. Listings with a video tend to hold attention longer. Rebuild with `python3 build/listing_video.py`.
+Upload `video/listing_video.mp4`: a 14-second silent slideshow of the listing images.
 
 ---
 
-# Version A — PDF planner (ready now)
-
-## Title (134 / 140 characters)
+## Title (129 / 140 characters)
 
 ```
-2027 Digital Planner + Undated Planner, Hyperlinked PDF, GoodNotes Notability iPad Planner, Weekly Monthly Planner, 111 Work Templates
+OneNote Digital Planner 2027 + Undated, Hyperlinked PDF Planner, GoodNotes Notability Planner, Weekly Monthly, 111 Work Templates
 ```
 
 ## Tags (13 / 13)
 
 ```
-digital planner, 2027 planner, undated planner, goodnotes planner, notability planner, ipad planner, hyperlinked planner, weekly planner, monthly planner, business planner, work planner, project planner, productivity planner
+onenote planner, digital planner, onenote template, 2027 planner, goodnotes planner, hyperlinked planner, weekly planner, monthly planner, business planner, productivity planner, notability planner, project planner, work planner
 ```
 
 ## Description
 
 ```
-One planner for your whole year — and your work. Yearly goals, 12 monthly sections, 53 weekly trackers, 111 work templates and 8 note layouts, all linked from one General Index.
+Your year, your weeks and your work notes in one place. Yearly goals, 12 monthly sections, 53 weekly trackers, 111 work templates and 8 note layouts, all linked from one General Index.
 
-TWO EDITIONS INCLUDED: a planner dated for 2027 and an undated planner you can start any month and reuse every year.
+TWO FORMATS INCLUDED:
+• A OneNote notebook (.onepkg) for OneNote for Windows: typed pages with tick boxes and tables you can add rows to, organised in sections with linked contents pages.
+• A hyperlinked PDF planner for GoodNotes, Notability, Xodo, Drawboard, Samsung Notes and other PDF note apps: clickable side tabs on every page, an index and contents pages, 6,400+ links.
 
-A hyperlinked PDF planner for GoodNotes, Notability, Xodo, Drawboard, Samsung Notes and other PDF note apps: clickable side tabs on every page, an index and contents pages — 6,400+ links, so every page is one tap away.
+The PDF comes in two editions: dated for 2027, and undated so you can start any month and reuse it every year.
 
 ━━━━━━━━━━━━━━━━━━━━
 WHAT'S INSIDE — 212 PLANNER PAGES
@@ -81,6 +73,7 @@ Every category starts with its own linked contents page. Every page links back t
 ━━━━━━━━━━━━━━━━━━━━
 WHAT YOU RECEIVE
 ━━━━━━━━━━━━━━━━━━━━
+• Ultimate_Planner_2027.onepkg — OneNote notebook (2027)
 • Ultimate_Planner_2027_Hyperlinked.pdf — dated 2027, 226-page landscape PDF (US Letter)
 • Ultimate_Planner_Undated_Hyperlinked.pdf — the same 226 pages with blank dates, for any year
 • User guide (PDF)
@@ -89,16 +82,17 @@ WHAT YOU RECEIVE
 ━━━━━━━━━━━━━━━━━━━━
 COMPATIBILITY
 ━━━━━━━━━━━━━━━━━━━━
+✔ OneNote for Windows (Microsoft 365 / OneNote desktop) — open the .onepkg notebook. Microsoft only lets OneNote for Windows open .onepkg files; on Mac, web and iPad use the PDF.
 ✔ GoodNotes, Notability, Xodo, Drawboard, Samsung Notes, Noteshelf and other PDF annotation apps — hyperlinks work
 ✔ iPad, Android tablets, Windows and Mac
-✔ OneNote — insert the PDF as printouts and write on top (links inside printouts don't click)
+✔ OneNote for Mac, web and iPad — insert the PDF as printouts and write on top (links inside printouts don't click)
 ✔ Print at home — landscape, fit to page
 
 ━━━━━━━━━━━━━━━━━━━━
 HOW IT WORKS
 ━━━━━━━━━━━━━━━━━━━━
 1. Download the files right after purchase (Etsy › Purchases and reviews).
-2. Import the PDF into your note app.
+2. Double-click the .onepkg in OneNote for Windows, or import the PDF into your note app.
 3. Start at the General Index — every page is one tap away.
 
 ━━━━━━━━━━━━━━━━━━━━
@@ -106,51 +100,13 @@ PLEASE NOTE
 ━━━━━━━━━━━━━━━━━━━━
 • This is a DIGITAL product. Nothing will be shipped.
 • The 2027 edition has dated calendars and weekly pages. The undated edition has blank date grids. The 111 templates and 8 note layouts are undated in both.
-• Pages are landscape, US Letter size. They aren't fillable form fields: you write with a stylus or add text boxes in your note app.
+• The PDF pages are landscape, US Letter size, for handwriting or text boxes. In the OneNote notebook you type directly on the page.
+• Listing pictures show the PDF edition. The OneNote notebook has the same pages in OneNote's own layout.
 • For personal use. Please don't resell or share the files.
 • Questions? Send me a message and I will help.
 ```
 
----
-
-# Version B — with the OneNote notebook
-
-Use this only after the `.onepkg` is exported, tested and in `etsy_upload/`.
-
-## Title (129 / 140 characters)
-
-```
-OneNote Digital Planner 2027 + Undated, Hyperlinked PDF Planner, GoodNotes Notability Planner, Weekly Monthly, 111 Work Templates
-```
-
-## Tags (13 / 13)
-
-```
-onenote planner, digital planner, onenote template, 2027 planner, goodnotes planner, hyperlinked planner, weekly planner, monthly planner, business planner, productivity planner, notability planner, project planner, work planner
-```
-
-## Description changes
-
-Start from the Version A description and change three parts:
-
-```
-(second paragraph)
-Two formats included:
-• A OneNote notebook (.onepkg) for OneNote for Windows — real typed pages with tick boxes and tables you can add rows to
-• TWO EDITIONS INCLUDED: a planner dated for 2027 and an undated planner you can start any month and reuse every year.
-
-A hyperlinked PDF planner for GoodNotes, Notability, Xodo, Drawboard, Samsung Notes and other PDF note apps
-
-(add to WHAT YOU RECEIVE)
-• Ultimate_Planner_2027.onepkg — OneNote notebook
-
-(add as the first COMPATIBILITY line)
-✔ OneNote for Windows (Microsoft 365 / OneNote desktop) — open the .onepkg notebook. Microsoft only lets OneNote for Windows open .onepkg files; on Mac, web and iPad use the PDF.
-```
-
----
-
-## Listing details (both versions)
+## Listing details
 
 | Field | Value |
 |---|---|
@@ -164,7 +120,7 @@ A hyperlinked PDF planner for GoodNotes, Notability, Xodo, Drawboard, Samsung No
 ## Materials
 
 ```
-hyperlinked PDF, digital download, digital planner
+OneNote notebook, hyperlinked PDF, digital download, digital planner
 ```
 
 ## Price (based on Etsy research, Nov 2026)
@@ -179,11 +135,13 @@ hyperlinked PDF, digital download, digital planner
 
 **Do the links work in GoodNotes / Notability?** Yes. The tabs, index and contents links are PDF hyperlinks. Use read mode, or tap with your finger instead of the pen.
 
-**Does it work in OneNote?** You can insert the PDF as printouts and write on top, but links inside printouts don't click. (Version B adds a real OneNote notebook for Windows.)
+**Does it work in OneNote?** Yes. OneNote for Windows opens the included OneNote notebook (.onepkg). OneNote for Mac, web and iPad can't open .onepkg files (a Microsoft limitation), so there you insert the PDF as printouts; links inside printouts don't click.
+
+**I don't have a Microsoft account. Can I use the notebook?** Yes. When OneNote for Windows opens the .onepkg, choose a folder on your computer.
 
 **Is it 2027 only?** No. You get a 2027 edition and an undated edition with blank dates that works for any year.
 
-**Can I type in it?** It's a PDF for handwriting or text boxes in a note app. It has no fillable form fields.
+**Can I type in it?** In the OneNote notebook, yes. The PDF is for handwriting or text boxes; it has no fillable form fields.
 
 **Can I duplicate pages?** Yes, in every PDF note app.
 
@@ -191,12 +149,20 @@ hyperlinked PDF, digital download, digital planner
 
 ## Files to upload
 
-Run `python3 build/build_listing_package_planner.py`, then upload everything in `etsy_upload/` (4 files for Version A, 5 for Version B).
+Upload these 5 files (Etsy allows 5):
+
+1. `Ultimate_Planner_2027.onepkg` — the notebook you exported
+2. `Ultimate_Planner_2027_Hyperlinked.pdf`
+3. `Ultimate_Planner_Undated_Hyperlinked.pdf`
+4. `Planner_User_Guide.pdf`
+5. `START_HERE.pdf`
+
+Files 2–5 are in `etsy_upload/`. Rebuild them with `python3 build/build_listing_package_planner.py --with-onepkg`.
 
 ## Seller checklist before publishing
 
-- [ ] Open the PDF in GoodNotes or Notability on a tablet and tap a few side tabs and index links.
+- [x] Build the OneNote notebook and export the .onepkg.
+- [ ] Open the PDF in GoodNotes or Notability on a tablet if you can, and tap a few side tabs and index links.
 - [ ] Upload the 7 images in order and add the alt text.
-- [ ] Paste the Version A title, tags and description. Set the price.
-- [ ] Upload the files from `etsy_upload/`.
-- [ ] Version B only: follow the Seller Guide, then **open the exported .onepkg as a new notebook and click several links** before uploading it.
+- [ ] Paste the title, tags and description. Set the price.
+- [ ] Upload the 5 files.

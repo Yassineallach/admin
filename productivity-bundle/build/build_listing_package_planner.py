@@ -12,6 +12,7 @@ Usage: python build_listing_package_planner.py
 """
 from __future__ import annotations
 
+import argparse
 import json
 import shutil
 import sys
@@ -30,7 +31,7 @@ ONEPKG = "Ultimate_Planner_2027.onepkg"
 def start_here_md(cfg, has_onepkg):
     thanks = f"Thank you for your purchase{' from ' + cfg['shop_name'] if cfg.get('shop_name') else ''}."
     shared = cfg.get("onenote_shared_notebook_link", "")
-    onenote_row = ("| **OneNote for Windows** (Microsoft 365 / desktop) | **Ultimate_Planner_2027.onepkg**: double-click it and choose where to keep the notebook (pick OneDrive to sync it to your phone) |\n"
+    onenote_row = ("| **OneNote for Windows** (Microsoft 365 / desktop) | **Ultimate_Planner_2027.onepkg**: double-click it and choose where to keep the notebook (a folder on your computer, or OneDrive to use it on other devices) |\n"
                    if has_onepkg else "")
     shared_txt = (f"\n**OneNote on Mac, web, iPad or phone:** open this link while signed in to your Microsoft account "
                   f"and copy the notebook to your OneDrive: {shared}\n" if shared else "")
@@ -79,6 +80,11 @@ def pdf_only_guide(md: str) -> str:
 
 
 def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--with-onepkg", action="store_true",
+                    help="build the guide and Start Here for the OneNote edition even when the .onepkg is not in this folder "
+                         "(you add Ultimate_Planner_2027.onepkg to etsy_upload/ yourself)")
+    a = ap.parse_args()
     cfg = json.loads((LST / "listing_config.json").read_text())
     if OUT.exists():
         shutil.rmtree(OUT)
@@ -89,20 +95,23 @@ def main():
     shutil.copy2(DIST / "PDF_Planner" / "Ultimate_Planner_2027_Hyperlinked.pdf", OUT)
     shutil.copy2(DIST / "PDF_Planner" / "Ultimate_Planner_Undated_Hyperlinked.pdf", OUT)
     guide = (DIST / "Guides" / "OneNote_Planner_User_Guide.md").read_text(encoding="utf-8")
-    if not src:
+    onenote = bool(src) or a.with_onepkg
+    if not onenote:
         guide = pdf_only_guide(guide)
     gmd = OUT / "Planner_User_Guide.md"
     gmd.write_text(guide, encoding="utf-8")
     md_to_pdf.render(gmd, OUT / "Planner_User_Guide.pdf", footer="Ultimate Planner 2027 · User Guide")
     gmd.unlink()
     md = OUT / "START_HERE.md"
-    md.write_text(start_here_md(cfg, bool(src)), encoding="utf-8")
+    md.write_text(start_here_md(cfg, onenote), encoding="utf-8")
     md_to_pdf.render(md, OUT / "START_HERE.pdf", footer="Ultimate Planner 2027 · Start Here")
     md.unlink()
     for f in sorted(OUT.iterdir()):
         mb = f.stat().st_size / 1e6
         print(f"{f.name}: {mb:.2f} MB", "(OVER Etsy's 20 MB limit!)" if mb > 20 else "")
-    if not src:
+    if a.with_onepkg and not src:
+        print(f"Add your {ONEPKG} to {OUT.relative_to(ROOT)}/ next to these files: 5 files to upload.")
+    if not onenote:
         print(f"note: no {ONEPKG} — built the PDF-planner package. Use 'Version A' in LISTING.md. To sell the OneNote "
               f"notebook too, export it (Seller Guide), put it in {LST.relative_to(ROOT)}/, rerun this script and "
               f"listing_images_planner.py, then use 'Version B'.")

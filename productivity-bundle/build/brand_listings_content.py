@@ -118,9 +118,9 @@ BG = dict(
 
 PL = dict(
     prod="02_Ultimate_OneNote_Planner", name="Ultimate Planner 2027",
-    hero=dict(kicker="Digital planner · Hyperlinked PDF", headline="Your year, your weeks and your work notes in one file.",
-              sub="A 226-page planner for PDF note apps. Tabs on every page and an index, so each page is one tap away.",
-              facts=["Dated 2027 and undated editions", "12 months and 53 weekly trackers", "111 work templates, 8 note layouts", "6,400+ links"]),
+    hero=dict(kicker="Digital planner · OneNote and PDF", headline="Your year, your weeks and your work notes in one place.",
+              sub="A OneNote notebook for Windows and a 226-page hyperlinked PDF for note apps. An index and tabs, so each page is one tap away.",
+              facts=["OneNote notebook and PDF planner", "Dated 2027 and undated PDF editions", "12 months and 53 weekly trackers", "111 work templates, 8 note layouts"]),
     hero_shots=[("02_Ultimate_OneNote_Planner", "index", None), ("02_Ultimate_OneNote_Planner", "w1", None), ("02_Ultimate_OneNote_Planner", "m1_cal", None)],
     included=dict(headline="212 planner pages, all linked from one index.", columns=[
         ("Start", ["General Index", "How to use", "Yearly Goals", "Year at a Glance", "Resources"]),
@@ -135,27 +135,28 @@ PL = dict(
         ("Habits and reflection", "Tick habits daily and review the week at the end."),
     ]),
     summary=dict(kicker="The general index", headline="Every page is one tap from the index.", shot="index", points=[
-        ("Side tabs on every page", "Jump to any month or section."),
-        ("Contents pages", "Each template category opens on its own linked list."),
-        ("Back to the index", "From any page, in one tap."),
+        ("In OneNote", "Sections for each month and template category, with linked contents pages."),
+        ("In the PDF", "Side tabs on every page and a linked index."),
+        ("Back to the index", "From any page, in one tap. Pages shown are from the PDF edition."),
     ]),
-    steps=dict(headline="Import the PDF and start at the index.", steps=[
+    steps=dict(headline="Open the file for your app and start at the index.", steps=[
         ("Download", "Get the files from your Etsy Purchases page as soon as you check out."),
-        ("Import", "Open the PDF in GoodNotes, Notability or another PDF note app."),
-        ("Plan", "Start at the General Index. Write with a stylus or add text boxes."),
+        ("Open", "Double-click the .onepkg in OneNote for Windows, or import the PDF into your note app."),
+        ("Plan", "Start at the General Index. Every month, week and template is one tap away."),
     ]),
     compat=dict(headline="Opens in the note app you already use.", rows=[
+        (True, "OneNote for Windows", "The OneNote notebook: typed pages, tick boxes and tables you can add rows to."),
+        (True, "OneNote for Mac, web and iPad", "Insert the PDF as printouts. Links inside printouts do not click."),
         (True, "GoodNotes, Notability, Noteshelf", "Hyperlinked PDF. Tabs and index links work."),
         (True, "Xodo, Drawboard, Samsung Notes", "Hyperlinked PDF on Android and Windows."),
-        (True, "OneNote", "Insert the PDF as printouts and write on top. Links inside printouts do not click."),
         (True, "Paper", "Print at home: landscape, US Letter, fit to page."),
-        (False, "Fillable form fields", "Pages are for handwriting or text boxes, not typed form fields."),
     ]),
-    receive=dict(headline="Two planners and two guides.", files=[
-        ("Planner PDF, dated 2027", "226 pages, landscape"), ("Planner PDF, undated", "The same pages, blank dates"),
-        ("PDF user guide", "How the planner is organised"), ("Start Here PDF", "How to import the file")],
-        notes=["Instant digital download. Nothing is shipped.", "US Letter, landscape.", "The undated edition can be reused every year.",
-               "For personal use. Please do not resell the files."]),
+    receive=dict(headline="A notebook, two PDF planners and two guides.", files=[
+        ("OneNote notebook (.onepkg)", "For OneNote for Windows"), ("Planner PDF, dated 2027", "226 pages, landscape"),
+        ("Planner PDF, undated", "The same pages, blank dates"), ("PDF user guide", "How the planner is organised"),
+        ("Start Here PDF", "Which file for which app")],
+        notes=["Instant digital download. Nothing is shipped.", "The .onepkg opens in OneNote for Windows. Use the PDF on Mac, iPad and web.",
+               "The undated PDF can be reused every year.", "For personal use. Please do not resell the files."]),
 )
 
 BUNDLE = dict(

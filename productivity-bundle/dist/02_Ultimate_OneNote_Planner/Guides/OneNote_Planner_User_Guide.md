@@ -43,7 +43,7 @@ Each template category and the Notes and Weekly sections start with a contents p
 
 ## Using the OneNote notebook
 
-1. Double-click `Ultimate_Planner_2027.onepkg`. OneNote asks where to keep the notebook; pick OneDrive to sync it to your phone.
+1. Double-click `Ultimate_Planner_2027.onepkg`. OneNote asks where to keep the notebook: choose a folder on your computer, or OneDrive if you want it on your other devices too.
 2. Open the **Start** section › **General Index**. Click any link to jump to that page.
 3. Click **⌂ Index** at the top of any page to come back.
 4. Tick checkboxes by clicking them. Press **Tab** in the last cell of a table to add a row.
