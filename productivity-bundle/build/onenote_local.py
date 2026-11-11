@@ -313,6 +313,43 @@ $on.NavigateTo($ids["index"])
 if ($fail.Count) { Write-Host "Finished with $($fail.Count) page(s) that OneNote did not accept: $($fail -join ', '). Details in failed_pages\errors.txt" -ForegroundColor Yellow }
 else { Write-Host "Done. $($pages.Count) pages. Check the notebook, then File > Export > Notebook > OneNote Package (*.onepkg)." -ForegroundColor Green }
 '''
+DIAG = r"""# Brass Ledger - finds which page element OneNote rejects. Run:  powershell -ExecutionPolicy Bypass -File .\diagnose.ps1
+$ErrorActionPreference = "Stop"
+$on = New-Object -ComObject OneNote.Application
+$folder = "C:\Brass Ledger"; New-Item -ItemType Directory -Force -Path $folder | Out-Null
+$path = Join-Path $folder "Diagnose"; $n = 2
+while (Test-Path $path) { $path = Join-Path $folder "Diagnose ($n)"; $n++ }
+$nb = ""; $on.OpenHierarchy($path, "", [ref]$nb, 1)
+$sid = ""; $on.OpenHierarchy("Tests.one", $nb, [ref]$sid, 3)
+$ns = 'xmlns:one="http://schemas.microsoft.com/office/onenote/2013/onenote"'
+$title = '<one:Title><one:OE><one:T><![CDATA[Test]]></one:T></one:OE></one:Title>'
+function Body($inner) { return "<one:Outline><one:OEChildren>$inner</one:OEChildren></one:Outline>" }
+$tests = [ordered]@{
+  "01 title only"          = "$title"
+  "02 xml declaration"     = "DECL$title"
+  "03 paragraph"           = $title + (Body '<one:OE><one:T><![CDATA[Hello]]></one:T></one:OE>')
+  "04 coloured text"       = $title + (Body "<one:OE><one:T><![CDATA[<span style='font-weight:bold;color:#A87620'>Hi</span>]]></one:T></one:OE>")
+  "05 position and size"   = $title + '<one:Outline><one:Position x="36.0" y="86.0" z="0"/><one:Size width="720.0" height="40.0" isSetByUser="true"/><one:OEChildren><one:OE><one:T><![CDATA[x]]></one:T></one:OE></one:OEChildren></one:Outline>'
+  "06 alignment"           = $title + (Body '<one:OE alignment="center"><one:T><![CDATA[x]]></one:T></one:OE>')
+  "07 to-do tag"           = '<one:TagDef index="0" type="0" symbol="3" fontColor="automatic" highlightColor="none" name="To Do"/>' + $title + (Body '<one:OE><one:Tag index="0" completed="false" disabled="false"/><one:T><![CDATA[x]]></one:T></one:OE>')
+  "08 title style"         = '<one:QuickStyleDef index="0" name="PageTitle" fontColor="#1F3D36" highlightColor="automatic" font="Georgia" fontSize="22.0" spaceBefore="0.0" spaceAfter="0.0"/><one:Title><one:OE quickStyleIndex="0"><one:T><![CDATA[Test]]></one:T></one:OE></one:Title>'
+  "09 table"               = $title + (Body '<one:OE><one:Table bordersVisible="true"><one:Columns><one:Column index="0" width="200.0"/></one:Columns><one:Row><one:Cell><one:OEChildren><one:OE><one:T><![CDATA[x]]></one:T></one:OE></one:OEChildren></one:Cell></one:Row></one:Table></one:OE>')
+  "10 table locked+header" = $title + (Body '<one:OE><one:Table bordersVisible="true" hasHeaderRow="false"><one:Columns><one:Column index="0" width="200.0" isLocked="true"/></one:Columns><one:Row><one:Cell><one:OEChildren><one:OE><one:T><![CDATA[x]]></one:T></one:OE></one:OEChildren></one:Cell></one:Row></one:Table></one:OE>')
+  "11 shaded cell"         = $title + (Body '<one:OE><one:Table bordersVisible="true"><one:Columns><one:Column index="0" width="200.0"/></one:Columns><one:Row><one:Cell shadingColor="#F1ECE2"><one:OEChildren><one:OE><one:T><![CDATA[x]]></one:T></one:OE></one:OEChildren></one:Cell></one:Row></one:Table></one:OE>')
+  "12 link"                = $title + (Body '<one:OE><one:T><![CDATA[<a href="https://example.com">link</a>]]></one:T></one:OE>')
+  "13 empty text"          = $title + (Body '<one:OE><one:T><![CDATA[]]></one:T></one:OE>')
+  "14 symbols"             = $title + (Body '<one:OE><one:T><![CDATA[⌂ Index · – 💡]]></one:T></one:OE>')
+}
+foreach ($k in $tests.Keys) {
+  $pid2 = ""; $on.CreateNewPage($sid, [ref]$pid2, 0)
+  $x = "<one:Page $ns ID=`"$pid2`">" + $tests[$k] + "</one:Page>"
+  if ($x.Contains("DECL")) { $x = '<?xml version="1.0" encoding="utf-8"?>' + "`n" + $x.Replace("DECL", "") }
+  try { $on.UpdatePageContent($x); Write-Host "OK    $k" -ForegroundColor Green }
+  catch { Write-Host "FAIL  $k  ->  $($_.Exception.Message)" -ForegroundColor Red }
+}
+Write-Host "OneNote version: $((Get-Item (Get-Process onenote -ErrorAction SilentlyContinue | Select-Object -First 1).Path -ErrorAction SilentlyContinue).VersionInfo.ProductVersion)"
+"""
+
 
 README = """BRASS LEDGER - OneNote planner without a Microsoft account
 =============================================================
@@ -356,6 +393,7 @@ def main():
     (OUT / "plan.json").write_text(json.dumps({"notebook": man["notebook"], "groups": groups}, indent=1, ensure_ascii=False), encoding="utf-8")
     (OUT / "build_onenote_local.ps1").write_text(PS1.replace("__NAME__", man["notebook"]), encoding="utf-8-sig")
     (OUT / "README.txt").write_text(README, encoding="utf-8")
+    (OUT / "diagnose.ps1").write_text(DIAG, encoding="utf-8-sig")
     print(f"wrote {n} OneNote pages to {OUT}")
 
 
