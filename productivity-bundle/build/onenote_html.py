@@ -18,8 +18,8 @@ from pathlib import Path
 import planner_content as PC
 
 WIDTH = 940
-TEAL_LIGHT, GREY_FILL, LABEL_FILL = "E2F2EF", "F1F5F4", "E7EFEE"
-TXT, SUB = "1F3533", "5F7472"
+TEAL_LIGHT, GREY_FILL, LABEL_FILL = "F6EBD3", "FAF7F2", "F1ECE2"   # Brass Ledger: brass tint, paper, calculated
+TXT, SUB = "222222", "444444"
 
 
 def esc(s):
@@ -101,7 +101,7 @@ def render_block(b, width=WIDTH, color="0F6E68"):
             tds = []
             for d in week:
                 inm = d.month == m
-                tds.append(cell(f'<span style="font-weight:bold;color:#{TXT if inm else "9AAAA9"}">{d.day}</span><br/>&nbsp;<br/>&nbsp;',
+                tds.append(cell(f'<span style="font-weight:bold;color:#{TXT if inm else "B8B2A6"}">{d.day}</span><br/>&nbsp;<br/>&nbsp;',
                                 w, None if inm else GREY_FILL))
             out.append("<tr>" + "".join(tds) + "</tr>")
         return table(out, width)
@@ -139,7 +139,7 @@ def page_html(p, sec, extra_top=""):
     sub = f'<p style="color:#{SUB}">{esc(p.subtitle)}</p>' if p.subtitle else ""
     body = "".join(render_block(b, WIDTH, sec.color) for b in p.blocks)
     return (f'<!DOCTYPE html><html><head><title>{title}</title><meta charset="utf-8"/></head><body>'
-            f'{nav}{label}<h1 style="color:#0B4F4C">{title}</h1>{sub}{extra_top}{body}</body></html>')
+            f'{nav}{label}<h1 style="color:#1F3D36;font-family:Georgia">{title}</h1>{sub}{extra_top}{body}</body></html>')
 
 
 # ---------------------------------------------------------------- index + contents pages
@@ -158,19 +158,19 @@ def index_html(secs, year):
 
     def row(label, links_html, color):
         return f"<tr>{cell(esc(label), 220, color, True, 'FFFFFF')}{cell(links_html, 720)}</tr>"
-    rows.append(row("Start here", " · ".join(link(p.key, p.title) for p in start.pages), "0B4F4C"))
+    rows.append(row("Start here", " · ".join(link(p.key, p.title) for p in start.pages), "1F3D36"))
     rows.append(row("Yearly goals", link("year_goals", f"Yearly Goals {year}") + " · " + link("year_glance", "Year at a Glance"), "0F6E68"))
-    rows.append(row("Monthly calendars", " · ".join(link(f"m{m}_cal", PC.MONTHS[m - 1][:3]) for m in range(1, 13)), "14958B"))
-    rows.append(row("Monthly goals", " · ".join(link(f"m{m}_goals", PC.MONTHS[m - 1][:3]) for m in range(1, 13)), "14958B"))
-    rows.append(row("Monthly reflections", " · ".join(link(f"m{m}_refl", PC.MONTHS[m - 1][:3]) for m in range(1, 13)), "14958B"))
+    rows.append(row("Monthly calendars", " · ".join(link(f"m{m}_cal", PC.MONTHS[m - 1][:3]) for m in range(1, 13)), "2E7D4F"))
+    rows.append(row("Monthly goals", " · ".join(link(f"m{m}_goals", PC.MONTHS[m - 1][:3]) for m in range(1, 13)), "2E7D4F"))
+    rows.append(row("Monthly reflections", " · ".join(link(f"m{m}_refl", PC.MONTHS[m - 1][:3]) for m in range(1, 13)), "2E7D4F"))
     rows.append(row("Weekly trackers", " ".join(link(f"w{w}", f"{w:02d}") for w in range(1, 54)), "2F6FAA"))
     for s in tpls:
         rows.append(row(f"{s.name} ({len(s.pages)})", link(f"contents_{s.key}", "Open contents") + " · " +
                         " · ".join(link(p.key, p.title) for p in s.pages[:4]) + (" …" if len(s.pages) > 4 else ""), s.color))
     rows.append(row("Notes", " · ".join(link(p.key, p.title) for p in notes.pages), notes.color))
-    rows.append(row("Resources", link("resources", "Links, contacts & references"), "0B4F4C"))
-    body = (f'<table style="border-collapse:collapse"><tr>{cell("GENERAL INDEX", None, "0B4F4C", True, "FFFFFF", size=9)}</tr></table>'
-            f'<h1 style="color:#0B4F4C">Ultimate Planner {year}</h1>'
+    rows.append(row("Resources", link("resources", "Links, contacts & references"), "1F3D36"))
+    body = (f'<table style="border-collapse:collapse"><tr>{cell("GENERAL INDEX", None, "1F3D36", True, "FFFFFF", size=9)}</tr></table>'
+            f'<h1 style="color:#1F3D36;font-family:Georgia">Ultimate Planner {year}</h1>'
             f'<p style="color:#{SUB}">Click any link to jump straight to that page. Every page has a ⌂ Index link back here.</p>'
             f'<div data-id="links">{table(rows)}</div>')
     return f'<!DOCTYPE html><html><head><title>General Index</title><meta charset="utf-8"/></head><body>{body}</body></html>'
@@ -192,7 +192,7 @@ def contents_html(sec):
         rows.append("<tr>" + cell(str(i), 60, align="center") + cell(link(p.key, p.title), 520) + cell(esc(hint[:60]), 360, color=SUB) + "</tr>")
     nav = f'<p style="font-size:9pt;color:#{SUB}"><a href="{{{{LINK:index}}}}">⌂ Index</a></p>'
     label = f'<table style="border-collapse:collapse"><tr>{cell(esc(sec.name.upper()), None, sec.color, True, "FFFFFF", size=9)}</tr></table>'
-    body = (f'{nav}{label}<h1 style="color:#0B4F4C">{esc(sec.name)} — contents</h1>'
+    body = (f'{nav}{label}<h1 style="color:#1F3D36;font-family:Georgia">{esc(sec.name)} — contents</h1>'
             f'<p style="color:#{SUB}">{len(sec.pages)} pages. Click a title to open it.</p><div data-id="links">{table(rows)}</div>')
     return f'<!DOCTYPE html><html><head><title>{esc(sec.name)} — Contents</title><meta charset="utf-8"/></head><body>{body}</body></html>'
 
@@ -243,10 +243,10 @@ def write(out_dir: Path, year=PC.YEAR):
 def write_preview(import_dir: Path, preview_dir: Path, manifest):
     """Browsable copy: {{LINK:key}} -> key.html, plus a light frame that mimics a OneNote page canvas."""
     preview_dir.mkdir(parents=True, exist_ok=True)
-    frame = ('<style>body{font-family:Segoe UI,Aptos,Arial,sans-serif;font-size:11pt;color:#1F3533;background:#EDF5F4;margin:0}'
+    frame = ('<style>body{font-family:Segoe UI,Arial,sans-serif;font-size:11pt;color:#222222;background:#FAF7F2;margin:0}'
              '.pg{background:#fff;max-width:980px;margin:24px auto;padding:28px 36px;box-shadow:0 6px 24px rgba(11,79,76,.12);border-radius:10px}'
-             'td{padding:4px 6px;border:1px solid #D5E5E2;vertical-align:top}table{margin:6px 0}p[data-tag="to-do"]::before{content:"☐ ";color:#14958B}'
-             'p[data-tag="to-do"]{margin:3px 0}a{color:#14958B}h1{margin:6px 0}h3{margin:14px 0 4px}</style>')
+             'td{padding:4px 6px;border:1px solid #E6E1D8;vertical-align:top}table{margin:6px 0}p[data-tag="to-do"]::before{content:"☐ ";color:#A87620}'
+             'p[data-tag="to-do"]{margin:3px 0}a{color:#A87620}h1{margin:6px 0}h3{margin:14px 0 4px}</style>')
     for g in manifest["groups"]:
         for s in g["sections"]:
             for p in s["pages"]:
