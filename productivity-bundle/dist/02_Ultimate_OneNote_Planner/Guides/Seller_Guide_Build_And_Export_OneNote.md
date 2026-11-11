@@ -8,6 +8,18 @@
 - **OneNote for Windows** (the desktop app in Microsoft 365) to export the `.onepkg`
 - Python 3.9 or newer, plus `pip install msal`
 
+## No Microsoft account? Build it offline instead
+
+If you have the OneNote desktop app on Windows (the one with **File › Export**), you can build the notebook on your computer with no account and no internet. Use the **OneNote_Local** folder:
+
+1. Close OneNote. Open PowerShell in the OneNote_Local folder.
+2. Test with 8 pages first: `powershell -ExecutionPolicy Bypass -File .\build_onenote_local.ps1 -Test`
+3. Check the "Planner Test" notebook and its index links, then close it in OneNote.
+4. Build the full planner: `powershell -ExecutionPolicy Bypass -File .\build_onenote_local.ps1`
+5. Continue from step 3 below (export the .onepkg and test it).
+
+The notebook is saved in `C:\Brass Ledger`, so the links inside it don't contain your Windows user name.
+
 ## 1. Build the notebook in your account
 
 ```bash

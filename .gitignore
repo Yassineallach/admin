@@ -12,6 +12,7 @@ productivity-bundle/listings/**/etsy_upload/
 productivity-bundle/**/*.onepkg
 # generated OneNote pages and HTML preview (rebuilt by onenote_html.py, sent directly)
 productivity-bundle/dist/02_Ultimate_OneNote_Planner/OneNote_Import/
+productivity-bundle/dist/02_Ultimate_OneNote_Planner/OneNote_Local/
 productivity-bundle/dist/02_Ultimate_OneNote_Planner/Preview_HTML/
 productivity-bundle/listings/**/video/
 productivity-bundle/listings/pins/*.png
