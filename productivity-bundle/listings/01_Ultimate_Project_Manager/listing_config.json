@@ -1,0 +1,6 @@
+{
+  "_help": "Paste your Google Sheets 'make a copy' links (…/copy at the end), then run: python3 build/build_listing_package_pm.py",
+  "shop_name": "Brass Ledger",
+  "google_sheets_demo_copy_link": "",
+  "google_sheets_blank_copy_link": ""
+}

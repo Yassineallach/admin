@@ -1,0 +1,22 @@
+__pycache__/
+*.pyc
+# generated deliverables are sent directly, not stored in the repo
+productivity-bundle/dist/**/*.xlsx
+productivity-bundle/dist/**/*.pdf
+productivity-bundle/dist/**/*.zip
+# generated Etsy listing assets (sent directly, rebuilt by the build scripts)
+productivity-bundle/listings/**/screens/
+productivity-bundle/listings/**/screens_sheets/
+productivity-bundle/listings/**/images/
+productivity-bundle/listings/**/etsy_upload/
+productivity-bundle/**/*.onepkg
+# generated OneNote pages and HTML preview (rebuilt by onenote_html.py, sent directly)
+productivity-bundle/dist/02_Ultimate_OneNote_Planner/OneNote_Import/
+productivity-bundle/dist/02_Ultimate_OneNote_Planner/OneNote_Local/
+productivity-bundle/dist/02_Ultimate_OneNote_Planner/Preview_HTML/
+productivity-bundle/listings/**/video/
+productivity-bundle/listings/pins/*.png
+
+# brand reference art (sent to the owner, not stored here)
+productivity-bundle/brand/*.png
+productivity-bundle/listings/LAUNCH_SCHEDULE.pdf
