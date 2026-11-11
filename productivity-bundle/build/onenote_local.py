@@ -259,6 +259,7 @@ $path = Join-Path $Folder $Name
 $n = 2
 while (Test-Path $path) { $path = Join-Path $Folder "$Name ($n)"; $n++ }
 
+Write-Host "Keep OneNote on a normal page while this runs: no File menu, no dialog boxes open." -ForegroundColor Cyan
 $nb = ""
 $on.OpenHierarchy($path, "", [ref]$nb, 1)
 Write-Host "Notebook created: $path"
@@ -298,12 +299,23 @@ foreach ($p in $pages) {
     $xml = Get-Content -Raw -Encoding UTF8 (Join-Path $here ("pages\" + $p.file))
     $xml = $xml.Replace("__PAGEID__", $ids[$p.key])
     $xml = [regex]::Replace($xml, '\{\{LINK:([a-z0-9_]+)\}\}', $eval)
-    try { $on.UpdatePageContent($xml) }
-    catch {
+    $ok = $false
+    for ($try = 1; $try -le 60 -and -not $ok; $try++) {
+        try { $on.UpdatePageContent($xml); $ok = $true }
+        catch {
+            if ($_.Exception.Message -notmatch "80042030") { break }
+            if ($try -eq 1) { Write-Host "  OneNote is busy with a menu or dialog box. Click back on a normal page in OneNote (close the File menu or any open window)..." -ForegroundColor Yellow }
+            Start-Sleep -Seconds 2
+        }
+    }
+    if (-not $ok) {
+      try { $on.UpdatePageContent($xml) }
+      catch {
         $fail += $p.key
         New-Item -ItemType Directory -Force -Path $logDir | Out-Null
         Set-Content -Encoding UTF8 -Path (Join-Path $logDir ($p.key + ".xml")) -Value $xml
         Add-Content -Encoding UTF8 -Path (Join-Path $logDir "errors.txt") -Value ("$($p.key): " + $_.Exception.Message)
+    }
     }
     $done++
     if ($done % 25 -eq 0 -or $done -eq $pages.Count) { Write-Host "  pages $done / $($pages.Count)" }
