@@ -55,6 +55,21 @@ class VoxApiIntegrationTest {
         assertEquals(1.5f, result.durationSec)
     }
 
+    @Test fun omniVoiceCapabilities() {
+        val omni = System.getenv("VOX_TEST_OMNI_URL") ?: ""
+        assumeTrue(omni.isNotEmpty())
+        val api = VoxApi(omni, "")
+        val info = api.health()
+        assertEquals("omnivoice", info.engine)
+        assertEquals(listOf(8, 64, 32), listOf(info.stepsMin, info.stepsMax, info.stepsDefault))
+        assertTrue(info.designPresets.isNotEmpty() && info.duration && info.transcript)
+        val out = File.createTempFile("vox", ".wav")
+        val result = api.synthesize(
+            TtsRequest("Hi", info.designPresets[0], null, "", 2.0f, 32, 5, durationFactor = 2f), out,
+        )
+        assertEquals(2.0f, result.durationSec)
+    }
+
     @Test fun serverInfoOfOldVoxcpmServer() {
         val old = System.getenv("VOX_TEST_OLD_URL") ?: ""
         assumeTrue(old.isNotEmpty())

@@ -1,9 +1,10 @@
-# VoxCPM Studio — Android voice generator for VoxCPM2 and IndexTTS-2.5
+# VoxCPM Studio — Android voice generator for VoxCPM2, IndexTTS-2.5 and OmniVoice
 
 An Android app (Kotlin + Jetpack Compose) for generating speech with
 [VoxCPM2](https://github.com/OpenBMB/VoxCPM) (`openbmb/VoxCPM2`, 48 kHz, 30 languages) or
 [IndexTTS-2.5](https://github.com/index-tts/index-tts) (`IndexTeam/IndexTTS-2.5`, 22 kHz,
-English / Chinese / Japanese / Spanish / Arabic, emotion control).
+English / Chinese / Japanese / Spanish / Arabic, emotion control) or
+[OmniVoice](https://github.com/k2-fsa/OmniVoice) (`k2-fsa/OmniVoice`, 24 kHz, 600+ languages).
 
 Both models need a GPU, so they can't run inside a phone. The app is a client: it sends requests
 to a small server (`server/server.py`) that runs one of the models on a PC or in Google Colab /
@@ -15,13 +16,13 @@ Android app  ──HTTP (multipart)──▶  server.py --engine voxcpm | indext
              ◀──────── WAV ────────
 ```
 
-| | VoxCPM2 | IndexTTS-2.5 |
-|---|---|---|
-| Voice | default voice, voice design, cloning | cloning only (needs a reference voice) |
-| Control | style text, CFG, inference steps | 8 emotions + strength, emotion description, speech length |
-| Languages | 30, detected automatically | EN, ZH, JA, ES, AR (auto-detected or picked) |
-| GPU memory | ~8 GB | ~6 GB |
-| License | Apache-2.0 | bilibili Model Use License (large companies need a separate license; read it before commercial use) |
+| | VoxCPM2 | IndexTTS-2.5 | OmniVoice |
+|---|---|---|---|
+| Voice | default voice, voice design, cloning | cloning only (needs a reference voice) | default voice, voice design (fixed attributes), cloning |
+| Control | style text, CFG, inference steps | 8 emotions + strength, emotion description, speech length | CFG, diffusion steps, speech length, tags like `[laughter]` |
+| Languages | 30, detected automatically | EN, ZH, JA, ES, AR (auto-detected or picked) | 600+, detected automatically |
+| Download | ~5 GB | ~8.5 GB | ~3.3 GB |
+| License | Apache-2.0 | bilibili Model Use License (large companies need a separate license; read it before commercial use) | Apache-2.0 |
 
 ## Features
 
@@ -85,6 +86,12 @@ modal deploy modal_app.py         # prints https://<you>--voxcpm-server-serve.mo
 
 The URL never changes and the GPU shuts down by itself after 5 idle minutes. The first request
 after a pause takes 1–3 minutes while the model starts.
+
+**OmniVoice:** set `MODEL = "OmniVoice"` in the notebook's first cell. On your own PC:
+`pip install omnivoice fastapi "uvicorn[standard]" python-multipart soundfile`, then
+`python server.py --engine omnivoice`. Voice design only accepts its attribute words (gender,
+age, pitch, whisper, accent), e.g. `female, young adult, british accent`. Leaving the clone
+transcript empty makes it transcribe the clip with Whisper (an extra ~1.6 GB download).
 
 **IndexTTS-2.5:** in the Colab or Kaggle notebook set `MODEL = "IndexTTS-2.5"` in the first cell.
 The notebook clones [index-tts](https://github.com/index-tts/index-tts), builds its Python 3.11

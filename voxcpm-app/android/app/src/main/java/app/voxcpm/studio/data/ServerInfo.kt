@@ -18,6 +18,14 @@ data class ServerInfo(
     val emotionText: Boolean,
     val emotions: List<String>,
     val duration: Boolean,
+    /** Inference-steps slider range and the model's default. */
+    val stepsMin: Int = 4,
+    val stepsMax: Int = 30,
+    val stepsDefault: Int = 10,
+    /** Voice design examples; the model only accepts this kind of description. Empty: free text. */
+    val designPresets: List<String> = emptyList(),
+    val designHint: String = "",
+    val textHint: String = "",
 ) {
     val isIndexTts get() = engine == "indextts"
 
@@ -38,7 +46,10 @@ data class ServerInfo(
             .put("modes", JSONArray(modes)).put("languages", JSONArray(languages))
             .put("cfg", cfg).put("steps", steps).put("transcript", transcript)
             .put("emotion_vector", emotionVector).put("emotion_text", emotionText)
-            .put("emotions", JSONArray(emotions)).put("duration", duration))
+            .put("emotions", JSONArray(emotions)).put("duration", duration)
+            .put("steps_range", JSONArray(listOf(stepsMin, stepsMax, stepsDefault)))
+            .put("design_presets", JSONArray(designPresets))
+            .put("design_hint", designHint).put("text_hint", textHint))
 
     companion object {
         /** VoxCPM2, also what servers from before /health had capabilities support. */
@@ -57,6 +68,7 @@ data class ServerInfo(
                     device = o.optString("device"),
                 )
             fun strings(key: String) = caps.optJSONArray(key)?.let { a -> (0 until a.length()).map { a.getString(it) } }.orEmpty()
+            val range = caps.optJSONArray("steps_range")?.takeIf { it.length() == 3 }
             return ServerInfo(
                 engine = o.optString("engine", "voxcpm"),
                 model = o.optString("model"),
@@ -71,6 +83,12 @@ data class ServerInfo(
                 emotionText = caps.optBoolean("emotion_text"),
                 emotions = strings("emotions"),
                 duration = caps.optBoolean("duration"),
+                stepsMin = range?.getInt(0) ?: 4,
+                stepsMax = range?.getInt(1) ?: 30,
+                stepsDefault = range?.getInt(2) ?: 10,
+                designPresets = strings("design_presets"),
+                designHint = caps.optString("design_hint"),
+                textHint = caps.optString("text_hint"),
             )
         }
     }

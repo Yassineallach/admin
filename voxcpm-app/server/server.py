@@ -5,11 +5,14 @@ Two engines, one per server process (they need different Python environments):
     voxcpm    VoxCPM2 (openbmb/VoxCPM2): default voice, voice design and cloning, 30 languages.
     indextts  IndexTTS-2.5 (IndexTeam/IndexTTS-2.5): cloning with emotion control,
               EN / ZH / JA / ES / AR. Run it from an index-tts checkout (see the notebooks).
+    omnivoice OmniVoice (k2-fsa/OmniVoice): auto voice, attribute-based voice design and
+              cloning in 600+ languages. `pip install omnivoice`.
 
 Run:
     pip install -r requirements.txt
     python server.py --host 0.0.0.0 --port 8000                     # VoxCPM2
     python server.py --engine indextts --model-dir checkpoints      # IndexTTS-2.5
+    python server.py --engine omnivoice                             # OmniVoice
 
 Endpoints:
     GET    /health           -> engine, model info and what the engine supports
@@ -43,6 +46,7 @@ from fastapi.responses import Response
 ENGINE = os.environ.get("TTS_ENGINE", "voxcpm")
 MODEL_ID = os.environ.get("VOXCPM_MODEL", "openbmb/VoxCPM2")
 INDEXTTS_MODEL_DIR = os.environ.get("INDEXTTS_MODEL_DIR", "checkpoints")
+OMNIVOICE_MODEL = os.environ.get("OMNIVOICE_MODEL", "k2-fsa/OmniVoice")
 API_KEY = os.environ.get("VOXCPM_API_KEY", "")
 MAX_TEXT_CHARS = int(os.environ.get("VOXCPM_MAX_CHARS", "2000"))
 
@@ -218,6 +222,84 @@ class IndexTTSEngine:
         return np.asarray(wav, dtype=np.float32).squeeze() / 32768.0
 
 
+class OmniVoiceEngine:
+    name = "OmniVoice"
+
+    # Voice design only accepts these attributes (one per category); anything else is an error.
+    DESIGN_PRESETS = [
+        "female, young adult, high pitch",
+        "male, middle-aged, low pitch",
+        "male, elderly, very low pitch",
+        "female, child",
+        "female, whisper",
+        "male, young adult, british accent",
+        "female, middle-aged, american accent",
+    ]
+
+    def __init__(self):
+        import torch
+        from omnivoice import OmniVoice
+
+        on_gpu = torch.cuda.is_available()
+        self.device = "cuda" if on_gpu else "cpu"
+        if not on_gpu:
+            torch.set_num_threads(os.cpu_count() or 2)
+        print(f"Loading {OMNIVOICE_MODEL} on {self.device} ...", flush=True)
+        self.model = OmniVoice.from_pretrained(
+            OMNIVOICE_MODEL,
+            device_map="cuda:0" if on_gpu else "cpu",
+            dtype=torch.float16 if on_gpu else torch.float32,
+        )
+        self.sample_rate = int(self.model.sampling_rate or 24000)
+
+    def info(self):
+        return {
+            "modes": ["default", "design", "clone"],
+            "languages": [],  # 600+ languages, detected from the text
+            "cfg": True,
+            "steps": True,
+            "steps_range": [8, 64, 32],  # min, max, default diffusion steps
+            "transcript": True,  # optional; Whisper transcribes the reference when it is empty
+            "emotion_vector": False,
+            "emotion_text": False,
+            "duration": True,
+            "design_presets": self.DESIGN_PRESETS,
+            "design_hint": "Comma-separated attributes: male/female; child, teenager, young adult, middle-aged, "
+                           "elderly; very low … very high pitch; whisper; american/british/australian/canadian/"
+                           "indian/chinese/japanese/korean/portuguese/russian accent.",
+            "text_hint": "600+ languages. Tags like [laughter] or [sigh] add sounds.",
+        }
+
+    def generate(self, p: dict) -> np.ndarray:
+        kwargs = {
+            "text": p["text"],
+            "num_step": max(4, min(p["inference_timesteps"], 64)),
+            "guidance_scale": max(0.5, min(p["cfg_value"], 5.0)),
+        }
+        factor = max(0.5, min(p["duration_factor"], 2.0))
+        if factor != 1.0:
+            kwargs["speed"] = 1.0 / factor  # the app's "speech length" is the inverse of speed
+        lang = p["language"].lower()
+        if lang and lang != "auto":
+            kwargs["language"] = lang
+        if p["ref_path"]:
+            kwargs["ref_audio"] = p["ref_path"]
+            kwargs["ref_text"] = p["prompt_text"] or None  # None: Whisper transcribes the clip
+        else:
+            control = p["control"].strip().strip("()")
+            if control:
+                kwargs["instruct"] = control
+        try:
+            audios = self.model.generate(**kwargs)
+        except ValueError as e:  # e.g. an unsupported voice design attribute
+            raise GenerationError(str(e))
+        return np.asarray(audios[0], dtype=np.float32).squeeze()
+
+
+ENGINES = {"voxcpm": VoxCPMEngine, "indextts": IndexTTSEngine, "omnivoice": OmniVoiceEngine}
+ENGINE_NAMES = {"voxcpm": "VoxCPM2", "indextts": "IndexTTS-2.5", "omnivoice": "OmniVoice"}
+
+
 _load_lock = threading.Lock()
 _load_error: Optional[str] = None
 
@@ -227,7 +309,7 @@ def get_model():
     global _engine
     with _load_lock:
         if _engine is None:
-            _engine = IndexTTSEngine() if ENGINE == "indextts" else VoxCPMEngine()
+            _engine = ENGINES[ENGINE]()
             print(f"{_engine.name} ready.", flush=True)
     return _engine
 
@@ -253,7 +335,7 @@ def ready_model():
         return _engine
     if _load_error:
         raise HTTPException(status_code=500, detail=f"The model failed to load: {_load_error}")
-    name = "IndexTTS-2.5" if ENGINE == "indextts" else "VoxCPM2"
+    name = ENGINE_NAMES[ENGINE]
     raise HTTPException(
         status_code=503,
         detail=f"Still loading {name}. The first start also downloads the model; try again in a minute.",
@@ -306,7 +388,7 @@ def health(_: None = Depends(check_key)):
     return {
         "status": "ok",
         "engine": ENGINE,
-        "model": engine.name if ENGINE == "indextts" else MODEL_ID,
+        "model": MODEL_ID if ENGINE == "voxcpm" else engine.name,
         "sample_rate": engine.sample_rate,
         "device": engine.device,
         "jobs": True,
@@ -547,7 +629,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--host", default="0.0.0.0")
     parser.add_argument("--port", type=int, default=8000)
-    parser.add_argument("--engine", choices=["voxcpm", "indextts"], default=ENGINE)
+    parser.add_argument("--engine", choices=sorted(ENGINES), default=ENGINE)
     parser.add_argument("--model-dir", default=INDEXTTS_MODEL_DIR, help="IndexTTS-2.5 checkpoints folder")
     args = parser.parse_args()
     ENGINE = args.engine

@@ -29,7 +29,7 @@ fun SettingsScreen(vm: MainViewModel, modifier: Modifier = Modifier) {
     ) {
         Text("Server", style = MaterialTheme.typography.headlineSmall)
         Text(
-            "The voice models (VoxCPM2, IndexTTS-2.5) need a GPU, so the app talks to a server you run " +
+            "The voice models (VoxCPM2, IndexTTS-2.5, OmniVoice) need a GPU, so the app talks to a server you run " +
                 "on a PC or in Google Colab / Kaggle.",
             style = MaterialTheme.typography.bodyMedium,
         )
@@ -65,7 +65,7 @@ fun SettingsScreen(vm: MainViewModel, modifier: Modifier = Modifier) {
                     style = MaterialTheme.typography.bodySmall,
                 )
                 Text(
-                    "• Models: the notebooks run VoxCPM2 or IndexTTS-2.5 (pick it in the first cell). The app " +
+                    "• Models: the notebooks run VoxCPM2, IndexTTS-2.5 or OmniVoice (pick it in the first cell). The app " +
                         "adapts to whichever one the server runs; tap Test connection after switching.",
                     style = MaterialTheme.typography.bodySmall,
                 )

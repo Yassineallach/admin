@@ -135,6 +135,7 @@ fun GenerateScreen(vm: MainViewModel, modifier: Modifier = Modifier) {
             placeholder = {
                 Text(
                     if (vm.batchMode) "Hello and welcome.\nToday we talk about the weather.\nThanks for listening!"
+                    else if (info.textHint.isNotEmpty()) info.textHint
                     else if (info.isIndexTts) "Type in English, Chinese, Japanese, Spanish or Arabic"
                     else "Type in any of 30 languages — no language tag needed",
                 )
@@ -168,7 +169,7 @@ fun GenerateScreen(vm: MainViewModel, modifier: Modifier = Modifier) {
 
         when (vm.mode) {
             VoiceMode.Default -> Text(
-                "VoxCPM2 picks a natural voice that fits the text.",
+                "${info.displayName} picks a natural voice that fits the text.",
                 style = MaterialTheme.typography.bodySmall,
             )
             VoiceMode.Design -> {
@@ -176,10 +177,13 @@ fun GenerateScreen(vm: MainViewModel, modifier: Modifier = Modifier) {
                     value = vm.voiceDescription,
                     onValueChange = { vm.voiceDescription = it },
                     label = { Text("Describe the voice") },
-                    placeholder = { Text("e.g. A young woman, gentle and sweet voice") },
+                    placeholder = { Text("e.g. " + (info.designPresets.firstOrNull() ?: "A young woman, gentle and sweet voice")) },
+                    supportingText = if (info.designHint.isNotEmpty()) {
+                        { Text(info.designHint) }
+                    } else null,
                     modifier = Modifier.fillMaxWidth(),
                 )
-                PresetRow(voicePresets) { vm.voiceDescription = it }
+                PresetRow(info.designPresets.ifEmpty { voicePresets }) { vm.voiceDescription = it }
                 Text(
                     "Voice design can vary between runs — try a couple of seeds.",
                     style = MaterialTheme.typography.bodySmall,
@@ -305,9 +309,10 @@ fun GenerateScreen(vm: MainViewModel, modifier: Modifier = Modifier) {
             if (info.steps) {
                 Text("Inference steps: ${vm.timesteps} (more = higher quality, slower)")
                 Slider(
-                    value = vm.timesteps.toFloat(),
+                    value = vm.timesteps.toFloat().coerceIn(info.stepsMin.toFloat(), info.stepsMax.toFloat()),
                     onValueChange = { vm.timesteps = it.roundToInt() },
-                    valueRange = 4f..30f, steps = 25,
+                    valueRange = info.stepsMin.toFloat()..info.stepsMax.toFloat(),
+                    steps = info.stepsMax - info.stepsMin - 1,
                 )
             }
             if (info.duration) {

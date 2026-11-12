@@ -185,7 +185,11 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     /** Asks the server which model it runs and adapts the Generate page to it. */
     private suspend fun refreshServerInfo(): ServerInfo {
         val info = withContext(Dispatchers.IO) { api().health() }
-        if (info.engine != serverInfo.engine) settings.secPerChar = 0f // different model, different speed
+        if (info.engine != serverInfo.engine) {
+            settings.secPerChar = 0f // different model, different speed
+            timesteps = info.stepsDefault
+        }
+        timesteps = timesteps.coerceIn(info.stepsMin, info.stepsMax)
         serverInfo = info
         settings.serverInfo = info
         if (VoiceMode.Default.key !in info.modes && mode != VoiceMode.Clone) mode = VoiceMode.Clone
@@ -618,7 +622,11 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch(Dispatchers.IO) { voiceStore.save(snapshot) }
     }
 
-    fun engineName(engine: String) = if (engine == "indextts") "IndexTTS-2.5" else "VoxCPM2"
+    fun engineName(engine: String) = when (engine) {
+        "indextts" -> "IndexTTS-2.5"
+        "omnivoice" -> "OmniVoice"
+        else -> "VoxCPM2"
+    }
 
     fun cancelGeneration() {
         generateJob?.cancel()
