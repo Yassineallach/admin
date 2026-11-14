@@ -71,6 +71,17 @@ runtime still uses up your free GPU time.
 1. Sign in at [kaggle.com](https://www.kaggle.com) and verify your phone number once
    (Settings → Phone verification; needed for GPU and Internet).
 2. Create → New Notebook → File → Import Notebook → upload `server/VoxCPM_Server_Kaggle.ipynb`.
+   No file to upload? Create a new notebook instead and paste this into its single cell:
+   ```python
+   MODEL = "OmniVoice"   # or "VoxCPM2" or "IndexTTS-2.5"
+   API_KEY = ""          # optional: same key as in the app's Settings
+   import json, urllib.request
+   nb = json.load(urllib.request.urlopen("https://raw.githubusercontent.com/yassineallach/admin/claude/android-voxcpm-voice-app-8pkl1u/voxcpm-app/server/VoxCPM_Server_Kaggle.ipynb"))
+   for cell in nb["cells"][2:5]:  # install, start the server, open the tunnel
+       result = get_ipython().run_cell("".join(cell["source"]))
+       if not result.success:
+           raise SystemExit("Stopped: see the error above.")
+   ```
 3. Right-hand panel → Session options: **Accelerator: GPU T4 x2**, **Internet: on**.
 4. **Run All**, then paste the printed `trycloudflare.com` URL into the app.
    Stop the session when done so your weekly hours aren't wasted.
