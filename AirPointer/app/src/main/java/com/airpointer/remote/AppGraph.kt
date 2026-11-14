@@ -11,6 +11,8 @@ import com.airpointer.remote.hid.BluetoothPairingManager
 import com.airpointer.remote.motion.SensorMotionSource
 import com.airpointer.remote.presenter.PresenterController
 import com.airpointer.remote.settings.SettingsRepository
+import com.airpointer.remote.ads.AdsManager
+import com.airpointer.remote.ads.ConsentManager
 import com.airpointer.remote.hand.HandTrackingController
 import com.airpointer.remote.table.TableMouseController
 import com.airpointer.remote.transport.CompanionDiscovery
@@ -58,6 +60,8 @@ class AppGraph(app: Application) {
     val tvDiscovery = TvDiscovery(app)
     val tableMouse = TableMouseController(app, presenter, io, log)
     val handMouse = HandTrackingController(app, presenter, log)
+    val ads = AdsManager(app, log)
+    val consent = ConsentManager(app, ads, log)
 
     init {
         // Reconnect to the saved companion when Wi-Fi is the selected transport.

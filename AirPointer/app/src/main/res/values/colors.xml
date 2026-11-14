@@ -1,3 +1,10 @@
 <resources>
     <color name="background">#FF090A0D</color>
+    <!-- Native ad card (matches the Compose palette) -->
+    <color name="ad_surface">#FF14151A</color>
+    <color name="ad_surface_high">#FF1B1D24</color>
+    <color name="ad_border">#FF272932</color>
+    <color name="ad_text_primary">#FFF4F4F6</color>
+    <color name="ad_text_secondary">#FFA0A2AC</color>
+    <color name="ad_accent">#FFFF5752</color>
 </resources>

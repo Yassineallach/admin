@@ -1,8 +1,24 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
 }
+
+// ---- AdMob configuration -------------------------------------------------------------------
+// Production IDs live in admob.properties (git-ignored; see admob.properties.example) or -P flags.
+// Debug builds ALWAYS use Google's official test IDs (AdMob policy: never serve live ads in development).
+val admobProps = Properties().apply {
+    rootProject.file("admob.properties").takeIf { it.exists() }?.inputStream()?.use { load(it) }
+}
+fun admob(key: String): String? =
+    (admobProps.getProperty(key) ?: project.findProperty(key) as String?)?.trim()?.takeIf { it.isNotEmpty() }
+val testAppId = "ca-app-pub-3940256099942544~3347511713"     // Google sample App ID
+val testNativeUnit = "ca-app-pub-3940256099942544/2247696110" // Google test Native Advanced unit
+val releaseAppId = admob("admob.appId")
+fun releaseUnit(placement: String) = admob("admob.native.$placement") ?: admob("admob.native")
+if (releaseAppId == null) logger.warn("AdMob: admob.appId not set — release builds use Google TEST ads (no revenue). See admob.properties.example.")
 
 android {
     namespace = "com.airpointer.remote"
@@ -13,12 +29,26 @@ android {
         // BluetoothHidDevice (HID peripheral role) was added in API 28 (Android 9).
         minSdk = 28
         targetSdk = 35
-        versionCode = 9
-        versionName = "2.2.0"
+        versionCode = 10
+        versionName = "2.3.0"
         ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64") }
+        manifestPlaceholders["admobAppId"] = releaseAppId ?: testAppId
+        for (placement in listOf("home", "connection", "settings")) {
+            buildConfigField("String", "ADMOB_NATIVE_${placement.uppercase()}", "\"${releaseUnit(placement) ?: testNativeUnit}\"")
+        }
+        buildConfigField("boolean", "ADMOB_TEST_IDS", "${releaseAppId == null}")
+        // Optional: hashed device id (from logcat) to test the EEA consent form on a real phone.
+        buildConfigField("String", "UMP_TEST_DEVICE", "\"${admob("ump.testDeviceHashedId") ?: ""}\"")
     }
 
     buildTypes {
+        debug {
+            manifestPlaceholders["admobAppId"] = testAppId
+            for (placement in listOf("home", "connection", "settings")) {
+                buildConfigField("String", "ADMOB_NATIVE_${placement.uppercase()}", "\"$testNativeUnit\"")
+            }
+            buildConfigField("boolean", "ADMOB_TEST_IDS", "true")
+        }
         release {
             isMinifyEnabled = true
             isShrinkResources = true
@@ -32,9 +62,6 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
-    }
-    kotlinOptions {
-        jvmTarget = "17"
     }
     androidResources {
         noCompress += "task" // the hand model is memory-mapped by MediaPipe
@@ -52,6 +79,12 @@ android {
             // ./gradlew testDebugUnitTest -Pscreenshots  → writes PNGs to app/build/screenshots
             if (project.hasProperty("screenshots")) t.systemProperty("roborazzi.test.record", "true")
         }
+    }
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
     }
 }
 
@@ -77,6 +110,9 @@ dependencies {
     implementation("androidx.camera:camera-lifecycle:$camerax")
     implementation("androidx.camera:camera-view:$camerax")
     implementation("com.google.mediapipe:tasks-vision:0.10.14")
+    // Monetisation: AdMob Native Advanced + Google User Messaging Platform (consent)
+    implementation("com.google.android.gms:play-services-ads:25.5.0")
+    implementation("com.google.android.ump:user-messaging-platform:4.0.0")
     debugImplementation("androidx.compose.ui:ui-tooling")
 
     testImplementation("junit:junit:4.13.2")

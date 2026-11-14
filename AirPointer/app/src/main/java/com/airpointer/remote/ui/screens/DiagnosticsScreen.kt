@@ -75,10 +75,10 @@ fun DiagnosticsScreen(graph: AppGraph, onBack: () -> Unit) {
             hid.unsupportedReason?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = Palette.Negative) }
             hid.lastError?.let { Text("Last error: $it", style = MaterialTheme.typography.bodySmall, color = Palette.Warning) }
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                SecondaryButton("Test square", enabled = hid.connected) { graph.presenter.sendTestPattern() }
-                SecondaryButton("Test click", enabled = hid.connected) { graph.presenter.click(com.airpointer.remote.hid.MouseButtons.LEFT) }
-                SecondaryButton("Re-register") { graph.hid.restart() }
+                SecondaryButton("Test square", Modifier.weight(1f), enabled = hid.connected) { graph.presenter.sendTestPattern() }
+                SecondaryButton("Test click", Modifier.weight(1f), enabled = hid.connected) { graph.presenter.click(com.airpointer.remote.hid.MouseButtons.LEFT) }
             }
+            SecondaryButton("Re-register Bluetooth mouse", Modifier.fillMaxWidth()) { graph.hid.restart() }
         }
 
         SectionLabel("Wi-Fi companion")

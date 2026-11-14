@@ -54,6 +54,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.airpointer.remote.AppGraph
+import androidx.compose.material.icons.rounded.PrivacyTip
+import com.airpointer.remote.ads.AdPlacement
+import com.airpointer.remote.ads.AdPlacementPolicy
+import com.airpointer.remote.ui.components.NativeAdCard
 import com.airpointer.remote.transport.TransportKind
 import com.airpointer.remote.ui.AppActions
 import com.airpointer.remote.ui.CardAction
@@ -86,6 +90,7 @@ fun HomeScreen(graph: AppGraph, actions: AppActions, navigate: (Route) -> Unit, 
     val hid by graph.hid.state.collectAsStateWithLifecycle()
     val snapshot = rememberLinkSnapshot(graph, actions.permissionsGranted)
     val card = connectionCardState(snapshot)
+    val privacyRequired by graph.consent.privacyOptionsRequired.collectAsStateWithLifecycle()
     var gated by rememberSaveable { mutableStateOf<String?>(null) }   // preset waiting for a decision
     var pending by rememberSaveable { mutableStateOf<String?>(null) }  // open this once connected
 
@@ -123,6 +128,9 @@ fun HomeScreen(graph: AppGraph, actions: AppActions, navigate: (Route) -> Unit, 
             add(MenuEntry("Connection settings", Icons.Rounded.SettingsInputAntenna) { navigate(Route.PAIRING) })
             add(MenuEntry("Sensitivity & calibration", Icons.Rounded.Tune) { navigate(Route.SETTINGS) })
             add(MenuEntry("Diagnostics", Icons.Rounded.Insights) { navigate(Route.DIAGNOSTICS) })
+            if (privacyRequired) add(MenuEntry("Privacy options", Icons.Rounded.PrivacyTip) {
+                (context as? android.app.Activity)?.let { graph.consent.showPrivacyOptions(it) }
+            })
             if (hid.serviceRunning) add(MenuEntry("Stop Bluetooth service", Icons.Rounded.PowerSettingsNew, onStop))
             else add(MenuEntry("Start Bluetooth service", Icons.Rounded.PowerSettingsNew, onStart))
         })
@@ -164,6 +172,10 @@ fun HomeScreen(graph: AppGraph, actions: AppActions, navigate: (Route) -> Unit, 
                 SetupItem(Icons.Rounded.Tune, "Sensitivity", "Pointer speed, smoothing, calibration") { navigate(Route.SETTINGS) }
                 SetupItem(Icons.Rounded.Insights, "Diagnostics", "Link quality, sensors, event log") { navigate(Route.DIAGNOSTICS) }
             }
+            // Native ad: bottom of the page (least disruptive), never near the connection card,
+            // and only once a computer is set up so first-run onboarding stays ad-free.
+            NativeAdCard(AdPlacement.HOME, allowed = AdPlacementPolicy.homeAllowed(snapshot.configured),
+                modifier = Modifier.padding(top = Spacing.section))
             Spacer(Modifier.height(24.dp))
         }
     }

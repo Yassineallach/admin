@@ -14,6 +14,10 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.unit.dp
 import com.airpointer.remote.AppGraph
+import androidx.compose.foundation.layout.padding
+import com.airpointer.remote.ads.AdPlacement
+import com.airpointer.remote.ads.AdPlacementPolicy
+import com.airpointer.remote.ui.components.NativeAdCard
 import com.airpointer.remote.core.CalibrationState
 import com.airpointer.remote.presenter.PointerMode
 import com.airpointer.remote.presenter.RemoteAction
@@ -107,7 +111,7 @@ fun SettingsScreen(graph: AppGraph, onBack: () -> Unit) {
                 style = MaterialTheme.typography.bodySmall, color = Palette.TextSecondary)
         }
 
-        SectionLabel("Presentation")
+        SectionLabel("Presentation keys")
         Panel {
             SettingChoice("Slide keys", SlideKeys.entries.toList(), s.slideKeys, { it.label }) { v -> repo.update { it.copy(slideKeys = v) } }
             SettingSwitch("Volume buttons", s.volumeKeysEnabled, { v -> repo.update { it.copy(volumeKeysEnabled = v) } },
@@ -116,8 +120,10 @@ fun SettingsScreen(graph: AppGraph, onBack: () -> Unit) {
                 SettingChoice("Volume up", ACTIONS, s.volumeUpAction, { it.label }) { v -> repo.update { it.copy(volumeUpAction = v) } }
                 SettingChoice("Volume down", ACTIONS, s.volumeDownAction, { it.label }) { v -> repo.update { it.copy(volumeDownAction = v) } }
             }
-            Divider()
-            Text("Gesture pad", style = MaterialTheme.typography.labelSmall, color = Palette.TextSecondary)
+        }
+
+        SectionLabel("Gesture pad")
+        Panel {
             val clicky = setOf(RemoteAction.LEFT_CLICK, RemoteAction.RIGHT_CLICK)
             if (s.tapAction in clicky || s.doubleTapAction in clicky || s.longPressAction in clicky) {
                 Text("A click on the pad lands wherever the cursor is, and the thumb holding the phone often rests on the pad. " +
@@ -133,7 +139,10 @@ fun SettingsScreen(graph: AppGraph, onBack: () -> Unit) {
             SettingChoice("Swipe down", ACTIONS, s.swipeDownAction, { it.label }) { v -> repo.update { it.copy(swipeDownAction = v) } }
             SettingSlider("Scroll strip step", s.scrollStepDp.toFloat(), 10f..48f, "${s.scrollStepDp} dp",
                 { v -> repo.update { it.copy(scrollStepDp = v.roundToInt()) } }, "Finger travel per wheel notch.")
-            Divider()
+        }
+
+        SectionLabel("Feedback & display")
+        Panel {
             SettingSwitch("Haptic feedback", s.haptics, { v -> repo.update { it.copy(haptics = v) } })
             SettingSwitch("Keep screen on", s.keepScreenOn, { v -> repo.update { it.copy(keepScreenOn = v) } },
                 "Recommended: Android may throttle motion sensors when the screen turns off.")
@@ -155,6 +164,15 @@ fun SettingsScreen(graph: AppGraph, onBack: () -> Unit) {
         }
 
         SecondaryButton("Reset tuning to defaults", Modifier.fillMaxWidth()) { repo.resetTuning() }
+
+        val privacyRequired by graph.consent.privacyOptionsRequired.collectAsStateWithLifecycle()
+        if (privacyRequired) {
+            val activity = androidx.compose.ui.platform.LocalContext.current as? android.app.Activity
+            SecondaryButton("Ad privacy options", Modifier.fillMaxWidth()) { activity?.let { graph.consent.showPrivacyOptions(it) } }
+        }
+        // Native ad at the end of this long page; hidden while calibrating (phone must stay still).
+        NativeAdCard(AdPlacement.SETTINGS, allowed = AdPlacementPolicy.settingsAllowed(calibration is CalibrationState.Running),
+            modifier = Modifier.padding(top = 14.dp))
     }
 }
 

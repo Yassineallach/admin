@@ -1,0 +1,15 @@
+# Copy to admob.properties (git-ignored) and fill in the values from your AdMob account.
+# Debug builds ignore these and always use Google's test IDs.
+
+# AdMob → Apps → Air Pointer → App settings → App ID
+admob.appId=ca-app-pub-XXXXXXXXXXXXXXXX~YYYYYYYYYY
+
+# AdMob → Ad units → "Native advanced". One unit per placement gives per-screen reporting;
+# set only admob.native to use a single unit everywhere.
+admob.native=ca-app-pub-XXXXXXXXXXXXXXXX/ZZZZZZZZZZ
+#admob.native.home=ca-app-pub-XXXXXXXXXXXXXXXX/1111111111
+#admob.native.connection=ca-app-pub-XXXXXXXXXXXXXXXX/2222222222
+#admob.native.settings=ca-app-pub-XXXXXXXXXXXXXXXX/3333333333
+
+# Optional, for testing the consent form on a real device outside the EEA (UMP logs the hashed id):
+#ump.testDeviceHashedId=33BE2250B43518CCDA7DE426D04EE231

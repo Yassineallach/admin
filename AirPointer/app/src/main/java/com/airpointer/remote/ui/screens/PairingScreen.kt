@@ -39,6 +39,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.airpointer.remote.AppGraph
+import androidx.compose.foundation.layout.padding
+import com.airpointer.remote.ads.AdPlacement
+import com.airpointer.remote.ads.AdPlacementPolicy
+import com.airpointer.remote.ui.components.NativeAdCard
 import com.airpointer.remote.hid.BluetoothHidController.Phase
 import com.airpointer.remote.hid.BluetoothPairingManager
 import com.airpointer.remote.ui.AppActions
@@ -80,14 +84,14 @@ fun PairingScreen(graph: AppGraph, actions: AppActions, onBack: () -> Unit) {
             style = MaterialTheme.typography.bodySmall, color = Palette.TextSecondary,
         )
         if (settings.transport == TransportKind.WIFI) WifiSection(graph) else {
-        if (!hid.registered) Panel {
-            Text("Bluetooth HID is not ready", style = MaterialTheme.typography.titleMedium, color = Palette.Warning)
-            Text(hid.unsupportedReason ?: hid.lastError ?: "Wait for the status on the home screen to read \"Ready\" before pairing. " +
+        if (!hid.registered) com.airpointer.remote.ui.components.NotificationBanner(
+            title = "BLUETOOTH MOUSE NOT READY",
+            message = hid.unsupportedReason ?: hid.lastError ?: "Wait until the home screen says Ready before pairing. " +
                 "Windows reads the mouse service only while Air Pointer is registered.",
-                style = MaterialTheme.typography.bodyMedium, color = Palette.TextSecondary)
-        }
+            tone = if (hid.unsupportedReason != null) com.airpointer.remote.ui.components.BannerTone.ERROR else com.airpointer.remote.ui.components.BannerTone.WARNING,
+        )
 
-        SectionLabel("Option A — pair from the computer (recommended)")
+        SectionLabel("Pair from your PC · recommended")
         Panel {
             Text("1. Make “${pairing.localName}” visible", style = MaterialTheme.typography.titleMedium)
             Text(if (p.discoverable) "Visible to nearby computers now." else "Phones are hidden by default. Make it visible for 3 minutes.",
@@ -132,7 +136,7 @@ fun PairingScreen(graph: AppGraph, actions: AppActions, onBack: () -> Unit) {
             }) { Text("Manage / forget in Android settings", color = Palette.TextSecondary) }
         }
 
-        SectionLabel("Option B — find the computer from the phone")
+        SectionLabel("Or find your PC from the phone")
         Panel {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
@@ -159,6 +163,9 @@ fun PairingScreen(graph: AppGraph, actions: AppActions, onBack: () -> Unit) {
                 }
             }
         }
+            NativeAdCard(AdPlacement.CONNECTION, allowed = AdPlacementPolicy.connectionAllowed(
+                scanning = p.scanning, connecting = hid.phase == com.airpointer.remote.hid.BluetoothHidController.Phase.CONNECTING,
+                pairing = p.bondingAddress != null, dialogOpen = false), modifier = Modifier.padding(top = 14.dp))
         }
     }
 }
@@ -196,8 +203,11 @@ private fun WifiSection(graph: AppGraph) {
                 Text("Connecting to ${wifi.host}… ${wifi.error ?: ""}", style = MaterialTheme.typography.bodyMedium, color = Palette.TextSecondary)
             }
             else -> {
-                Text("Not connected", style = MaterialTheme.typography.titleMedium)
-                wifi.error?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = Palette.Negative) }
+                com.airpointer.remote.ui.components.StatusIndicator(
+                    if (wifi.phase == WifiCompanionClient.Phase.FAILED) com.airpointer.remote.ui.Tone.ERROR else com.airpointer.remote.ui.Tone.NEUTRAL,
+                    if (wifi.phase == WifiCompanionClient.Phase.FAILED) "PAIRING UNSUCCESSFUL" else "NOT CONNECTED")
+                Text(wifi.error ?: settings.wifiName?.let { "Last computer: $it" } ?: "Pick a computer below or enter its address.",
+                    style = MaterialTheme.typography.bodyMedium, color = Palette.TextSecondary)
             }
         }
     }
@@ -213,14 +223,14 @@ private fun WifiSection(graph: AppGraph) {
         )
     }
     Panel {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(if (scanning) "Searching…" else if (found.isEmpty()) "None found yet." else "${found.size} found",
+        if (scanning || found.isNotEmpty()) Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(if (scanning) "Searching your network…" else "${found.size} found",
                 style = MaterialTheme.typography.bodyMedium, color = Palette.TextSecondary, modifier = Modifier.weight(1f))
             if (scanning) CircularProgressIndicator(Modifier.size(20.dp), color = Palette.Accent, strokeWidth = 2.dp)
-            else SecondaryButton("Scan") { scan() }
+            else SecondaryButton("Scan again") { scan() }
         }
-        found.forEach { f ->
-            Divider()
+        found.forEachIndexed { i, f ->
+            if (i > 0 || scanning) Divider()
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 IconBadge(Icons.Rounded.Computer, tint = Palette.Accent)
                 Column(Modifier.weight(1f)) {
@@ -230,8 +240,8 @@ private fun WifiSection(graph: AppGraph) {
                 SecondaryButton("Connect") { pinFor = f.host to f.port; pinName = f.name }
             }
         }
-        Divider()
-        Text("Or enter the address shown in the companion window", style = MaterialTheme.typography.bodySmall, color = Palette.TextSecondary)
+        if (scanning || found.isNotEmpty()) Divider()
+        Text("Enter the address shown in the companion window", style = MaterialTheme.typography.bodySmall, color = Palette.TextSecondary)
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             OutlinedTextField(manualHost, { manualHost = it }, Modifier.weight(1f), singleLine = true,
                 placeholder = { Text("192.168.1.20") },
@@ -252,6 +262,11 @@ private fun WifiSection(graph: AppGraph) {
         Text("3. Keep the phone and the PC on the same Wi-Fi network. Guest networks often block devices from seeing each other.",
             style = MaterialTheme.typography.bodySmall, color = Palette.TextSecondary)
     }
+
+    // Native ad only while nothing is in progress: never during discovery, connecting or PIN entry.
+    NativeAdCard(AdPlacement.CONNECTION, allowed = AdPlacementPolicy.connectionAllowed(
+        scanning = scanning, connecting = wifi.phase == WifiCompanionClient.Phase.CONNECTING,
+        pairing = false, dialogOpen = pinFor != null), modifier = Modifier.padding(top = 14.dp))
 
     pinFor?.let { (host, port) ->
         var pin by remember { mutableStateOf(if (settings.wifiHost == host) settings.wifiPin.orEmpty() else "") }

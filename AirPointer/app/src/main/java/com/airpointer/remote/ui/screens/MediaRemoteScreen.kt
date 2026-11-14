@@ -115,6 +115,7 @@ fun MediaRemoteScreen(graph: AppGraph, onBack: () -> Unit, navigate: (Route) -> 
     }
 
     val mediaStatus: Pair<Tone, String> = when {
+        backend == null -> Tone.NEUTRAL to "$player NOT SET UP"
         error != null -> Tone.ERROR to "PLAYER UNREACHABLE"
         status != null -> Tone.SUCCESS to "${status!!.state.name} · $player"
         else -> Tone.NEUTRAL to "CONNECTING TO $player"
@@ -139,6 +140,7 @@ fun MediaRemoteScreen(graph: AppGraph, onBack: () -> Unit, navigate: (Route) -> 
                 )
             }
 
+            if (backend == null) return@Column
             val s = status ?: MediaStatus()
             val caps = backend?.capabilities.orEmpty()
             val ready = status != null && error == null

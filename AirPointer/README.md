@@ -58,6 +58,85 @@ These are real renders of the app's Compose UI (Robolectric native graphics + Ro
 
 ---
 
+## Advertising (AdMob Native Advanced)
+
+User experience first: ads appear only where people browse or pause, never inside a remote,
+a dialog, or a pairing, discovery, connection or calibration step.
+
+| Screen | Decision | Placement / reason |
+|---|---|---|
+| Home | **Recommended** | One native ad at the **bottom**, below Settings — far from the connection card and its actions. Hidden until a computer is set up, so first-run onboarding is ad-free. |
+| Connection | **Recommended, conditional** | Bottom of the page, shown **only while nothing is in progress** (hidden during Wi-Fi discovery, Bluetooth scanning/bonding, connecting, PIN entry). |
+| Sensitivity & calibration | **Recommended** | End of the long page, after "Reset tuning". Hidden while calibrating. |
+| Diagnostics | Not recommended | Troubleshooting context with live data; users there are fixing a problem. |
+| TV devices | Not recommended (re-evaluate) | Setup / discovery / pairing flow. A slot below the saved-TV list could be evaluated with real usage data. |
+| Presentation, PC Mouse, TV Remote, Media Player | **Excluded** | Main interaction areas: accidental taps, gesture conflicts. |
+| All dialogs (connect-first, PIN, TV code, keyboard) | **Excluded** | Focused tasks. |
+
+The plan is code: `ads/AdPlacementPolicy.kt` (unit-tested).
+
+**Native ad component** (`res/layout/native_ad_card.xml`, `ads/NativeAdBinder.kt`, `ui/components/NativeAdCard.kt`):
+* **The SDK's own views:** `NativeAdView` and `MediaView`. Every asset view is registered:
+  headline, body, advertiser/store, icon, media (image or video), call to action. AdChoices is
+  placed top-right by the SDK, and the attribution row reserves space so nothing covers it.
+* **Styling:** `#14151A` card, `#272932` border, 20dp radius, 16dp padding, `#F4F4F6` / `#A0A2AC` text.
+* **Clearly an ad:**
+  * a coral-outlined **"Ad"** badge (spoken as "Advertisement") plus "Sponsored · advertiser";
+  * an **outlined** call-to-action button, deliberately different from the app's filled primary
+    buttons, so it can't be mistaken for an app control.
+* **States:**
+  * loading: a skeleton with the same frame and the "Ad" badge;
+  * loaded: animated in;
+  * failed, no fill, no consent or not allowed: the slot collapses completely, leaving no gap.
+
+**Ad management** (`ads/AdsManager.kt`, `ads/NativeAdCache.kt`):
+* **Startup:** Mobile Ads SDK 25.5.0 initialises on a background thread, only after consent
+  allows requests. The SDK's `OPTIMIZE_INITIALIZATION` / `OPTIMIZE_AD_LOADING` flags are on.
+* **Caching:** one cached ad per placement, reused when you come back to a screen. It is
+  refreshed only on a later visit once 30 min old (never while shown) and never shown after
+  55 min (served native ads expire after about an hour).
+* **Requests:** duplicate requests are ignored while one is in flight; after a failure there is a
+  2-minute back-off.
+* **Cleanup:** replaced and expired ads are `destroy()`ed, and withdrawing consent destroys them all.
+* **Isolation:** nothing waits on ads. Bluetooth, Wi-Fi and the remotes never depend on them.
+
+**Consent and privacy** (`ads/ConsentManager.kt`, Google User Messaging Platform 4.0.0):
+* **On every start:** `requestConsentInfoUpdate`, then `loadAndShowConsentFormIfRequired`.
+  Ads start only when `canRequestAds()` is true, and immediately when consent from an earlier
+  session already allows it.
+* **Personalisation:** handled by the SDK according to the user's choices; the app does not
+  override it.
+* **Privacy options:** when UMP reports them as `REQUIRED`, a **Privacy options** entry appears
+  in the home overflow menu and an **Ad privacy options** button at the end of Sensitivity &
+  calibration. Both open `showPrivacyOptionsForm`.
+* **Testing the consent form:** set `ump.testDeviceHashedId` (see below) to force the EEA form
+  in debug builds.
+
+**Configuration** (production IDs are never in the source code):
+* **Debug builds always use Google's test App ID and test Native Advanced unit**
+  (`ca-app-pub-3940256099942544/2247696110`).
+* **Release builds** read your IDs from `admob.properties` (git-ignored; copy
+  `admob.properties.example`) or from `-Padmob.appId=…` style flags. Without them, the build
+  warns and falls back to test ads.
+
+### Before publishing on Google Play (needs your AdMob account)
+1. **Register the app:** create it in AdMob, then put its **App ID** in `admob.properties` → `admob.appId`.
+2. **Create ad units:** create **Native advanced** ad units (one per placement for per-screen
+   reporting, or one shared) → `admob.native` / `admob.native.home|connection|settings`.
+3. **Consent messages:** in AdMob → Privacy & messaging, create and publish a **GDPR** message
+   (and a US state regulations message if you serve those regions). The UMP form only appears
+   once a message is published.
+4. **app-ads.txt:** host it on the developer website listed in your Play listing.
+5. **Play Console declarations:**
+   * *Ads*: "contains ads".
+   * *Advertising ID*: "yes". The SDK adds `com.google.android.gms.permission.AD_ID`.
+   * *Data safety*: declare what the Google Mobile Ads SDK collects (device or other IDs,
+     approximate location, app interactions, diagnostics) and that it is shared for advertising.
+   * Update the privacy policy to match.
+6. **Release signing:** replace the debug signing key used by `assembleRelease`.
+
+---
+
 ## 1. Build
 
 ### Android app
@@ -66,7 +145,7 @@ Requirements: JDK 17+, Android SDK Platform 35 + Build-Tools 35 (Android Studio 
 ```bash
 cd AirPointer
 echo "sdk.dir=/path/to/Android/sdk" > local.properties
-./gradlew testDebugUnitTest   # 98 JVM tests; 2 of them need live players and skip otherwise (§8)
+./gradlew testDebugUnitTest   # 116 JVM tests; up to 6 of them need live players and skip otherwise (§8)
 ./gradlew assembleRelease     # app/build/outputs/apk/release/app-release.apk (R8, ~3 MB)
 ./gradlew lintDebug
 adb install -r app/build/outputs/apk/release/app-release.apk
@@ -368,8 +447,9 @@ so nothing jumps afterwards.
 * HID descriptor parsing (exactly one mouse; report sizes match the encoders), report encoding, consumer reports;
 * touchpad gestures (5);
 * air hand gestures (9), table motion (6), table screen gestures (7);
-* UI: connection-card state model (14), US-layout typing (3), and 10 screenshot renders of
-  the components and full screens;
+* UI: connection-card state model (14), US-layout typing (3), and 22 screenshot renders of
+  every screen, dialog and state (`*Screenshots*` tests);
+* ads: cache behaviour and placement policy (6), and a design render of the native ad layout;
 * TV protocols (11): protobuf, key inject bytes, Android TV pairing secret against the reference
   algorithm, NEC/Samsung32/SIRC timings, SSDP classification, Samsung/LG messages, Wake-on-LAN,
   certificate pinning with real certificates;

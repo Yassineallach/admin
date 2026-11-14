@@ -30,6 +30,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -38,6 +39,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
@@ -277,7 +279,7 @@ fun SettingSlider(
     Column {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(label, style = MaterialTheme.typography.titleMedium, color = Palette.TextPrimary, modifier = Modifier.weight(1f))
-            Text(valueLabel, style = MaterialTheme.typography.labelMedium.copy(fontFamily = FontFamily.Monospace), color = Palette.Accent)
+            Text(valueLabel, style = MaterialTheme.typography.labelLarge, color = Palette.TextPrimary)
         }
         if (description != null) Text(description, style = MaterialTheme.typography.bodySmall, color = Palette.TextSecondary)
         Slider(
@@ -311,10 +313,12 @@ fun SettingSwitch(label: String, checked: Boolean, onChange: (Boolean) -> Unit, 
 @Composable
 fun <T> SettingChoice(label: String, options: List<T>, selected: T, labelOf: (T) -> String, onSelect: (T) -> Unit) {
     var open by remember { mutableStateOf(false) }
-    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable { open = true }.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).clip(RoundedCornerShape(12.dp)).clickable(role = Role.Button) { open = true }
+        .padding(vertical = 8.dp).semantics(mergeDescendants = true) {}, verticalAlignment = Alignment.CenterVertically) {
         Text(label, style = MaterialTheme.typography.titleMedium, color = Palette.TextPrimary, modifier = Modifier.weight(1f))
-        Text(labelOf(selected), style = MaterialTheme.typography.bodyMedium, color = Palette.Accent, maxLines = 1, overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.padding(start = 12.dp))
+        Text(labelOf(selected), style = MaterialTheme.typography.bodyMedium, color = Palette.TextSecondary, maxLines = 2, overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.End, modifier = Modifier.padding(start = 12.dp).widthIn(max = 220.dp))
+        Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = Palette.TextSecondary, modifier = Modifier.padding(start = 4.dp).size(20.dp))
     }
     if (open) {
         AlertDialog(

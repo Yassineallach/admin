@@ -16,6 +16,8 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        // Consent first (ads only depend on it — every remote works without it).
+        graph.consent.gather(this)
         setContent {
             AirPointerTheme {
                 AirPointerRoot(this)

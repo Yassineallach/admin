@@ -281,6 +281,7 @@ fun TvDevicesScreen(graph: AppGraph, onBack: () -> Unit) {
     var protocol by rememberSaveable { mutableStateOf(TvProtocol.ANDROID_TV) }
     var scanning by remember { mutableStateOf(false) }
     var found by remember { mutableStateOf<List<TvDiscovery.Found>>(emptyList()) }
+    var searched by remember { mutableStateOf(false) }
     var manualIp by remember { mutableStateOf("") }
     var irSet by rememberSaveable { mutableStateOf(IrCodeSet.SAMSUNG) }
     val hasIr = remember { IrRemote.hasIrBlaster(context) }
@@ -315,7 +316,7 @@ fun TvDevicesScreen(graph: AppGraph, onBack: () -> Unit) {
 
         SectionLabel("Add a TV")
         Panel {
-            SettingChoice("Brand / connection", TvProtocol.entries.toList(), protocol, { it.label }) { protocol = it; found = emptyList() }
+            SettingChoice("TV type", TvProtocol.entries.toList(), protocol, { it.label }) { protocol = it; found = emptyList() }
             Text(protocol.brandHint, style = MaterialTheme.typography.bodySmall, color = Palette.TextSecondary)
         }
 
@@ -340,12 +341,17 @@ fun TvDevicesScreen(graph: AppGraph, onBack: () -> Unit) {
             else -> {
                 Panel {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(if (scanning) "Searching the network…" else "${found.count { it.protocol == protocol }} found",
+                        Text(when {
+                            scanning -> "Searching the network…"
+                            !searched -> "Search your Wi-Fi for this TV."
+                            found.none { it.protocol == protocol } -> "No ${protocol.label.substringBefore(" (")} found. Is it on and on this Wi-Fi?"
+                            else -> "${found.count { it.protocol == protocol }} found"
+                        },
                             style = MaterialTheme.typography.bodyMedium, color = Palette.TextSecondary, modifier = Modifier.weight(1f))
                         if (scanning) CircularProgressIndicator(Modifier.size(20.dp), color = Palette.Accent, strokeWidth = 2.dp)
                         else SecondaryButton("Search") {
                             scanning = true
-                            scope.launch { found = graph.tvDiscovery.scan(); scanning = false }
+                            scope.launch { found = graph.tvDiscovery.scan(); scanning = false; searched = true }
                         }
                     }
                     found.filter { it.protocol == protocol }.forEach { f ->

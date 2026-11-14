@@ -62,6 +62,18 @@
             </intent-filter>
         </activity>
 
+        <!-- AdMob: App ID comes from admob.properties (release) or Google's test App ID (debug). -->
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="${admobAppId}" />
+        <!-- Let the SDK initialise and load ads off the main thread. -->
+        <meta-data
+            android:name="com.google.android.gms.ads.flag.OPTIMIZE_INITIALIZATION"
+            android:value="true" />
+        <meta-data
+            android:name="com.google.android.gms.ads.flag.OPTIMIZE_AD_LOADING"
+            android:value="true" />
+
         <service
             android:name=".service.AirPointerService"
             android:exported="false"
