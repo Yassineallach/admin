@@ -27,6 +27,18 @@ func init() {
 	for i := 0; i < 10; i++ {                    // F1–F10
 		hidKeys[0x3A+i] = keyInfo{vk: uint16(0x70 + i), evdev: uint16(59 + i)}
 	}
+	// Punctuation (US layout positions) for typing text.
+	hidKeys[0x2D] = keyInfo{vk: 0xBD, evdev: 12}                  // - _
+	hidKeys[0x2E] = keyInfo{vk: 0xBB, evdev: 13}                  // = +
+	hidKeys[0x2F] = keyInfo{vk: 0xDB, evdev: 26}                  // [ {
+	hidKeys[0x30] = keyInfo{vk: 0xDD, evdev: 27}                  // ] }
+	hidKeys[0x31] = keyInfo{vk: 0xDC, evdev: 43}                  // backslash |
+	hidKeys[0x33] = keyInfo{vk: 0xBA, evdev: 39}                  // ; :
+	hidKeys[0x34] = keyInfo{vk: 0xDE, evdev: 40}                  // ' "
+	hidKeys[0x35] = keyInfo{vk: 0xC0, evdev: 41}                  // ` ~
+	hidKeys[0x36] = keyInfo{vk: 0xBC, evdev: 51}                  // , <
+	hidKeys[0x37] = keyInfo{vk: 0xBE, evdev: 52}                  // . >
+	hidKeys[0x38] = keyInfo{vk: 0xBF, evdev: 53}                  // / ?
 	hidKeys[0x44] = keyInfo{vk: 0x7A, evdev: 87}                  // F11
 	hidKeys[0x45] = keyInfo{vk: 0x7B, evdev: 88}                  // F12
 	hidKeys[0x49] = keyInfo{vk: 0x2D, extended: true, evdev: 110} // Insert

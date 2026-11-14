@@ -49,6 +49,13 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.width
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import com.airpointer.remote.ui.Tone
+import com.airpointer.remote.ui.components.BannerTone
+import com.airpointer.remote.ui.components.NotificationBanner
+import kotlin.math.roundToInt
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.airpointer.remote.AppGraph
 import com.airpointer.remote.media.MediaBackend
@@ -92,7 +99,8 @@ fun MediaRemoteScreen(graph: AppGraph, onBack: () -> Unit, navigate: (Route) -> 
     var seeking by remember { mutableStateOf<Float?>(null) }
     var editVlc by remember { mutableStateOf(false) }
 
-    LaunchedEffect(backend, wifi.phase) {
+    var retry by remember { mutableStateOf(0) }
+    LaunchedEffect(backend, wifi.phase, retry) {
         status = null; error = null
         while (backend != null) {
             try { status = backend.status(); error = null } catch (e: MediaException) { error = e.message }
@@ -106,19 +114,12 @@ fun MediaRemoteScreen(graph: AppGraph, onBack: () -> Unit, navigate: (Route) -> 
         }
     }
 
-    Column(
-        Modifier.fillMaxSize().background(Palette.Background).statusBarsPadding().navigationBarsPadding().padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        Row(Modifier.fillMaxWidth().height(56.dp), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back", tint = Palette.TextPrimary) }
-            StatusDot(if (status != null && error == null) Palette.Positive else if (error != null) Palette.Negative else Palette.TextTertiary,
-                status != null && error == null, 7.dp)
-            Column(Modifier.weight(1f).padding(start = 4.dp)) {
-                Text("Media Player", style = MaterialTheme.typography.titleMedium)
-                Text(status?.title ?: player, style = MaterialTheme.typography.bodySmall, color = Palette.TextSecondary, maxLines = 1)
-            }
-        }
+    val mediaStatus: Pair<Tone, String> = when {
+        error != null -> Tone.ERROR to "PLAYER UNREACHABLE"
+        status != null -> Tone.SUCCESS to "${status!!.state.name} · $player"
+        else -> Tone.NEUTRAL to "CONNECTING TO $player"
+    }
+    RemoteFrame(graph, "Media Player", onBack, navigate, requiresComputer = player == "MPV", status = mediaStatus) {
         Segmented(listOf("VLC", "MPV"), player, { it }) { p -> graph.settings.update { it.copy(mediaPlayer = p) } }
 
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -130,7 +131,13 @@ fun MediaRemoteScreen(graph: AppGraph, onBack: () -> Unit, navigate: (Route) -> 
                     style = MaterialTheme.typography.bodySmall, color = Palette.TextSecondary)
                 PrimaryButton("Open Connection", Modifier.fillMaxWidth()) { navigate(Route.PAIRING) }
             }
-            error?.let { Panel(padding = 14.dp) { Text(it, style = MaterialTheme.typography.bodySmall, color = Palette.Negative) } }
+            error?.let { msg ->
+                NotificationBanner(
+                    title = "PLAYER UNREACHABLE", message = msg, tone = BannerTone.ERROR,
+                    primary = "Retry" to { error = null; status = null; retry++ },
+                    secondary = if (player == "VLC") "VLC settings" to { editVlc = true } else "Connection" to { navigate(Route.PAIRING) },
+                )
+            }
 
             val s = status ?: MediaStatus()
             val caps = backend?.capabilities.orEmpty()
@@ -172,29 +179,41 @@ fun MediaRemoteScreen(graph: AppGraph, onBack: () -> Unit, navigate: (Route) -> 
                 MKey(Icons.Rounded.Forward10, ready && MediaCap.SEEK in caps, Modifier.weight(1f), settings.haptics) { run { seekRelative(10.0) } }
             }
 
-            // Volume
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                MKey(Icons.AutoMirrored.Rounded.VolumeDown, ready && MediaCap.VOLUME in caps, Modifier.weight(1f), settings.haptics) { run { changeVolume(-5) } }
-                Text(if (s.muted) "Muted" else "${s.volumePercent}%", style = MaterialTheme.typography.titleMedium,
-                    color = if (s.muted) Palette.Warning else Palette.TextPrimary, modifier = Modifier.weight(0.8f))
-                MKey(Icons.AutoMirrored.Rounded.VolumeOff, ready && MediaCap.MUTE in caps, Modifier.weight(1f), settings.haptics, active = s.muted) { run { toggleMute() } }
-                MKey(Icons.AutoMirrored.Rounded.VolumeUp, ready && MediaCap.VOLUME in caps, Modifier.weight(1f), settings.haptics) { run { changeVolume(5) } }
+            // Volume: dedicated slider (drag, release to apply) + mute
+            Panel(padding = 14.dp) {
+                var dragging by remember { mutableStateOf<Float?>(null) }
+                val shown = dragging ?: s.volumePercent.toFloat()
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    MKey(if (s.muted) Icons.AutoMirrored.Rounded.VolumeOff else Icons.AutoMirrored.Rounded.VolumeUp,
+                        ready && MediaCap.MUTE in caps, Modifier.width(56.dp), settings.haptics, active = s.muted,
+                        description = if (s.muted) "Unmute" else "Mute") { run { toggleMute() } }
+                    Slider(
+                        value = shown.coerceIn(0f, 100f), valueRange = 0f..100f,
+                        onValueChange = { dragging = it },
+                        onValueChangeFinished = { dragging?.let { v -> run { setVolume(v.roundToInt()) } }; dragging = null },
+                        enabled = ready && MediaCap.VOLUME in caps,
+                        modifier = Modifier.weight(1f).semantics { contentDescription = "Volume" },
+                        colors = SliderDefaults.colors(thumbColor = Palette.TextPrimary, activeTrackColor = Palette.Accent, inactiveTrackColor = Palette.SurfaceHighest),
+                    )
+                    Text(if (s.muted) "Muted" else "${shown.roundToInt()}%", style = MaterialTheme.typography.labelLarge,
+                        color = if (s.muted) Palette.Warning else Palette.TextPrimary, modifier = Modifier.width(56.dp))
+                }
             }
 
             // Speed
             Panel(padding = 14.dp) {
-                Text("Playback speed · ${"%.2f".format(s.speed)}×", style = MaterialTheme.typography.labelSmall, color = Palette.TextTertiary)
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    for (sp in SPEEDS) RemoteKey("${sp}×".replace(".0×", "×"), null, Modifier.weight(1f), height = 40.dp,
+                Text("Playback speed · ${"%.2f".format(s.speed)}×", style = MaterialTheme.typography.labelSmall, color = Palette.TextSecondary)
+                for (row in SPEEDS.chunked(3)) Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    for (sp in row) RemoteKey("${sp}×".replace(".0×", "×"), null, Modifier.weight(1f), height = 48.dp,
                         active = kotlin.math.abs(s.speed - sp) < 0.01, enabled = ready && MediaCap.SPEED in caps, haptics = settings.haptics,
-                        onClick = { run { setSpeed(sp) } })
+                        contentDescription = "Speed ${sp} times", onClick = { run { setSpeed(sp) } })
                 }
             }
 
             // Subtitles & audio
             Panel(padding = 14.dp) {
                 Text("Subtitles · delay ${"%+.1f".format(s.subtitleDelaySec)} s" +
-                    (s.subtitlesVisible?.let { if (it) " · on" else " · off" } ?: ""), style = MaterialTheme.typography.labelSmall, color = Palette.TextTertiary)
+                    (s.subtitlesVisible?.let { if (it) " · on" else " · off" } ?: ""), style = MaterialTheme.typography.labelSmall, color = Palette.TextSecondary)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     MKey(Icons.Rounded.Subtitles, ready && MediaCap.SUBTITLE_TOGGLE in caps, Modifier.weight(1f), settings.haptics) { run { toggleSubtitles() } }
                     RemoteKey("Track", null, Modifier.weight(1f), height = 48.dp, enabled = ready && MediaCap.SUBTITLE_TRACK in caps,
@@ -215,8 +234,9 @@ fun MediaRemoteScreen(graph: AppGraph, onBack: () -> Unit, navigate: (Route) -> 
 @Composable
 private fun MKey(
     icon: androidx.compose.ui.graphics.vector.ImageVector, enabled: Boolean, modifier: Modifier, haptics: Boolean,
-    accent: Boolean = false, active: Boolean = false, height: androidx.compose.ui.unit.Dp = 56.dp, onClick: () -> Unit,
-) = RemoteKey("", icon, modifier, accent = accent && enabled, active = active, enabled = enabled, height = height, haptics = haptics, onClick = onClick)
+    accent: Boolean = false, active: Boolean = false, height: androidx.compose.ui.unit.Dp = 56.dp, description: String? = null, onClick: () -> Unit,
+) = RemoteKey("", icon, modifier, accent = accent && enabled, active = active, enabled = enabled, height = height, haptics = haptics,
+    contentDescription = description ?: icon.name.substringAfterLast('.').replace(Regex("([a-z])([A-Z0-9])"), "$1 $2"), onClick = onClick)
 
 @Composable
 private fun VlcSetup(graph: AppGraph, onDone: () -> Unit) {

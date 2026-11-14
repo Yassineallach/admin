@@ -37,6 +37,8 @@ interface MediaBackend {
     suspend fun seekRelative(seconds: Double)
     suspend fun seekTo(seconds: Double)
     suspend fun changeVolume(deltaPercent: Int)
+    /** Absolute volume, 0–100 %. */
+    suspend fun setVolume(percent: Int)
     suspend fun toggleMute()
     suspend fun setSpeed(speed: Double)
     suspend fun toggleFullscreen()

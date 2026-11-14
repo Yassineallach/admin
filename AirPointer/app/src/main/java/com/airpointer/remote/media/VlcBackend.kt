@@ -72,6 +72,8 @@ class VlcBackend(
         call("volume", if (delta >= 0) "+$delta" else "$delta")
     }
 
+    override suspend fun setVolume(percent: Int) { call("volume", (percent.coerceIn(0, 200) * 256 / 100).toString()) }
+
     /** VLC's HTTP interface has no mute command: remember the volume, set 0, restore it. */
     override suspend fun toggleMute() {
         val vol = (last ?: call()).optInt("volume", 256)

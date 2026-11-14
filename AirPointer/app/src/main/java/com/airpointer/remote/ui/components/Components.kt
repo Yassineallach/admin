@@ -68,7 +68,18 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.disabled
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextAlign
 import com.airpointer.remote.ui.theme.Palette
+import com.airpointer.remote.ui.theme.Spacing
 
 @Composable
 fun ScreenScaffold(
@@ -78,22 +89,9 @@ fun ScreenScaffold(
     actions: @Composable RowScope.() -> Unit = {},
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    Column(
-        Modifier.fillMaxSize().background(Palette.Background).statusBarsPadding().navigationBarsPadding(),
-    ) {
-        Row(
-            Modifier.fillMaxWidth().height(60.dp).padding(horizontal = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            if (onBack != null) {
-                IconButton(onClick = onBack) {
-                    Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back", tint = Palette.TextPrimary)
-                }
-            } else Spacer(Modifier.width(12.dp))
-            Text(title, style = MaterialTheme.typography.titleLarge, color = Palette.TextPrimary, modifier = Modifier.weight(1f))
-            actions()
-        }
-        val m = Modifier.fillMaxSize().padding(horizontal = 20.dp)
+    Column(Modifier.fillMaxSize().background(Palette.Background).statusBarsPadding().navigationBarsPadding()) {
+        RemoteToolbar(title = title, onBack = onBack, actions = actions)
+        val m = Modifier.fillMaxSize().padding(horizontal = Spacing.screen)
         Column(
             if (scrollable) m.verticalScroll(rememberScrollState()) else m,
             verticalArrangement = Arrangement.spacedBy(14.dp),
@@ -110,9 +108,9 @@ fun Panel(modifier: Modifier = Modifier, padding: Dp = 18.dp, content: @Composab
     Column(
         modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(24.dp))
+            .clip(RoundedCornerShape(20.dp))
             .background(Palette.Surface)
-            .border(1.dp, Palette.Outline.copy(alpha = 0.6f), RoundedCornerShape(24.dp))
+            .border(1.dp, Palette.Outline, RoundedCornerShape(20.dp))
             .padding(padding),
         verticalArrangement = Arrangement.spacedBy(10.dp),
         content = content,
@@ -120,9 +118,7 @@ fun Panel(modifier: Modifier = Modifier, padding: Dp = 18.dp, content: @Composab
 }
 
 @Composable
-fun SectionLabel(text: String, modifier: Modifier = Modifier) {
-    Text(text.uppercase(), style = MaterialTheme.typography.labelSmall, color = Palette.TextTertiary, modifier = modifier.padding(top = 8.dp, start = 4.dp))
-}
+fun SectionLabel(text: String, modifier: Modifier = Modifier) = SectionHeader(text, modifier.padding(top = 8.dp))
 
 @Composable
 fun StatusDot(color: Color, pulsing: Boolean, size: Dp = 10.dp) {
@@ -142,9 +138,10 @@ fun StatusDot(color: Color, pulsing: Boolean, size: Dp = 10.dp) {
 }
 
 /**
- * Rounded remote control key with press animation and haptic feedback.
- * [onPress]/[onRelease] give raw down/up (used for mouse buttons so drag works);
- * [onClick] is fired on release inside the key.
+ * Rounded remote-control key with press animation and haptic feedback.
+ * [onPress]/[onRelease] give raw down/up (mouse buttons, so drag works); [onClick] fires on release.
+ * Icon-only keys must pass [contentDescription]: it is read by TalkBack, and TalkBack's double-tap
+ * activates the key through the semantics action.
  */
 @Composable
 fun RemoteKey(
@@ -156,6 +153,8 @@ fun RemoteKey(
     enabled: Boolean = true,
     height: Dp = 64.dp,
     haptics: Boolean = true,
+    contentDescription: String? = null,
+    stacked: Boolean = false,
     onPress: (() -> Unit)? = null,
     onRelease: (() -> Unit)? = null,
     onClick: (() -> Unit)? = null,
@@ -166,7 +165,7 @@ fun RemoteKey(
     val currentOnRelease = rememberUpdatedState(onRelease)
     val currentOnClick = rememberUpdatedState(onClick)
     val currentHaptics = rememberUpdatedState(haptics)
-    val scale by animateFloatAsState(if (pressed) 0.95f else 1f, spring(dampingRatio = 0.55f, stiffness = 700f), label = "s")
+    val scale by animateFloatAsState(if (pressed) 0.96f else 1f, spring(dampingRatio = 0.6f, stiffness = 900f), label = "s")
     val bg by animateColorAsState(
         when {
             !enabled -> Palette.Surface
@@ -179,17 +178,26 @@ fun RemoteKey(
     )
     val fg = when {
         !enabled -> Palette.TextTertiary
-        accent -> Color.White
+        accent -> Palette.OnAccent
         active -> Palette.Accent
         else -> Palette.TextPrimary
     }
+    val spoken = contentDescription ?: label
     Box(
         modifier
-            .height(height)
+            .heightIn(min = maxOf(height, 48.dp))
             .scale(scale)
-            .clip(RoundedCornerShape(20.dp))
+            .clip(RoundedCornerShape(16.dp))
             .background(bg)
-            .border(1.dp, if (active) Palette.Accent.copy(alpha = 0.5f) else Palette.Outline.copy(alpha = 0.5f), RoundedCornerShape(20.dp))
+            .border(1.dp, if (active) Palette.Accent.copy(alpha = 0.5f) else Palette.Outline, RoundedCornerShape(16.dp))
+            .semantics {
+                role = Role.Button
+                this.contentDescription = spoken
+                if (!enabled) disabled()
+                if (enabled) onClick(spoken) {
+                    currentOnPress.value?.invoke(); currentOnRelease.value?.invoke(); currentOnClick.value?.invoke(); true
+                }
+            }
             .pointerInput(enabled) {
                 if (!enabled) return@pointerInput
                 awaitEachGesture {
@@ -212,31 +220,49 @@ fun RemoteKey(
             },
         contentAlignment = Alignment.Center,
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            if (icon != null) Icon(icon, contentDescription = label, tint = fg, modifier = Modifier.size(22.dp))
+        if (stacked) Column(Modifier.padding(horizontal = 4.dp, vertical = 8.dp), horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            if (icon != null) Icon(icon, contentDescription = null, tint = fg, modifier = Modifier.size(22.dp))
+            if (label.isNotEmpty()) Text(label, style = MaterialTheme.typography.labelMedium.copy(letterSpacing = 0.2.sp), color = fg,
+                maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)
+        } else Row(Modifier.padding(horizontal = 10.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (icon != null) Icon(icon, contentDescription = null, tint = fg, modifier = Modifier.size(22.dp))
             if (label.isNotEmpty()) Text(label, style = MaterialTheme.typography.labelLarge, color = fg, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
 }
 
 @Composable
-fun PrimaryButton(text: String, modifier: Modifier = Modifier, enabled: Boolean = true, onClick: () -> Unit) {
-    val bg = if (enabled) Palette.Accent else Palette.SurfaceHigh
-    Box(
-        modifier.height(52.dp).clip(RoundedCornerShape(16.dp)).background(bg)
-            .clickable(enabled = enabled, onClick = onClick).padding(horizontal = 20.dp),
-        contentAlignment = Alignment.Center,
-    ) { Text(text, style = MaterialTheme.typography.labelLarge, color = if (enabled) Color.White else Palette.TextTertiary) }
+fun PrimaryButton(text: String, modifier: Modifier = Modifier, enabled: Boolean = true, icon: ImageVector? = null, onClick: () -> Unit) {
+    Row(
+        modifier.heightIn(min = 52.dp).clip(RoundedCornerShape(12.dp))
+            .background(if (enabled) Palette.Accent else Palette.SurfaceHigh)
+            .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
+            .padding(horizontal = 20.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+    ) {
+        val fg = if (enabled) Palette.OnAccent else Palette.TextTertiary
+        if (icon != null) Icon(icon, null, tint = fg, modifier = Modifier.size(20.dp))
+        Text(text, style = MaterialTheme.typography.labelLarge, color = fg, textAlign = TextAlign.Center)
+    }
 }
 
 @Composable
-fun SecondaryButton(text: String, modifier: Modifier = Modifier, enabled: Boolean = true, onClick: () -> Unit) {
-    Box(
-        modifier.height(44.dp).clip(RoundedCornerShape(14.dp)).background(Palette.SurfaceHigh)
-            .border(1.dp, Palette.Outline, RoundedCornerShape(14.dp))
-            .clickable(enabled = enabled, onClick = onClick).padding(horizontal = 16.dp),
-        contentAlignment = Alignment.Center,
-    ) { Text(text, style = MaterialTheme.typography.labelLarge, color = if (enabled) Palette.TextPrimary else Palette.TextTertiary) }
+fun SecondaryButton(text: String, modifier: Modifier = Modifier, enabled: Boolean = true, icon: ImageVector? = null, onClick: () -> Unit) {
+    Row(
+        modifier.heightIn(min = 52.dp).clip(RoundedCornerShape(12.dp)).background(Palette.SurfaceHigh)
+            .border(1.dp, Palette.Outline, RoundedCornerShape(12.dp))
+            .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+    ) {
+        val fg = if (enabled) Palette.TextPrimary else Palette.TextTertiary
+        if (icon != null) Icon(icon, null, tint = fg, modifier = Modifier.size(18.dp))
+        Text(text, style = MaterialTheme.typography.labelLarge, color = fg, textAlign = TextAlign.Center)
+    }
 }
 
 @Composable
@@ -340,15 +366,16 @@ fun IconBadge(icon: ImageVector, tint: Color = Palette.TextPrimary, bg: Color = 
 fun <T> Segmented(options: List<T>, selected: T, label: (T) -> String, modifier: Modifier = Modifier, onSelect: (T) -> Unit) {
     Row(
         modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(Palette.Surface)
-            .border(1.dp, Palette.Outline.copy(alpha = 0.6f), RoundedCornerShape(16.dp)).padding(4.dp),
+            .border(1.dp, Palette.Outline, RoundedCornerShape(16.dp)).padding(4.dp),
         horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         for (o in options) {
             val active = o == selected
             Box(
-                Modifier.weight(1f).height(40.dp).clip(RoundedCornerShape(12.dp))
+                Modifier.weight(1f).heightIn(min = 44.dp).clip(RoundedCornerShape(12.dp))
                     .background(if (active) Palette.SurfaceHighest else Color.Transparent)
-                    .clickable { onSelect(o) },
+                    .border(1.dp, if (active) Palette.Outline else Color.Transparent, RoundedCornerShape(12.dp))
+                    .clickable(role = Role.Tab) { onSelect(o) }.semantics { this.selected = active },
                 contentAlignment = Alignment.Center,
             ) {
                 Text(label(o), style = MaterialTheme.typography.labelLarge, color = if (active) Palette.TextPrimary else Palette.TextSecondary,
@@ -358,14 +385,17 @@ fun <T> Segmented(options: List<T>, selected: T, label: (T) -> String, modifier:
     }
 }
 
-/** A banner shown on remote screens when the selected link is down. */
+/** Inline banner on remote screens when the selected link is down. */
 @Composable
-fun NotConnectedBanner(text: String, action: String, onAction: () -> Unit) {
-    Row(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(Palette.SurfaceHigh).padding(12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(text, style = MaterialTheme.typography.bodyMedium, color = Palette.TextSecondary, modifier = Modifier.weight(1f))
-        SecondaryButton(action, onClick = onAction)
-    }
+fun NotConnectedBanner(text: String, action: String, onAction: () -> Unit) =
+    NotificationBanner(title = "NOT CONNECTED", message = text, tone = BannerTone.WARNING, primary = action to onAction)
+
+/** Low-emphasis action (secondary choices next to a primary button): text only, 48dp target, ripple. */
+@Composable
+fun TertiaryButton(text: String, modifier: Modifier = Modifier, color: Color = Palette.TextPrimary, onClick: () -> Unit) {
+    Box(
+        modifier.heightIn(min = 48.dp).clip(RoundedCornerShape(12.dp))
+            .clickable(role = Role.Button, onClick = onClick).padding(horizontal = 16.dp, vertical = 10.dp),
+        contentAlignment = Alignment.Center,
+    ) { Text(text, style = MaterialTheme.typography.labelLarge, color = color, textAlign = TextAlign.Center) }
 }

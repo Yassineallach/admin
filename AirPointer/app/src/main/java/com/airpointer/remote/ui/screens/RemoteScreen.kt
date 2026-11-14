@@ -42,6 +42,8 @@ import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.CenterFocusStrong
 import androidx.compose.material.icons.rounded.DarkMode
+import androidx.compose.material.icons.rounded.Flare
+import androidx.compose.material.icons.rounded.Mouse
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Slideshow
@@ -72,6 +74,11 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.airpointer.remote.AppGraph
 import com.airpointer.remote.MainActivity
@@ -93,8 +100,6 @@ fun RemoteScreen(graph: AppGraph, activity: MainActivity, onBack: () -> Unit, na
     val tracking by graph.presenter.tracking.collectAsStateWithLifecycle()
     val presenter = graph.presenter
     val view = LocalView.current
-    val link = rememberLinkStatus(graph)
-    val status = link.info
 
     DisposableEffect(settings.keepScreenOn) {
         view.keepScreenOn = settings.keepScreenOn
@@ -106,46 +111,17 @@ fun RemoteScreen(graph: AppGraph, activity: MainActivity, onBack: () -> Unit, na
         }
     }
 
-    Column(
-        Modifier.fillMaxSize().background(Palette.Background).statusBarsPadding().navigationBarsPadding()
-            .padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        // Header
-        Row(Modifier.fillMaxWidth().height(56.dp), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back", tint = Palette.TextPrimary) }
-            StatusDot(status.color, status.pulsing, 7.dp)
-            Column(Modifier.weight(1f).padding(start = 4.dp)) {
-                Text(status.title, style = MaterialTheme.typography.titleMedium)
-                Text(
-                    link.hostName ?: status.detail, style = MaterialTheme.typography.bodySmall,
-                    color = Palette.TextSecondary, maxLines = 1,
-                )
-            }
-            IconButton(onClick = { navigate(Route.SETTINGS) }) { Icon(Icons.Rounded.Tune, "Settings", tint = Palette.TextSecondary) }
-        }
-
-        AnimatedVisibility(!link.connected, enter = expandVertically() + fadeIn(), exit = shrinkVertically() + fadeOut()) {
-            Row(
-                Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(Palette.SurfaceHigh).padding(12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text("Not connected — controls are inactive.", style = MaterialTheme.typography.bodyMedium,
-                    color = Palette.TextSecondary, modifier = Modifier.weight(1f))
-                val last = settings.lastHostAddress
-                if (link.transport == com.airpointer.remote.transport.TransportKind.BLUETOOTH && last != null && hid.registered)
-                    SecondaryButton("Connect") { graph.hid.connect(last) }
-                else SecondaryButton("Connection") { navigate(Route.PAIRING) }
-            }
-        }
-
-        // Gesture pad + scroll strip
+    val h = settings.haptics
+    RemoteFrame(graph, "Presentation", onBack, navigate, actions = {
+        IconButton(onClick = { navigate(Route.SETTINGS) }) { Icon(Icons.Rounded.Tune, "Presentation settings", tint = Palette.TextPrimary) }
+    }) {
+        // Gesture pad + scroll strip (main interaction area)
         Row(Modifier.fillMaxWidth().weight(1f), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             GesturePad(graph, Modifier.weight(1f).fillMaxHeight())
             ScrollStrip(graph, settings.scrollStepDp, Modifier.width(52.dp).fillMaxHeight())
         }
 
-        // Pointer activation
+        // Air pointer
         PointerButton(
             active = tracking.pointerActive && !tracking.paused,
             paused = tracking.paused,
@@ -154,43 +130,40 @@ fun RemoteScreen(graph: AppGraph, activity: MainActivity, onBack: () -> Unit, na
             onHold = { presenter.setPointerHeld(it) },
         )
 
-        // Mouse buttons (press/release so drag works while moving the phone)
+        // Slides — the largest targets on the screen
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            RemoteKey("Left click", null, Modifier.weight(1f), height = 58.dp, haptics = settings.haptics,
-                onPress = { presenter.setButton(MouseButtons.LEFT, true) },
-                onRelease = { presenter.setButton(MouseButtons.LEFT, false) })
-            RemoteKey("Right click", null, Modifier.weight(1f), height = 58.dp, haptics = settings.haptics,
-                onPress = { presenter.setButton(MouseButtons.RIGHT, true) },
-                onRelease = { presenter.setButton(MouseButtons.RIGHT, false) })
+            RemoteKey("Previous", Icons.AutoMirrored.Rounded.KeyboardArrowLeft, Modifier.weight(1f), height = 88.dp,
+                haptics = h, contentDescription = "Previous slide", onClick = { presenter.previousSlide() })
+            RemoteKey("Next", Icons.AutoMirrored.Rounded.KeyboardArrowRight, Modifier.weight(1.4f), height = 88.dp, accent = true,
+                haptics = h, contentDescription = "Next slide", onClick = { presenter.nextSlide() })
         }
 
-        // Slides
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            RemoteKey("Previous", Icons.AutoMirrored.Rounded.KeyboardArrowLeft, Modifier.weight(1f), height = 84.dp,
-                haptics = settings.haptics, onClick = { presenter.previousSlide() })
-            RemoteKey("Next", Icons.AutoMirrored.Rounded.KeyboardArrowRight, Modifier.weight(1.4f), height = 84.dp, accent = true,
-                haptics = settings.haptics, onClick = { presenter.nextSlide() })
-        }
-
-        // Utility row
+        // Show controls
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            RemoteKey("", Icons.Rounded.CenterFocusStrong, Modifier.weight(1f), height = 52.dp, haptics = settings.haptics,
-                onClick = { presenter.recenter() })
-            RemoteKey("", if (tracking.paused) Icons.Rounded.PlayArrow else Icons.Rounded.Pause, Modifier.weight(1f), height = 52.dp,
-                active = tracking.paused, haptics = settings.haptics, onClick = { presenter.setPaused(!tracking.paused) })
-            RemoteKey("", Icons.Rounded.DarkMode, Modifier.weight(1f), height = 52.dp, haptics = settings.haptics,
-                onClick = { presenter.perform(RemoteAction.BLACK_SCREEN) })
-            RemoteKey("", Icons.Rounded.Slideshow, Modifier.weight(1f), height = 52.dp, haptics = settings.haptics,
-                onClick = { presenter.perform(RemoteAction.START_SLIDESHOW) })
-            RemoteKey("", Icons.Rounded.StopCircle, Modifier.weight(1f), height = 52.dp, haptics = settings.haptics,
-                onClick = { presenter.perform(RemoteAction.END_SLIDESHOW) })
+            RemoteKey("Start", Icons.Rounded.Slideshow, Modifier.weight(1f), height = 64.dp, stacked = true, haptics = h,
+                contentDescription = "Start presentation", onClick = { presenter.perform(RemoteAction.START_SLIDESHOW) })
+            RemoteKey("Exit", Icons.Rounded.StopCircle, Modifier.weight(1f), height = 64.dp, stacked = true, haptics = h,
+                contentDescription = "Exit presentation", onClick = { presenter.perform(RemoteAction.END_SLIDESHOW) })
+            RemoteKey("Black", Icons.Rounded.DarkMode, Modifier.weight(1f), height = 64.dp, stacked = true, haptics = h,
+                contentDescription = "Black screen", onClick = { presenter.perform(RemoteAction.BLACK_SCREEN) })
+            RemoteKey("Laser", Icons.Rounded.Flare, Modifier.weight(1f), height = 64.dp, stacked = true, haptics = h,
+                contentDescription = "PowerPoint laser pointer", onClick = { presenter.perform(RemoteAction.LASER_POINTER) })
         }
-        Text(
-            "Recenter · Pause · Black screen · Start show · End show",
-            style = MaterialTheme.typography.labelSmall.copy(letterSpacing = MaterialTheme.typography.labelMedium.letterSpacing),
-            color = Palette.TextTertiary, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center,
-        )
-        Spacer(Modifier.height(4.dp))
+        // Mouse + pointer utilities (press/release so drag works while pointing)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            RemoteKey("Left", Icons.Rounded.Mouse, Modifier.weight(1f), height = 64.dp, stacked = true, haptics = h,
+                contentDescription = "Left click",
+                onPress = { presenter.setButton(MouseButtons.LEFT, true) }, onRelease = { presenter.setButton(MouseButtons.LEFT, false) })
+            RemoteKey("Right", Icons.Rounded.Mouse, Modifier.weight(1f), height = 64.dp, stacked = true, haptics = h,
+                contentDescription = "Right click",
+                onPress = { presenter.setButton(MouseButtons.RIGHT, true) }, onRelease = { presenter.setButton(MouseButtons.RIGHT, false) })
+            RemoteKey("Recenter", Icons.Rounded.CenterFocusStrong, Modifier.weight(1f), height = 64.dp, stacked = true, haptics = h,
+                contentDescription = "Recenter cursor", onClick = { presenter.recenter() })
+            RemoteKey(if (tracking.paused) "Resume" else "Pause", if (tracking.paused) Icons.Rounded.PlayArrow else Icons.Rounded.Pause,
+                Modifier.weight(1f), height = 64.dp, stacked = true, active = tracking.paused, haptics = h,
+                contentDescription = if (tracking.paused) "Resume air pointer" else "Pause air pointer",
+                onClick = { presenter.setPaused(!tracking.paused) })
+        }
     }
 }
 
@@ -204,9 +177,9 @@ private fun PointerButton(active: Boolean, paused: Boolean, mode: PointerMode, o
     val scale by animateFloatAsState(if (pressed) 0.97f else 1f, label = "scale")
     val border by animateColorAsState(if (active) Palette.Accent else Palette.Outline, label = "border")
     val label = when {
-        paused -> "Tracking paused"
-        mode == PointerMode.HOLD -> if (active) "Pointing…" else "Hold to point"
-        else -> if (active) "Pointer on" else "Pointer off"
+        paused -> "Air pointer paused"
+        mode == PointerMode.HOLD -> if (active) "Pointing…" else "Hold for air pointer"
+        else -> if (active) "Air pointer on" else "Air pointer off"
     }
     Box(
         Modifier.fillMaxWidth().height(64.dp).scale(scale).clip(RoundedCornerShape(32.dp))
@@ -224,6 +197,11 @@ private fun PointerButton(active: Boolean, paused: Boolean, mode: PointerMode, o
                 }
             }
             .border(1.5.dp, border, RoundedCornerShape(32.dp))
+            .semantics {
+                role = Role.Switch
+                contentDescription = label
+                onClick(label) { onToggle(); true }
+            }
             .pointerInput(mode) {
                 awaitEachGesture {
                     awaitFirstDown()
@@ -295,7 +273,7 @@ private fun GesturePad(graph: AppGraph, modifier: Modifier) {
         contentAlignment = Alignment.Center,
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text("GESTURE PAD", style = MaterialTheme.typography.labelSmall, color = Palette.TextTertiary)
+            Text("GESTURE PAD", style = MaterialTheme.typography.labelSmall, color = Palette.TextSecondary)
             Text(gestureHint(settings), style = MaterialTheme.typography.bodySmall, color = Palette.TextSecondary, textAlign = TextAlign.Center)
         }
     }

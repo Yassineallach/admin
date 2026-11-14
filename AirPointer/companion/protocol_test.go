@@ -79,7 +79,17 @@ func TestEveryHidKeyHasMappings(t *testing.T) {
 			t.Errorf("usage %#x incomplete: %+v", u, k)
 		}
 	}
-	for _, u := range []int{0x4F, 0x50, 0x3E, 0x29, 0x05, 0x1A, 0x0F, 0x04} { // keys the app sends
+	// keys the app sends, including everything the phone keyboard can type
+	keys := []int{0x4F, 0x50, 0x3E, 0x29, 0x05, 0x1A, 0x0F, 0x04, 0x28, 0x2A, 0x2B, 0x2C}
+	for u := 0x04; u <= 0x27; u++ {
+		keys = append(keys, u)
+	}
+	for u := 0x2D; u <= 0x38; u++ {
+		if u != 0x32 { // non-US key, never sent
+			keys = append(keys, u)
+		}
+	}
+	for _, u := range keys {
 		if _, ok := hidKeys[u]; !ok {
 			t.Errorf("missing usage %#x", u)
 		}

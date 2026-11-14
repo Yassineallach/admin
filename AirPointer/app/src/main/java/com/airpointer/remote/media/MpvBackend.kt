@@ -70,6 +70,7 @@ class MpvBackend(private val send: suspend (String) -> String?) : MediaBackend {
     override suspend fun seekTo(seconds: Double) { command("seek", seconds, "absolute") }
     override suspend fun changeVolume(deltaPercent: Int) { command("add", "volume", deltaPercent) }
     override suspend fun toggleMute() { command("cycle", "mute") }
+    override suspend fun setVolume(percent: Int) { command("set_property", "volume", percent.coerceIn(0, 130)) }
     override suspend fun setSpeed(speed: Double) { command("set_property", "speed", speed) }
     override suspend fun toggleFullscreen() { command("cycle", "fullscreen") }
     override suspend fun toggleSubtitles() { command("cycle", "sub-visibility") }

@@ -1,6 +1,13 @@
 package com.airpointer.remote.ui.screens
 
 import android.view.HapticFeedbackConstants
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.material.icons.automirrored.rounded.Backspace
+import androidx.compose.material.icons.rounded.Keyboard
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.TextButton
+import com.airpointer.remote.hid.KeyCodes
 import android.Manifest
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -78,37 +85,64 @@ import com.airpointer.remote.ui.theme.Palette
 import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
 
-private enum class MouseMode(val label: String) { AIR("Air mouse"), TOUCHPAD("Touchpad"), TABLE("Table") }
+private enum class MouseMode(val label: String) { TOUCHPAD("Touchpad"), AIR("Air mouse"), TABLE("Table") }
 
 @Composable
 fun PcMouseScreen(graph: AppGraph, activity: MainActivity, onBack: () -> Unit, navigate: (Route) -> Unit) {
-    var mode by rememberSaveable { mutableStateOf(MouseMode.AIR) }
-    val link = rememberLinkStatus(graph)
+    var mode by rememberSaveable { mutableStateOf(MouseMode.TOUCHPAD) }
+    var keyboard by rememberSaveable { mutableStateOf(false) }
     val view = LocalView.current
     DisposableEffect(Unit) {
         view.keepScreenOn = true
         onDispose { view.keepScreenOn = false; graph.presenter.releaseAll() }
     }
-    Column(
-        Modifier.fillMaxSize().background(Palette.Background).statusBarsPadding().navigationBarsPadding().padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        Row(Modifier.fillMaxWidth().height(56.dp), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back", tint = Palette.TextPrimary) }
-            StatusDot(link.info.color, link.info.pulsing, 7.dp)
-            Column(Modifier.weight(1f).padding(start = 4.dp)) {
-                Text("PC Mouse", style = MaterialTheme.typography.titleMedium)
-                Text(link.info.detail, style = MaterialTheme.typography.bodySmall, color = Palette.TextSecondary, maxLines = 1)
-            }
-        }
+    RemoteFrame(graph, "PC Mouse", onBack, navigate, actions = {
+        IconButton(onClick = { keyboard = true }) { Icon(Icons.Rounded.Keyboard, "Keyboard", tint = Palette.TextPrimary) }
+    }) {
         Segmented(MouseMode.entries.toList(), mode, { it.label }) { mode = it }
-        if (!link.connected) NotConnectedBanner("Not connected to a computer.", "Connection") { navigate(Route.PAIRING) }
         when (mode) {
-            MouseMode.AIR -> AirMousePane(graph, Modifier.weight(1f))
             MouseMode.TOUCHPAD -> TouchpadPane(graph, Modifier.weight(1f))
+            MouseMode.AIR -> AirMousePane(graph, Modifier.weight(1f))
             MouseMode.TABLE -> TablePane(graph, Modifier.weight(1f))
         }
     }
+    if (keyboard) KeyboardDialog(graph) { keyboard = false }
+}
+
+/** Type text and send common keys to the computer (works over Bluetooth and Wi-Fi). */
+@Composable
+private fun KeyboardDialog(graph: AppGraph, onDismiss: () -> Unit) {
+    var text by rememberSaveable { mutableStateOf("") }
+    var skipped by remember { mutableIntStateOf(0) }
+    val presenter = graph.presenter
+    val haptics = graph.settings.current.haptics
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = Palette.SurfaceHigh,
+        title = { Text("Keyboard", style = MaterialTheme.typography.titleLarge) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedTextField(text, { text = it }, Modifier.fillMaxWidth(), minLines = 2, maxLines = 5,
+                    label = { Text("Text to type on the computer") })
+                if (skipped > 0) Text("$skipped character(s) skipped: no key on a US keyboard.",
+                    style = MaterialTheme.typography.bodySmall, color = Palette.Warning)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    RemoteKey("Enter", null, Modifier.weight(1f), height = 48.dp, haptics = haptics, onClick = { presenter.key(KeyCodes.ENTER) })
+                    RemoteKey("", Icons.AutoMirrored.Rounded.Backspace, Modifier.weight(1f), height = 48.dp, haptics = haptics,
+                        contentDescription = "Backspace", onClick = { presenter.key(KeyCodes.BACKSPACE) })
+                    RemoteKey("Esc", null, Modifier.weight(1f), height = 48.dp, haptics = haptics, contentDescription = "Escape",
+                        onClick = { presenter.key(KeyCodes.ESCAPE) })
+                    RemoteKey("Tab", null, Modifier.weight(1f), height = 48.dp, haptics = haptics, onClick = { presenter.key(KeyCodes.TAB) })
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(enabled = text.isNotEmpty(), onClick = { skipped = presenter.typeText(text); text = "" }) {
+                Text("Type it", color = Palette.Accent, style = MaterialTheme.typography.labelLarge)
+            }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Close", color = Palette.TextSecondary, style = MaterialTheme.typography.labelLarge) } },
+    )
 }
 
 // ---------------------------------------------------------------------- shared finger-gesture surface
@@ -159,7 +193,7 @@ private fun GestureSurface(
             },
         contentAlignment = Alignment.Center,
     ) {
-        Text(hint, style = MaterialTheme.typography.bodySmall, color = if (active) Palette.TextPrimary else Palette.TextTertiary,
+        Text(hint, style = MaterialTheme.typography.bodySmall, color = if (active) Palette.TextPrimary else Palette.TextSecondary,
             textAlign = TextAlign.Center, modifier = Modifier.padding(16.dp))
     }
 }
@@ -227,13 +261,13 @@ private fun AirMousePane(graph: AppGraph, modifier: Modifier) {
                     !status.running -> "Camera off"
                     else -> "Show your hand to the camera"
                 },
-                style = MaterialTheme.typography.bodyMedium, color = Palette.TextTertiary, textAlign = TextAlign.Center,
+                style = MaterialTheme.typography.bodyMedium, color = Palette.TextSecondary, textAlign = TextAlign.Center,
                 modifier = Modifier.padding(24.dp),
             )
             Text(poseLabel(status.pose), style = MaterialTheme.typography.labelLarge,
-                color = if (status.pose == HandGestureMouse.Pose.NO_HAND) Palette.TextTertiary else Palette.Accent,
+                color = if (status.pose == HandGestureMouse.Pose.NO_HAND) Palette.TextSecondary else Palette.Accent,
                 modifier = Modifier.align(Alignment.TopStart).padding(16.dp))
-            if (status.running) Text("%.0f fps".format(status.fps), style = MaterialTheme.typography.labelSmall, color = Palette.TextTertiary,
+            if (status.running) Text("%.0f fps".format(status.fps), style = MaterialTheme.typography.labelSmall, color = Palette.TextSecondary,
                 modifier = Modifier.align(Alignment.TopEnd).padding(16.dp))
         }
 
@@ -266,7 +300,7 @@ private fun AirMousePane(graph: AppGraph, modifier: Modifier) {
             Text(
                 "Prop the phone up facing you (or lay it flat and hold your hand above it), 30–60 cm away, with your hand well lit. " +
                     "Tracking runs on the phone with Google's MediaPipe hand model; no images leave the phone.",
-                style = MaterialTheme.typography.bodySmall, color = Palette.TextTertiary,
+                style = MaterialTheme.typography.bodySmall, color = Palette.TextSecondary,
             )
         }
     }
@@ -352,7 +386,7 @@ private fun TouchpadPane(graph: AppGraph, modifier: Modifier) {
         ) {
             Text(
                 if (dragging) "Dragging — lift to drop" else "TOUCHPAD\n\nTap · click     Two-finger tap · right click\nTwo fingers · scroll     Hold · drag",
-                style = MaterialTheme.typography.bodySmall, color = Palette.TextTertiary, textAlign = TextAlign.Center,
+                style = MaterialTheme.typography.bodySmall, color = Palette.TextSecondary, textAlign = TextAlign.Center,
             )
         }
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -361,9 +395,13 @@ private fun TouchpadPane(graph: AppGraph, modifier: Modifier) {
             RemoteKey("Right", null, Modifier.weight(1f), height = 56.dp, haptics = settings.haptics,
                 onPress = { presenter.setButton(MouseButtons.RIGHT, true) }, onRelease = { presenter.setButton(MouseButtons.RIGHT, false) })
         }
-        Panel(padding = 14.dp) {
-            SettingSlider("Touchpad speed", speed, 0.5f..4f, "%.1f×".format(speed), { speed = (it * 10).roundToInt() / 10f })
+        var more by rememberSaveable { mutableStateOf(false) }
+        SettingSlider("Pointer sensitivity", speed, 0.5f..4f, "%.1f×".format(speed), { speed = (it * 10).roundToInt() / 10f })
+        AnimatedVisibility(more) {
             SettingSwitch("Natural scrolling", natural, { natural = it }, "Content follows your fingers, like Windows and macOS touchpads.")
+        }
+        TextButton(onClick = { more = !more }) {
+            Text(if (more) "Fewer options" else "More options", color = Palette.TextSecondary, style = MaterialTheme.typography.labelLarge)
         }
     }
 }
@@ -438,7 +476,7 @@ private fun TablePane(graph: AppGraph, modifier: Modifier) {
                 "Uses the gyroscope and accelerometer. They measure motion, not position, so the app adds up each push and " +
                     "resets the moment the phone comes to rest — that keeps the cursor from drifting. Short, brisk pushes work best, " +
                     "like lifting and repositioning a real mouse; very slow glides register less. Keep the top of the phone pointing away from you.",
-                style = MaterialTheme.typography.bodySmall, color = Palette.TextTertiary,
+                style = MaterialTheme.typography.bodySmall, color = Palette.TextSecondary,
             )
         }
     }

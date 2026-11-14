@@ -15,6 +15,49 @@ companion is a single dependency-free Go binary for Windows and Linux.
 
 ---
 
+## UI
+
+<p>
+<img src="docs/screenshots/home-connected.png" width="24%"> <img src="docs/screenshots/remote-pc-mouse.png" width="24%">
+<img src="docs/screenshots/remote-presentation.png" width="24%"> <img src="docs/screenshots/remote-tv.png" width="24%">
+</p>
+
+These are real renders of the app's Compose UI (Robolectric native graphics + Roborazzi); the
+"connected" screens come from a live Wi-Fi connection to the companion. To regenerate them:
+`./gradlew testDebugUnitTest --tests '*Screenshots*' -Pscreenshots` (PNGs land in
+`app/build/screenshots/`). For the connected screens, set
+`AIRPOINTER_SCREENSHOT_COMPANION=host:port:pin` with a companion running.
+
+* **Design system** (`ui/theme`, `ui/components/DesignSystem.kt`):
+  * Palette `#090A0D / #14151A / #1B1D24 / #272932`, coral `#FF5752`, green `#35C98A`,
+    yellow `#F5BB4F`; 8dp spacing scale; radii 12 (buttons) / 20 (cards) / 24 (connection card).
+  * Components: AppHeader, ConnectionCard, StatusIndicator, RemoteCard, SectionHeader,
+    SetupItem, PrimaryButton, IconContainer, RemoteToolbar, NotificationBanner.
+* **Contrast:** primary and secondary text are ≥ 6.6:1 on every surface. The muted grey
+  (3.5:1) is used only for disabled and decorative elements, never for readable text. Labels on
+  coral buttons are near-black (6.4:1), because white would be 3.1:1.
+* **Connection management:** one card maps the Bluetooth/Wi-Fi state onto a single state, each
+  with its recovery action. `connectionCardState` is a pure function, unit-tested state by state:
+  * connected (computer name, method, signal from Wi-Fi round-trip time)
+  * connecting, not connected, not set up
+  * connection lost, pairing failed
+  * Bluetooth off, permission needed, Wi-Fi unavailable, unsupported phone, service stopped
+
+  `LinkMonitor` tells a lost connection from a deliberate disconnect and drives the
+  "Connection lost → Reconnect" banner on every screen. A remote that needs the PC, tapped while
+  disconnected, explains why and offers **Connect now**; the remote opens automatically once
+  connected. *Your remotes* (quick access) appears when connected and highlights the last-used
+  remote.
+* **Accessibility:**
+  * every icon-only key has a spoken label and a Button role;
+  * custom press handlers are activatable with TalkBack;
+  * touch targets are at least 48dp;
+  * status always pairs colour with text;
+  * buttons use minimum (not fixed) heights, so system font scaling grows them instead of clipping;
+  * headings are marked for screen-reader navigation.
+
+---
+
 ## 1. Build
 
 ### Android app
@@ -23,7 +66,7 @@ Requirements: JDK 17+, Android SDK Platform 35 + Build-Tools 35 (Android Studio 
 ```bash
 cd AirPointer
 echo "sdk.dir=/path/to/Android/sdk" > local.properties
-./gradlew testDebugUnitTest   # 71 JVM tests; 2 of them need live players and skip otherwise (§8)
+./gradlew testDebugUnitTest   # 98 JVM tests; 2 of them need live players and skip otherwise (§8)
 ./gradlew assembleRelease     # app/build/outputs/apk/release/app-release.apk (R8, ~3 MB)
 ./gradlew lintDebug
 adb install -r app/build/outputs/apk/release/app-release.apk
@@ -325,6 +368,8 @@ so nothing jumps afterwards.
 * HID descriptor parsing (exactly one mouse; report sizes match the encoders), report encoding, consumer reports;
 * touchpad gestures (5);
 * air hand gestures (9), table motion (6), table screen gestures (7);
+* UI: connection-card state model (14), US-layout typing (3), and 10 screenshot renders of
+  the components and full screens;
 * TV protocols (11): protobuf, key inject bytes, Android TV pairing secret against the reference
   algorithm, NEC/Samsung32/SIRC timings, SSDP classification, Samsung/LG messages, Wake-on-LAN,
   certificate pinning with real certificates;

@@ -294,6 +294,23 @@ class PresenterController(
         io.postDelayed({ sendReliably(HidDescriptor.REPORT_ID_CONSUMER, HidReports.consumer(0)) }, KEY_HOLD_MS + 15)
     }
 
+    /**
+     * Types [text] as key presses (US layout). Returns how many characters have no key.
+     * Each character is pressed and released ~16 ms apart so no host drops repeated letters.
+     */
+    fun typeText(text: String): Int {
+        val strokes = text.mapNotNull { com.airpointer.remote.hid.TextKeys.stroke(it) }
+        var t = 0L
+        for (s in strokes) {
+            val mods = if (s.shift) KeyCodes.MOD_LEFT_SHIFT else 0
+            io.postDelayed({ if (link.isConnected) link.sendReport(HidDescriptor.REPORT_ID_KEYBOARD, HidReports.keyboard(mods, s.usage)) }, t)
+            t += TYPE_STEP_MS
+            io.postDelayed({ sendReliably(HidDescriptor.REPORT_ID_KEYBOARD, HidReports.keyboard(0)) }, t)
+            t += TYPE_STEP_MS
+        }
+        return text.length - strokes.size
+    }
+
     fun scroll(steps: Int) = io.post {
         if (!link.isConnected || steps == 0) return@post
         accumulator.add(0, 0, wheel = steps)
@@ -444,6 +461,7 @@ class PresenterController(
         const val CLICK_HOLD_MS = 35L
         const val KEY_HOLD_MS = 25L
         const val DOUBLE_CLICK_GAP_MS = 60L
+        const val TYPE_STEP_MS = 16L
         const val RELEASE_RETRIES = 5
         const val RELEASE_RETRY_MS = 12L
         const val SWEEP_STEP = 40

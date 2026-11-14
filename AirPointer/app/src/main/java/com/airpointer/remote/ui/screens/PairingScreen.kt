@@ -77,7 +77,7 @@ fun PairingScreen(graph: AppGraph, actions: AppActions, onBack: () -> Unit) {
             if (settings.transport == TransportKind.WIFI)
                 "Wi-Fi: works with every phone and every Windows/Linux PC, lowest latency, adds MPV control. Needs the small Air Pointer Companion running on the PC."
             else "Bluetooth: no software on the PC — the phone appears as a mouse and keyboard. Needs a phone whose firmware supports the HID Device profile.",
-            style = MaterialTheme.typography.bodySmall, color = Palette.TextTertiary,
+            style = MaterialTheme.typography.bodySmall, color = Palette.TextSecondary,
         )
         if (settings.transport == TransportKind.WIFI) WifiSection(graph) else {
         if (!hid.registered) Panel {
@@ -203,6 +203,15 @@ private fun WifiSection(graph: AppGraph) {
     }
 
     SectionLabel("Computers on this network")
+    if (!scanning && found.isEmpty() && wifi.phase != WifiCompanionClient.Phase.CONNECTED) {
+        com.airpointer.remote.ui.components.NotificationBanner(
+            title = "NO COMPUTER FOUND",
+            message = "Make sure the Air Pointer Companion is running on your PC and both devices are on the same Wi-Fi " +
+                "(guest networks often hide devices). You can also type the address shown in the companion window below.",
+            tone = com.airpointer.remote.ui.components.BannerTone.WARNING,
+            primary = "Scan again" to { scan() },
+        )
+    }
     Panel {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(if (scanning) "Searching…" else if (found.isEmpty()) "None found yet." else "${found.size} found",

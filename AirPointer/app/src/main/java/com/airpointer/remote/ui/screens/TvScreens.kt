@@ -8,6 +8,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import com.airpointer.remote.ui.Tone
+import com.airpointer.remote.ui.components.BannerTone
+import com.airpointer.remote.ui.components.NotificationBanner
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -108,40 +112,36 @@ fun TvRemoteScreen(graph: AppGraph, onBack: () -> Unit, navigate: (Route) -> Uni
         if (!text.isNullOrBlank()) graph.tv.sendText(text)
     }
 
-    Column(
-        Modifier.fillMaxSize().background(Palette.Background).statusBarsPadding().navigationBarsPadding().padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        Row(Modifier.fillMaxWidth().height(56.dp), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back", tint = Palette.TextPrimary) }
-            StatusDot(stateColor(state), state is TvConnState.Connecting || state == TvConnState.Connected, 7.dp)
-            Column(Modifier.weight(1f).padding(start = 4.dp)) {
-                Text(selected?.name ?: "TV Remote", style = MaterialTheme.typography.titleMedium, maxLines = 1)
-                Text(selected?.protocol?.label?.let { "$it · ${stateText(state)}" } ?: "No TV yet",
-                    style = MaterialTheme.typography.bodySmall, color = Palette.TextSecondary, maxLines = 1)
-            }
-            SecondaryButton("TVs") { navigate(Route.TV_DEVICES) }
-        }
-
+    val tvStatus: Pair<Tone, String> = when (state) {
+        TvConnState.Connected -> Tone.SUCCESS to "CONNECTED · ${selected?.name?.uppercase() ?: "TV"}"
+        TvConnState.Connecting -> Tone.PROGRESS to "CONNECTING"
+        is TvConnState.NeedsUser -> Tone.WARNING to "ACTION NEEDED ON TV"
+        is TvConnState.Failed -> Tone.ERROR to "TV UNREACHABLE"
+        TvConnState.Disconnected -> Tone.NEUTRAL to if (selected == null) "NO TV SET UP" else "NOT CONNECTED"
+    }
+    RemoteFrame(graph, selected?.name ?: "TV Remote", onBack, navigate, requiresComputer = false, status = tvStatus, actions = {
+        IconButton(onClick = { navigate(Route.TV_DEVICES) }) { Icon(Icons.Rounded.Tv, "Choose TV", tint = Palette.TextPrimary) }
+    }) {
         if (selected == null || conn == null) {
             Panel {
                 Text("Add your TV", style = MaterialTheme.typography.titleMedium)
                 Text("Pick the brand, search the network or use infrared/Bluetooth, and pair once.", style = MaterialTheme.typography.bodyMedium, color = Palette.TextSecondary)
                 PrimaryButton("Add a TV", Modifier.fillMaxWidth()) { navigate(Route.TV_DEVICES) }
             }
-            return@Column
+            return@RemoteFrame
         }
         val c = conn!!
 
         when (val s = state) {
-            is TvConnState.NeedsUser -> Panel {
-                Text(s.message, style = MaterialTheme.typography.titleMedium, color = Palette.Warning)
+            is TvConnState.NeedsUser -> Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                NotificationBanner("ACTION NEEDED ON TV", s.message, BannerTone.WARNING)
                 if (s.needsCode) CodeEntry { graph.tv.submitCode(it) }
             }
-            is TvConnState.Failed -> Panel {
-                Text(s.reason, style = MaterialTheme.typography.bodyMedium, color = Palette.Negative)
-                SecondaryButton("Retry") { graph.tv.connect(selected) }
-            }
+            is TvConnState.Failed -> NotificationBanner(
+                "TV UNREACHABLE", s.reason, BannerTone.ERROR,
+                primary = "Retry" to { graph.tv.connect(selected) },
+                secondary = "Choose TV" to { navigate(Route.TV_DEVICES) },
+            )
             else -> {}
         }
 
@@ -158,16 +158,19 @@ fun TvRemoteScreen(graph: AppGraph, onBack: () -> Unit, navigate: (Route) -> Uni
             }
 
             // D-pad
-            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                Column(Modifier.size(232.dp).clip(CircleShape).background(Palette.Surface).border(1.dp, Palette.Outline, CircleShape),
+            // Directional pad: as large as the screen allows (up to 300dp), with 72dp+ arrow targets.
+            BoxWithConstraints(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                val pad = minOf(maxWidth * 0.88f, 300.dp)
+                val arrow = pad * 0.27f
+                Column(Modifier.size(pad).clip(CircleShape).background(Palette.Surface).border(1.dp, Palette.Outline, CircleShape),
                     horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.SpaceEvenly) {
-                    TvButton(graph, c, TvKey.UP, Icons.Rounded.KeyboardArrowUp, Modifier.size(72.dp, 56.dp), settings.haptics)
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        TvButton(graph, c, TvKey.LEFT, Icons.AutoMirrored.Rounded.KeyboardArrowLeft, Modifier.size(56.dp, 72.dp), settings.haptics)
-                        TvButton(graph, c, TvKey.OK, null, Modifier.size(84.dp), settings.haptics, accent = true, text = "OK")
-                        TvButton(graph, c, TvKey.RIGHT, Icons.AutoMirrored.Rounded.KeyboardArrowRight, Modifier.size(56.dp, 72.dp), settings.haptics)
+                    TvButton(graph, c, TvKey.UP, Icons.Rounded.KeyboardArrowUp, Modifier.size(arrow * 1.3f, arrow), settings.haptics, height = arrow)
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        TvButton(graph, c, TvKey.LEFT, Icons.AutoMirrored.Rounded.KeyboardArrowLeft, Modifier.size(arrow, arrow * 1.3f), settings.haptics, height = arrow * 1.3f)
+                        TvButton(graph, c, TvKey.OK, null, Modifier.size(pad * 0.32f), settings.haptics, accent = true, text = "OK", height = pad * 0.32f)
+                        TvButton(graph, c, TvKey.RIGHT, Icons.AutoMirrored.Rounded.KeyboardArrowRight, Modifier.size(arrow, arrow * 1.3f), settings.haptics, height = arrow * 1.3f)
                     }
-                    TvButton(graph, c, TvKey.DOWN, Icons.Rounded.KeyboardArrowDown, Modifier.size(72.dp, 56.dp), settings.haptics)
+                    TvButton(graph, c, TvKey.DOWN, Icons.Rounded.KeyboardArrowDown, Modifier.size(arrow * 1.3f, arrow), settings.haptics, height = arrow)
                 }
             }
 
@@ -213,7 +216,7 @@ fun TvRemoteScreen(graph: AppGraph, onBack: () -> Unit, navigate: (Route) -> Uni
 
             val unsupported = TvKey.entries.filter { it !in c.supportedKeys && !(it == TvKey.VOICE && c.supportsText) }
             Panel(padding = 14.dp) {
-                Text("Limitations of ${c.protocol.label}", style = MaterialTheme.typography.labelSmall, color = Palette.TextTertiary)
+                Text("Limitations of ${c.protocol.label}", style = MaterialTheme.typography.labelSmall, color = Palette.TextSecondary)
                 if (unsupported.isNotEmpty()) Text("Not available with this connection: " + unsupported.joinToString { it.label },
                     style = MaterialTheme.typography.bodySmall, color = Palette.Warning)
                 if (showLimits) c.limitations.forEach { Text("• $it", style = MaterialTheme.typography.bodySmall, color = Palette.TextSecondary) }
@@ -230,13 +233,15 @@ private fun TvButton(
 ) {
     val supported = key in c.supportedKeys
     RemoteKey(text ?: if (icon == null) key.label else "", icon, modifier, accent = accent && supported, enabled = supported,
-        height = height, haptics = haptics, onClick = { graph.tv.send(key) })
+        height = height, haptics = haptics,
+        contentDescription = if (supported) key.label else "${key.label}, not available with this TV connection",
+        onClick = { graph.tv.send(key) })
 }
 
 @Composable
 private fun VoiceButton(c: TvConnection, modifier: Modifier, haptics: Boolean, onSend: () -> Unit, onDictate: () -> Unit) {
     val enabled = c.supportsText || TvKey.VOICE in c.supportedKeys
-    RemoteKey("", Icons.Rounded.Mic, modifier, enabled = enabled, height = 56.dp, haptics = haptics,
+    RemoteKey("", Icons.Rounded.Mic, modifier, enabled = enabled, height = 56.dp, haptics = haptics, contentDescription = "Voice search",
         onClick = { if (c.supportsText) onDictate() else onSend() })
 }
 
@@ -301,7 +306,7 @@ fun TvDevicesScreen(graph: AppGraph, onBack: () -> Unit) {
                         }
                         if (tv.id != selectedId) SecondaryButton("Use") { graph.tv.connect(tv); onBack() }
                         TextButton(onClick = { if (tv.id == selectedId) graph.tv.disconnect(); graph.tvRepository.remove(tv.id) }) {
-                            Text("Forget", color = Palette.TextTertiary)
+                            Text("Forget", color = Palette.TextSecondary)
                         }
                     }
                 }
@@ -356,7 +361,7 @@ fun TvDevicesScreen(graph: AppGraph, onBack: () -> Unit) {
                     }
                     val others = found.filter { it.protocol != protocol }
                     if (others.isNotEmpty()) Text("Also found: " + others.joinToString { "${it.name} (${it.protocol.label})" },
-                        style = MaterialTheme.typography.bodySmall, color = Palette.TextTertiary)
+                        style = MaterialTheme.typography.bodySmall, color = Palette.TextSecondary)
                     Divider()
                     Text("Not listed? Enter the TV's IP address (TV Settings → Network → Status).", style = MaterialTheme.typography.bodySmall, color = Palette.TextSecondary)
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {

@@ -16,7 +16,19 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.unit.dp
+import com.airpointer.remote.transport.LinkMonitor
+import com.airpointer.remote.ui.components.BannerTone
+import com.airpointer.remote.ui.components.NotificationBanner
+import kotlinx.coroutines.delay
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -108,7 +120,10 @@ fun AirPointerRoot(activity: MainActivity) {
         permissionsGranted = permissionsGranted,
     )
 
-    val navigate: (Route) -> Unit = { backStack.add(it) }
+    val navigate: (Route) -> Unit = { r ->
+        if (com.airpointer.remote.ui.screens.Preset.entries.any { it.route == r }) graph.settings.update { it.copy(lastRemote = r.name) }
+        backStack.add(r)
+    }
     val back: () -> Unit = { if (backStack.size > 1) backStack.removeAt(backStack.lastIndex) }
     BackHandler(enabled = backStack.size > 1, onBack = back)
 
@@ -117,8 +132,8 @@ fun AirPointerRoot(activity: MainActivity) {
             targetState = backStack.last(),
             transitionSpec = {
                 val forward = targetState.ordinal >= initialState.ordinal
-                (fadeIn(tween(220)) + slideInHorizontally(tween(260)) { if (forward) it / 8 else -it / 8 }) togetherWith
-                    (fadeOut(tween(160)) + slideOutHorizontally(tween(260)) { if (forward) -it / 8 else it / 8 })
+                (fadeIn(tween(200)) + slideInHorizontally(tween(220)) { if (forward) it / 10 else -it / 10 }) togetherWith
+                    (fadeOut(tween(150)) + slideOutHorizontally(tween(220)) { if (forward) -it / 10 else it / 10 })
             },
             label = "nav",
         ) { route ->
@@ -137,6 +152,37 @@ fun AirPointerRoot(activity: MainActivity) {
                 Route.SETTINGS -> SettingsScreen(graph, back)
                 Route.DIAGNOSTICS -> DiagnosticsScreen(graph, back)
             }
+        }
+        ConnectionEvents(graph, onHome = backStack.last() == Route.HOME, navigate = navigate)
+    }
+}
+
+/** Connection lost / restored banners over every screen except Home (where the card shows it). */
+@Composable
+private fun BoxScope.ConnectionEvents(graph: com.airpointer.remote.AppGraph, onHome: Boolean, navigate: (Route) -> Unit) {
+    var event by remember { mutableStateOf<LinkMonitor.Event?>(null) }
+    LaunchedEffect(Unit) { graph.linkMonitor.events.collect { event = it } }
+    LaunchedEffect(event) { if (event is LinkMonitor.Event.Restored) { delay(2500); event = null } }
+    val e = event
+    AnimatedVisibility(
+        visible = e != null && !onHome,
+        enter = slideInVertically(tween(220)) { -it } + fadeIn(tween(200)),
+        exit = slideOutVertically(tween(200)) { -it } + fadeOut(tween(150)),
+        modifier = Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(horizontal = 12.dp, vertical = 8.dp),
+    ) {
+        when (e) {
+            is LinkMonitor.Event.Lost -> NotificationBanner(
+                title = "CONNECTION LOST",
+                message = "${e.name ?: "Your computer"} is no longer reachable.",
+                tone = BannerTone.ERROR,
+                primary = "Reconnect" to { if (!graph.linkMonitor.connect()) navigate(Route.PAIRING); event = null },
+                secondary = "Settings" to { event = null; navigate(Route.PAIRING) },
+                onDismiss = { event = null },
+            )
+            is LinkMonitor.Event.Restored -> NotificationBanner(
+                title = "CONNECTED", message = "Back in control of ${e.name ?: "your computer"}.", tone = BannerTone.SUCCESS,
+            )
+            null -> {}
         }
     }
 }

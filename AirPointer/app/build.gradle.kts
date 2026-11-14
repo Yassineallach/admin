@@ -13,8 +13,8 @@ android {
         // BluetoothHidDevice (HID peripheral role) was added in API 28 (Android 9).
         minSdk = 28
         targetSdk = 35
-        versionCode = 8
-        versionName = "2.1.1"
+        versionCode = 9
+        versionName = "2.2.0"
         ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64") }
     }
 
@@ -45,6 +45,13 @@ android {
     }
     testOptions {
         unitTests.isReturnDefaultValues = true
+        unitTests.isIncludeAndroidResources = true // Robolectric screenshot tests
+        // Optional mirror for Robolectric's runtime download of android-all (e.g. behind a rate-limited proxy).
+        unitTests.all { t ->
+            System.getenv("ROBOLECTRIC_REPO_URL")?.let { t.systemProperty("robolectric.dependency.repo.url", it) }
+            // ./gradlew testDebugUnitTest -Pscreenshots  → writes PNGs to app/build/screenshots
+            if (project.hasProperty("screenshots")) t.systemProperty("roborazzi.test.record", "true")
+        }
     }
 }
 
@@ -75,4 +82,10 @@ dependencies {
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.json:json:20240303") // real org.json on the JVM (Android's is a stub)
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
+    // JVM screenshot tests of the real Compose UI (Robolectric native graphics + Roborazzi)
+    testImplementation("org.robolectric:robolectric:4.14.1")
+    testImplementation("io.github.takahirom.roborazzi:roborazzi:1.39.0")
+    testImplementation("io.github.takahirom.roborazzi:roborazzi-compose:1.39.0")
+    testImplementation("androidx.compose.ui:ui-test-junit4")
+    debugImplementation("androidx.compose.ui:ui-test-manifest")
 }

@@ -137,7 +137,7 @@ fun DiagnosticsScreen(graph: AppGraph, onBack: () -> Unit) {
                 val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                 cm.setPrimaryClip(ClipData.newPlainText("Air Pointer log", graph.log.asText()))
             }
-            if (log.isEmpty()) Text("No events yet.", style = MaterialTheme.typography.bodySmall, color = Palette.TextTertiary)
+            if (log.isEmpty()) Text("No events yet.", style = MaterialTheme.typography.bodySmall, color = Palette.TextSecondary)
             log.takeLast(60).asReversed().forEach { e ->
                 Text(
                     e.format(), style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),

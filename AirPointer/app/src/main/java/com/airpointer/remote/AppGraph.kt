@@ -14,6 +14,7 @@ import com.airpointer.remote.settings.SettingsRepository
 import com.airpointer.remote.hand.HandTrackingController
 import com.airpointer.remote.table.TableMouseController
 import com.airpointer.remote.transport.CompanionDiscovery
+import com.airpointer.remote.transport.LinkMonitor
 import com.airpointer.remote.tv.TvDiscovery
 import com.airpointer.remote.tv.TvManager
 import com.airpointer.remote.tv.TvRepository
@@ -47,6 +48,7 @@ class AppGraph(app: Application) {
     val wifi = WifiCompanionClient(log, appScope, "${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}")
     val link = TransportRouter(hid, wifi, settings, appScope)
     val companionDiscovery = CompanionDiscovery(app)
+    val linkMonitor = LinkMonitor(app, link, hid, wifi, settings, appScope)
     val pairing = BluetoothPairingManager(app, log)
     val motion = SensorMotionSource(app, io, log)
     val presenter = PresenterController(link, motion, settings, io, log, appScope)

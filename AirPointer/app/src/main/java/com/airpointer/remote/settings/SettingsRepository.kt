@@ -66,6 +66,7 @@ class SettingsRepository(context: Context) {
             scrollStepDp = prefs.getInt("scrollStepDp", d.scrollStepDp),
             handSpeed = prefs.getFloat("handSpeed", d.handSpeed),
             tableSpeed = prefs.getFloat("tableSpeed", d.tableSpeed),
+            lastRemote = prefs.getString("lastRemote", d.lastRemote) ?: d.lastRemote,
             slideKeys = enumOr("slideKeys", d.slideKeys),
             volumeKeysEnabled = prefs.getBoolean("volumeKeys", d.volumeKeysEnabled),
             volumeUpAction = enumOr("volumeUpAction", d.volumeUpAction),
@@ -117,6 +118,7 @@ class SettingsRepository(context: Context) {
             .putInt("scrollStepDp", s.scrollStepDp)
             .putFloat("handSpeed", s.handSpeed)
             .putFloat("tableSpeed", s.tableSpeed)
+            .putString("lastRemote", s.lastRemote)
             .putString("slideKeys", s.slideKeys.name)
             .putBoolean("volumeKeys", s.volumeKeysEnabled)
             .putString("volumeUpAction", s.volumeUpAction.name)

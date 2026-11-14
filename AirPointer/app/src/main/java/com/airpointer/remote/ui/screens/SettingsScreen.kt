@@ -65,7 +65,7 @@ fun SettingsScreen(graph: AppGraph, onBack: () -> Unit) {
                 is CalibrationState.Failed -> Text(c.reason, style = MaterialTheme.typography.bodySmall, color = Palette.Negative)
                 CalibrationState.Idle -> Text(
                     if (s.calibratedAtMs > 0) "Last calibrated ${DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT).format(Date(s.calibratedAtMs))}"
-                    else "Not calibrated yet.", style = MaterialTheme.typography.bodySmall, color = Palette.TextTertiary,
+                    else "Not calibrated yet.", style = MaterialTheme.typography.bodySmall, color = Palette.TextSecondary,
                 )
             }
             if (calibration !is CalibrationState.Running) Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -117,7 +117,7 @@ fun SettingsScreen(graph: AppGraph, onBack: () -> Unit) {
                 SettingChoice("Volume down", ACTIONS, s.volumeDownAction, { it.label }) { v -> repo.update { it.copy(volumeDownAction = v) } }
             }
             Divider()
-            Text("Gesture pad", style = MaterialTheme.typography.labelSmall, color = Palette.TextTertiary)
+            Text("Gesture pad", style = MaterialTheme.typography.labelSmall, color = Palette.TextSecondary)
             val clicky = setOf(RemoteAction.LEFT_CLICK, RemoteAction.RIGHT_CLICK)
             if (s.tapAction in clicky || s.doubleTapAction in clicky || s.longPressAction in clicky) {
                 Text("A click on the pad lands wherever the cursor is, and the thumb holding the phone often rests on the pad. " +

@@ -28,7 +28,7 @@ class BluetoothTvRemote(private val presenter: PresenterController, private val 
 
     override suspend fun connect() {
         _state.value = if (bluetooth.isConnected) TvConnState.Connected
-        else TvConnState.NeedsUser("Pair this phone from the TV's Bluetooth settings, then connect it under Devices & pairing.")
+        else TvConnState.NeedsUser("Pair this phone from the TV's Bluetooth settings (Air Pointer must show Ready), then connect it under Connection.")
     }
 
     fun refresh(connected: Boolean) {

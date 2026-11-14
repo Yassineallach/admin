@@ -24,6 +24,8 @@ data class AppSettings(
     /** Camera air mouse (hand tracking) cursor speed. */
     val handSpeed: Float = 1f,
     val tableSpeed: Float = 1f,
+    /** Route name of the remote opened last (quick access + "Open remote"). */
+    val lastRemote: String = "REMOTE",
     // Presentation
     val slideKeys: SlideKeys = SlideKeys.ARROWS,
     val volumeKeysEnabled: Boolean = true,
