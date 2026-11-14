@@ -49,6 +49,8 @@ fun SettingsScreen(graph: AppGraph, onBack: () -> Unit) {
     DisposableEffect(Unit) { onDispose { presenter.clearCalibrationResult() } }
 
     ScreenScaffold("Sensitivity & calibration", onBack) {
+        // Native ad at the top; none appears during a calibration.
+        NativeAdCard(AdPlacement.SETTINGS, allowed = AdPlacementPolicy.settingsAllowed(calibration is CalibrationState.Running))
         SectionLabel("Calibration")
         Panel(Modifier.animateContentSize()) {
             Text("Gyroscope calibration", style = MaterialTheme.typography.titleMedium)
@@ -170,9 +172,6 @@ fun SettingsScreen(graph: AppGraph, onBack: () -> Unit) {
             val activity = androidx.compose.ui.platform.LocalContext.current as? android.app.Activity
             SecondaryButton("Ad privacy options", Modifier.fillMaxWidth()) { activity?.let { graph.consent.showPrivacyOptions(it) } }
         }
-        // Native ad at the end of this long page; hidden while calibrating (phone must stay still).
-        NativeAdCard(AdPlacement.SETTINGS, allowed = AdPlacementPolicy.settingsAllowed(calibration is CalibrationState.Running),
-            modifier = Modifier.padding(top = 14.dp))
     }
 }
 

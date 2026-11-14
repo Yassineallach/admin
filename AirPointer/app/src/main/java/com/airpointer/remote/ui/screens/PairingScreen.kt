@@ -70,6 +70,7 @@ fun PairingScreen(graph: AppGraph, actions: AppActions, onBack: () -> Unit) {
     val settings by graph.settings.settings.collectAsStateWithLifecycle()
 
     ScreenScaffold("Connection", onBack) {
+        val wifiState by graph.wifi.state.collectAsStateWithLifecycle()
         Text("How should the phone reach your computer?", style = MaterialTheme.typography.bodyMedium, color = Palette.TextSecondary)
         Segmented(TransportKind.entries.toList(), settings.transport, { if (it == TransportKind.WIFI) "Wi-Fi" else "Bluetooth" }) { t ->
             graph.settings.update { it.copy(transport = t) }
@@ -83,6 +84,11 @@ fun PairingScreen(graph: AppGraph, actions: AppActions, onBack: () -> Unit) {
             else "Bluetooth: no software on the PC — the phone appears as a mouse and keyboard. Needs a phone whose firmware supports the HID Device profile.",
             style = MaterialTheme.typography.bodySmall, color = Palette.TextSecondary,
         )
+        // Native ad mid-screen, after the transport choice and above the computer list. It never *appears* during a connection or Bluetooth pairing.
+        NativeAdCard(AdPlacement.CONNECTION, allowed = AdPlacementPolicy.connectionAllowed(
+            connecting = hid.phase == com.airpointer.remote.hid.BluetoothHidController.Phase.CONNECTING ||
+                wifiState.phase == WifiCompanionClient.Phase.CONNECTING,
+            pairing = p.bondingAddress != null))
         if (settings.transport == TransportKind.WIFI) WifiSection(graph) else {
         if (!hid.registered) com.airpointer.remote.ui.components.NotificationBanner(
             title = "BLUETOOTH MOUSE NOT READY",
@@ -163,9 +169,6 @@ fun PairingScreen(graph: AppGraph, actions: AppActions, onBack: () -> Unit) {
                 }
             }
         }
-            NativeAdCard(AdPlacement.CONNECTION, allowed = AdPlacementPolicy.connectionAllowed(
-                scanning = p.scanning, connecting = hid.phase == com.airpointer.remote.hid.BluetoothHidController.Phase.CONNECTING,
-                pairing = p.bondingAddress != null, dialogOpen = false), modifier = Modifier.padding(top = 14.dp))
         }
     }
 }
@@ -263,10 +266,6 @@ private fun WifiSection(graph: AppGraph) {
             style = MaterialTheme.typography.bodySmall, color = Palette.TextSecondary)
     }
 
-    // Native ad only while nothing is in progress: never during discovery, connecting or PIN entry.
-    NativeAdCard(AdPlacement.CONNECTION, allowed = AdPlacementPolicy.connectionAllowed(
-        scanning = scanning, connecting = wifi.phase == WifiCompanionClient.Phase.CONNECTING,
-        pairing = false, dialogOpen = pinFor != null), modifier = Modifier.padding(top = 14.dp))
 
     pinFor?.let { (host, port) ->
         var pin by remember { mutableStateOf(if (settings.wifiHost == host) settings.wifiPin.orEmpty() else "") }

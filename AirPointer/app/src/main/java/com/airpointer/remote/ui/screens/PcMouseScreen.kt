@@ -98,11 +98,9 @@ fun PcMouseScreen(graph: AppGraph, activity: MainActivity, onBack: () -> Unit, n
         view.keepScreenOn = true
         onDispose { view.keepScreenOn = false; graph.presenter.releaseAll() }
     }
-    RemoteFrame(graph, "PC Mouse", onBack, navigate, actions = {
+    RemoteFrame(graph, "PC Mouse", onBack, navigate, adPlacement = AdPlacement.PC_MOUSE, actions = {
         IconButton(onClick = { keyboard = true }) { Icon(Icons.Rounded.Keyboard, "Keyboard", tint = Palette.TextPrimary) }
     }) {
-        // Compact ad at the top edge, above the tabs — never beside the touchpad's Left/Right buttons.
-        NativeAdCard(AdPlacement.PC_MOUSE, allowed = true)
         Segmented(MouseMode.entries.toList(), mode, { it.label }) { mode = it }
         when (mode) {
             MouseMode.TOUCHPAD -> TouchpadPane(graph, Modifier.weight(1f))

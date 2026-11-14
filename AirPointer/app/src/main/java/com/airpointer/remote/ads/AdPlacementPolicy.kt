@@ -3,13 +3,14 @@ package com.airpointer.remote.ads
 import com.airpointer.remote.ui.Route
 
 /**
- * Where native ads may appear. Each placement has its own cached ad and ad unit.
- * [compact] placements use the small layout (icon, headline, button — no media) on screens
- * whose controls fill the display.
+ * Where native ads may appear: always at the TOP of the screen, so they are seen without
+ * scrolling. Each placement has its own cached ad and ad unit. Top slots use the [compact]
+ * layout (icon, attribution, headline, button): a tall media ad would push the screen's real
+ * content below the fold, and a compact ad matches its loading placeholder, so nothing shifts
+ * under the user's finger when it arrives.
  */
-enum class AdPlacement(val compact: Boolean = false) {
-    HOME, CONNECTION, SETTINGS,
-    PRESENTATION(compact = true), PC_MOUSE(compact = true), TV, MEDIA,
+enum class AdPlacement(val compact: Boolean = true) {
+    HOME, CONNECTION, SETTINGS, PRESENTATION, PC_MOUSE, TV, MEDIA,
 }
 
 /**
@@ -29,20 +30,23 @@ object AdPlacementPolicy {
         Route.PAIRING -> AdPlacement.CONNECTION
         Route.SETTINGS -> AdPlacement.SETTINGS
         // Remotes: kept clear of every control (AdMob prohibits ads that invite accidental clicks).
-        Route.REMOTE -> AdPlacement.PRESENTATION   // compact, top of screen; thumbs work the bottom half
-        Route.PC_MOUSE -> AdPlacement.PC_MOUSE     // compact, top of screen, above the mode tabs
-        Route.TV -> AdPlacement.TV                 // end of the scroll, below every key
-        Route.MEDIA -> AdPlacement.MEDIA           // end of the scroll, below playback controls
+        Route.REMOTE -> AdPlacement.PRESENTATION   // top, under the toolbar; thumbs work the bottom half
+        Route.PC_MOUSE -> AdPlacement.PC_MOUSE     // top, above the mode tabs
+        Route.TV -> AdPlacement.TV                 // top, above the TV keys
+        Route.MEDIA -> AdPlacement.MEDIA           // top, above the player
         else -> null
     }
 
-    /** Home: bottom of the page, and only after first-run setup so onboarding stays clean. */
+    /** Home: top of the page, only after first-run setup so onboarding stays clean. */
     fun homeAllowed(computerConfigured: Boolean) = computerConfigured
 
-    /** Connection: only while nothing is in progress — never during discovery, pairing or connecting. */
-    fun connectionAllowed(scanning: Boolean, connecting: Boolean, pairing: Boolean, dialogOpen: Boolean) =
-        !scanning && !connecting && !pairing && !dialogOpen
+    /**
+     * Connection: an ad does not *appear* while a connection or pairing is in progress. Discovery
+     * scans are not a reason to hide it: the slot is at the top, and collapsing it mid-scan would
+     * shift the list of computers the user is about to tap.
+     */
+    fun connectionAllowed(connecting: Boolean, pairing: Boolean) = !connecting && !pairing
 
-    /** Sensitivity & calibration: not while calibrating (the phone must be held still). */
+    /** Sensitivity & calibration: no ad appears during a calibration (the phone must be held still). */
     fun settingsAllowed(calibrating: Boolean) = !calibrating
 }

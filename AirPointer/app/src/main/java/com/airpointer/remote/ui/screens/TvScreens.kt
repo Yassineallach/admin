@@ -121,7 +121,7 @@ fun TvRemoteScreen(graph: AppGraph, onBack: () -> Unit, navigate: (Route) -> Uni
         is TvConnState.Failed -> Tone.ERROR to "TV UNREACHABLE"
         TvConnState.Disconnected -> Tone.NEUTRAL to if (selected == null) "NO TV SET UP" else "NOT CONNECTED"
     }
-    RemoteFrame(graph, selected?.name ?: "TV Remote", onBack, navigate, requiresComputer = false, status = tvStatus, actions = {
+    RemoteFrame(graph, selected?.name ?: "TV Remote", onBack, navigate, requiresComputer = false, status = tvStatus, adPlacement = AdPlacement.TV, actions = {
         IconButton(onClick = { navigate(Route.TV_DEVICES) }) { Icon(Icons.Rounded.Tv, "Choose TV", tint = Palette.TextPrimary) }
     }) {
         if (selected == null || conn == null) {
@@ -224,8 +224,6 @@ fun TvRemoteScreen(graph: AppGraph, onBack: () -> Unit, navigate: (Route) -> Uni
                 if (showLimits) c.limitations.forEach { Text("• $it", style = MaterialTheme.typography.bodySmall, color = Palette.TextSecondary) }
                 TextButton(onClick = { showLimits = !showLimits }) { Text(if (showLimits) "Less" else "More details", color = Palette.TextSecondary) }
             }
-            // End of the scroll, well below every key.
-            NativeAdCard(AdPlacement.TV, allowed = true, modifier = Modifier.padding(top = 16.dp))
         }
     }
 }

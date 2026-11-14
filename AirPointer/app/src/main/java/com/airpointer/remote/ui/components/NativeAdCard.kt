@@ -23,6 +23,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -39,9 +42,12 @@ import com.airpointer.remote.graph
 import com.airpointer.remote.ui.theme.Palette
 
 /**
- * Reusable native ad slot. Requests (or reuses) the cached ad for [placement] while [allowed],
- * shows a compact skeleton while the first ad loads, and collapses completely — no empty gap —
- * when ads are unavailable (no consent, offline, no fill, error) or not [allowed].
+ * Reusable native ad slot, placed at the top of a screen. Requests (or reuses) the cached ad for
+ * [placement] while [allowed]; shows a placeholder of the same size while the first ad loads, so
+ * the screen does not shift when it arrives; collapses completely — no empty gap — when ads are
+ * unavailable (no consent, offline, no fill, error).
+ * Once an ad is on screen it stays even if [allowed] turns false (e.g. a connection attempt starts):
+ * removing it would move the controls the user is reaching for.
  */
 @Composable
 fun NativeAdCard(placement: AdPlacement, allowed: Boolean, modifier: Modifier = Modifier) {
@@ -50,9 +56,11 @@ fun NativeAdCard(placement: AdPlacement, allowed: Boolean, modifier: Modifier = 
     val slots by ads.ads.collectAsStateWithLifecycle()
     LaunchedEffect(placement, allowed, ready) { if (allowed && ready) ads.request(placement) }
 
+    var shown by remember(placement) { mutableStateOf(false) }
     val slot = slots[placement]
-    val ad = if (allowed && ready) ads.displayable(placement) else null
+    val ad = if (ready && (allowed || shown)) ads.displayable(placement) else null
     val loading = allowed && ready && ad == null && slot is NativeAdCache.Slot.Loading
+    LaunchedEffect(ad != null) { if (ad != null) shown = true }
 
     AnimatedVisibility(
         visible = ad != null || loading,
@@ -75,7 +83,9 @@ fun NativeAdCard(placement: AdPlacement, allowed: Boolean, modifier: Modifier = 
 private fun AdSkeleton(compact: Boolean) {
     Column(
         Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(Palette.Surface)
-            .border(1.dp, Palette.Outline, RoundedCornerShape(20.dp)).padding(16.dp)
+            .border(1.dp, Palette.Outline, RoundedCornerShape(20.dp))
+            // Same padding as native_ad_compact.xml, so the real ad replaces it without a jump.
+            .then(if (compact) Modifier.padding(start = 14.dp, end = 14.dp, top = 20.dp, bottom = 12.dp) else Modifier.padding(16.dp))
             .semantics { contentDescription = "Advertisement loading" },
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {

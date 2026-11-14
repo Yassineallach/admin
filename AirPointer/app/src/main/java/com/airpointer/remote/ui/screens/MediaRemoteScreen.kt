@@ -122,7 +122,7 @@ fun MediaRemoteScreen(graph: AppGraph, onBack: () -> Unit, navigate: (Route) -> 
         status != null -> Tone.SUCCESS to "${status!!.state.name} · $player"
         else -> Tone.NEUTRAL to "CONNECTING TO $player"
     }
-    RemoteFrame(graph, "Media Player", onBack, navigate, requiresComputer = player == "MPV", status = mediaStatus) {
+    RemoteFrame(graph, "Media Player", onBack, navigate, requiresComputer = player == "MPV", status = mediaStatus, adPlacement = AdPlacement.MEDIA) {
         Segmented(listOf("VLC", "MPV"), player, { it }) { p -> graph.settings.update { it.copy(mediaPlayer = p) } }
 
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -231,8 +231,6 @@ fun MediaRemoteScreen(graph: AppGraph, onBack: () -> Unit, navigate: (Route) -> 
                     enabled = ready && MediaCap.AUDIO_TRACK in caps, haptics = settings.haptics, onClick = { run { cycleAudioTrack() } })
             }
             if (player == "VLC" && settings.vlcHost != null && !editVlc) SecondaryButton("VLC: ${settings.vlcHost}:${settings.vlcPort} — change") { editVlc = true }
-            // End of the scroll, well below playback, seek and volume controls.
-            NativeAdCard(AdPlacement.MEDIA, allowed = true, modifier = Modifier.padding(top = 16.dp))
         }
     }
 }

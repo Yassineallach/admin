@@ -60,26 +60,34 @@ These are real renders of the app's Compose UI (Robolectric native graphics + Ro
 
 ## Advertising (AdMob Native Advanced)
 
-Ads appear where people browse or pause, and on the remotes at the edge of the screen, separated
-from every control. They never appear in a dialog or during a pairing, discovery, connection or
-calibration step.
+Every ad sits in the **first screenful** of its screen, near the top or in the middle, so it is
+seen as soon as the screen opens. Nobody has to scroll to reach it. This is checked by rendering every
+screen on a large (411×891dp) and a small (360×640dp) phone (`AdSlotScreenshots`). All ads use the **compact** format
+(icon, headline, advertiser, button, no media) so the screen's real content still starts above the fold.
+
+* **No layout shift:** while an ad loads, a placeholder of the same size holds its space. If no ad
+  is available or there is no consent, the slot collapses before anything has been drawn there.
+* **Sticky:** an ad that is already showing is never removed mid-task (for example when a scan or
+  calibration starts), because pulling it out would move every control under the user's finger.
+  A new ad is shown only when the user comes back to the screen (30-minute refresh).
+* Ads never appear in a dialog.
 
 > **AdMob policy:** ads must not invite accidental clicks, for example by sitting right next to
 > buttons or gesture areas. Accounts with high accidental-click rates can have serving limited or
-> be suspended. The remote placements below were chosen to keep that distance. Watch the click-through
-> rate per remote ad unit in AdMob; an unusually high one is the warning sign.
+> be suspended. Each top ad is set apart from the controls below it by a card border and spacing.
+> Watch the click-through rate per ad unit in AdMob; an unusually high one is the warning sign.
 
 | Screen | Decision | Placement / reason |
 |---|---|---|
-| Home | **Recommended** | One native ad at the **bottom**, below Settings — far from the connection card and its actions. Hidden until a computer is set up, so first-run onboarding is ad-free. |
-| Connection | **Recommended, conditional** | Bottom of the page, shown **only while nothing is in progress** (hidden during Wi-Fi discovery, Bluetooth scanning/bonding, connecting, PIN entry). |
-| Sensitivity & calibration | **Recommended** | End of the long page, after "Reset tuning". Hidden while calibrating. |
-| Diagnostics | Not recommended | Troubleshooting context with live data; users there are fixing a problem. |
-| TV devices | Not recommended (re-evaluate) | Setup / discovery / pairing flow. A slot below the saved-TV list could be evaluated with real usage data. |
-| Presentation | **Yes, compact** | Small ad (icon, headline, button, no media) at the **top**, under the toolbar. Thumbs work the bottom half (Next/Previous); the gesture pad gives up the space. |
-| PC Mouse | **Yes, compact** | Small ad at the **top**, above the mode tabs. The touchpad stays the largest area; nothing is placed beside the Left/Right buttons. |
-| TV Remote | **Yes** | Full ad at the **end of the scroll**, below the limitations panel, well clear of every key. |
-| Media Player | **Yes** | Full ad at the **end of the scroll**, below playback, seek, volume, speed and subtitles. |
+| Home | **Yes** | Mid-screen, just below the connection card. Not shown until a computer is set up, so first-run onboarding has no ads. |
+| Connection | **Yes** | Mid-screen, after the Bluetooth / Wi-Fi choice and above the computer list. It first appears only when nothing is in progress (no connecting or Bluetooth bonding), then stays during scans so the list below doesn't jump. |
+| Sensitivity & calibration | **Yes** | Top. Below the tall calibration card it would fall under the fold on small phones. It first appears only when no calibration is running. |
+| Presentation | **Yes** | Under the connection banner (when shown), above the gesture pad. |
+| PC Mouse | **Yes** | Under the connection banner (when shown), above the mode tabs. |
+| TV Remote | **Yes** | Under the toolbar, above the TV status and the power and input row. |
+| Media Player | **Yes** | Under the connection banner (when shown), above the player selector. |
+| Diagnostics | Excluded | Troubleshooting context with live data. |
+| TV devices | Excluded | Setup, discovery and pairing flow. |
 | All dialogs (connect-first, PIN, TV code, keyboard) | **Excluded** | Focused tasks. |
 
 The plan is code: `ads/AdPlacementPolicy.kt` (unit-tested).

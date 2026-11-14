@@ -94,6 +94,14 @@ class AdsManager(context: Context, private val log: DiagnosticsLog) {
     /** The ad to show for [placement], or null (never an expired ad). Main thread. */
     fun displayable(placement: AdPlacement): NativeAd? = cache.displayable(placement)
 
+    /** Screenshot tests only: show every slot in its loading state without contacting AdMob. */
+    @androidx.annotation.VisibleForTesting
+    internal fun showLoadingSlotsForPreview() {
+        _ready.value = true
+        AdPlacement.entries.forEach { cache.markLoading(it) }
+        publish()
+    }
+
     private fun publish() {
         _ads.value = AdPlacement.entries.associateWith { cache.slot(it) }
     }

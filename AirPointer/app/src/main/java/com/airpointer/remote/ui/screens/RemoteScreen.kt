@@ -114,11 +114,9 @@ fun RemoteScreen(graph: AppGraph, activity: MainActivity, onBack: () -> Unit, na
     }
 
     val h = settings.haptics
-    RemoteFrame(graph, "Presentation", onBack, navigate, actions = {
+    RemoteFrame(graph, "Presentation", onBack, navigate, adPlacement = AdPlacement.PRESENTATION, actions = {
         IconButton(onClick = { navigate(Route.SETTINGS) }) { Icon(Icons.Rounded.Tune, "Presentation settings", tint = Palette.TextPrimary) }
     }) {
-        // Compact ad at the top edge: thumbs work the bottom half (Next / Previous).
-        NativeAdCard(AdPlacement.PRESENTATION, allowed = true)
         // Gesture pad + scroll strip (main interaction area)
         Row(Modifier.fillMaxWidth().weight(1f), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             GesturePad(graph, Modifier.weight(1f).fillMaxHeight())

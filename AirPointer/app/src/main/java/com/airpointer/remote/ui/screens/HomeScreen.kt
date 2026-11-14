@@ -137,6 +137,10 @@ fun HomeScreen(graph: AppGraph, actions: AppActions, navigate: (Route) -> Unit, 
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = Spacing.screen)) {
             Spacer(Modifier.height(Spacing.headerToCard - 8.dp))
             ConnectionCard(card, ::onAction)
+            // Native ad just below the connection card: mid-screen, inside the first screenful on
+            // every phone size. Hidden during first-run setup so a new user sees how to connect first.
+            NativeAdCard(AdPlacement.HOME, allowed = AdPlacementPolicy.homeAllowed(snapshot.configured),
+                modifier = Modifier.padding(top = 14.dp))
 
             if (snapshot.connected) {
                 Spacer(Modifier.height(Spacing.section))
@@ -172,10 +176,6 @@ fun HomeScreen(graph: AppGraph, actions: AppActions, navigate: (Route) -> Unit, 
                 SetupItem(Icons.Rounded.Tune, "Sensitivity", "Pointer speed, smoothing, calibration") { navigate(Route.SETTINGS) }
                 SetupItem(Icons.Rounded.Insights, "Diagnostics", "Link quality, sensors, event log") { navigate(Route.DIAGNOSTICS) }
             }
-            // Native ad: bottom of the page (least disruptive), never near the connection card,
-            // and only once a computer is set up so first-run onboarding stays ad-free.
-            NativeAdCard(AdPlacement.HOME, allowed = AdPlacementPolicy.homeAllowed(snapshot.configured),
-                modifier = Modifier.padding(top = Spacing.section))
             Spacer(Modifier.height(24.dp))
         }
     }

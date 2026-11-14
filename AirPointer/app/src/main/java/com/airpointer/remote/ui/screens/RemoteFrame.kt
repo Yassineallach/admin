@@ -19,6 +19,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.airpointer.remote.AppGraph
+import com.airpointer.remote.ads.AdPlacement
+import com.airpointer.remote.ui.components.NativeAdCard
 import com.airpointer.remote.ui.Route
 import com.airpointer.remote.ui.Tone
 import com.airpointer.remote.ui.components.BannerTone
@@ -41,6 +43,7 @@ fun RemoteFrame(
     navigate: (Route) -> Unit,
     requiresComputer: Boolean = true,
     status: Pair<Tone, String>? = null,
+    adPlacement: AdPlacement? = null,
     actions: @Composable RowScope.() -> Unit = {},
     content: @Composable ColumnScope.() -> Unit,
 ) {
@@ -66,6 +69,9 @@ fun RemoteFrame(
                     secondary = if (connecting) null else "Settings" to { navigate(Route.PAIRING) },
                 )
             }
+            // Native ad after the connection banner and before the controls: always in the first
+            // screenful, separated from every button and gesture area by its own card.
+            if (adPlacement != null) NativeAdCard(adPlacement, allowed = true)
             content()
         }
     }

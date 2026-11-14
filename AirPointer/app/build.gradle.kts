@@ -29,8 +29,8 @@ android {
         // BluetoothHidDevice (HID peripheral role) was added in API 28 (Android 9).
         minSdk = 28
         targetSdk = 35
-        versionCode = 11
-        versionName = "2.4.0"
+        versionCode = 12
+        versionName = "2.5.0"
         ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64") }
         manifestPlaceholders["admobAppId"] = releaseAppId ?: testAppId
         for (placement in listOf("home", "connection", "settings", "presentation", "mouse", "tv", "media")) {
