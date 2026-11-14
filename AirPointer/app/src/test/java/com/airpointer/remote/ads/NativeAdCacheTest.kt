@@ -73,10 +73,18 @@ class NativeAdCacheTest {
     }
 
     @Test fun placementPlan() {
-        // Remotes, diagnostics and TV setup never show ads.
-        for (r in listOf(Route.REMOTE, Route.PC_MOUSE, Route.TV, Route.MEDIA, Route.DIAGNOSTICS, Route.TV_DEVICES)) {
+        // Diagnostics and TV setup never show ads.
+        for (r in listOf(Route.DIAGNOSTICS, Route.TV_DEVICES)) {
             assertNull(AdPlacementPolicy.placementFor(r)); assertTrue(r in AdPlacementPolicy.excluded)
         }
+        // Remotes: their own placements; the full-screen-control remotes use the compact layout.
+        assertEquals(AdPlacement.PRESENTATION, AdPlacementPolicy.placementFor(Route.REMOTE))
+        assertEquals(AdPlacement.PC_MOUSE, AdPlacementPolicy.placementFor(Route.PC_MOUSE))
+        assertEquals(AdPlacement.TV, AdPlacementPolicy.placementFor(Route.TV))
+        assertEquals(AdPlacement.MEDIA, AdPlacementPolicy.placementFor(Route.MEDIA))
+        assertTrue(AdPlacement.PRESENTATION.compact && AdPlacement.PC_MOUSE.compact)
+        assertFalse(AdPlacement.TV.compact || AdPlacement.MEDIA.compact)
+        assertEquals("every placement has a distinct slot", AdPlacement.entries.size, AdPlacement.entries.toSet().size)
         assertEquals(AdPlacement.HOME, AdPlacementPolicy.placementFor(Route.HOME))
         assertFalse("no home ad during first-run setup", AdPlacementPolicy.homeAllowed(computerConfigured = false))
         assertFalse(AdPlacementPolicy.connectionAllowed(scanning = true, connecting = false, pairing = false, dialogOpen = false))

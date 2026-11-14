@@ -83,7 +83,8 @@ class AdsManager(context: Context, private val log: DiagnosticsLog) {
             .withNativeAdOptions(
                 NativeAdOptions.Builder()
                     .setAdChoicesPlacement(NativeAdOptions.ADCHOICES_TOP_RIGHT)
-                    .setMediaAspectRatio(NativeAdOptions.NATIVE_MEDIA_ASPECT_RATIO_LANDSCAPE)
+                    .setMediaAspectRatio(if (placement.compact) NativeAdOptions.NATIVE_MEDIA_ASPECT_RATIO_ANY
+                        else NativeAdOptions.NATIVE_MEDIA_ASPECT_RATIO_LANDSCAPE)
                     .build(),
             )
             .build()
@@ -103,6 +104,10 @@ class AdsManager(context: Context, private val log: DiagnosticsLog) {
             AdPlacement.HOME -> BuildConfig.ADMOB_NATIVE_HOME
             AdPlacement.CONNECTION -> BuildConfig.ADMOB_NATIVE_CONNECTION
             AdPlacement.SETTINGS -> BuildConfig.ADMOB_NATIVE_SETTINGS
+            AdPlacement.PRESENTATION -> BuildConfig.ADMOB_NATIVE_PRESENTATION
+            AdPlacement.PC_MOUSE -> BuildConfig.ADMOB_NATIVE_MOUSE
+            AdPlacement.TV -> BuildConfig.ADMOB_NATIVE_TV
+            AdPlacement.MEDIA -> BuildConfig.ADMOB_NATIVE_MEDIA
         }
     }
 }

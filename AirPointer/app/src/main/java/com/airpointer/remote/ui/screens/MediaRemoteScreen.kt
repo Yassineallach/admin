@@ -58,6 +58,8 @@ import com.airpointer.remote.ui.components.NotificationBanner
 import kotlin.math.roundToInt
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.airpointer.remote.AppGraph
+import com.airpointer.remote.ads.AdPlacement
+import com.airpointer.remote.ui.components.NativeAdCard
 import com.airpointer.remote.media.MediaBackend
 import com.airpointer.remote.media.MediaCap
 import com.airpointer.remote.media.MediaException
@@ -229,6 +231,8 @@ fun MediaRemoteScreen(graph: AppGraph, onBack: () -> Unit, navigate: (Route) -> 
                     enabled = ready && MediaCap.AUDIO_TRACK in caps, haptics = settings.haptics, onClick = { run { cycleAudioTrack() } })
             }
             if (player == "VLC" && settings.vlcHost != null && !editVlc) SecondaryButton("VLC: ${settings.vlcHost}:${settings.vlcPort} — change") { editVlc = true }
+            // End of the scroll, well below playback, seek and volume controls.
+            NativeAdCard(AdPlacement.MEDIA, allowed = true, modifier = Modifier.padding(top = 16.dp))
         }
     }
 }

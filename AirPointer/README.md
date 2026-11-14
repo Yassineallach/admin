@@ -60,8 +60,14 @@ These are real renders of the app's Compose UI (Robolectric native graphics + Ro
 
 ## Advertising (AdMob Native Advanced)
 
-User experience first: ads appear only where people browse or pause, never inside a remote,
-a dialog, or a pairing, discovery, connection or calibration step.
+Ads appear where people browse or pause, and on the remotes at the edge of the screen, separated
+from every control. They never appear in a dialog or during a pairing, discovery, connection or
+calibration step.
+
+> **AdMob policy:** ads must not invite accidental clicks, for example by sitting right next to
+> buttons or gesture areas. Accounts with high accidental-click rates can have serving limited or
+> be suspended. The remote placements below were chosen to keep that distance. Watch the click-through
+> rate per remote ad unit in AdMob; an unusually high one is the warning sign.
 
 | Screen | Decision | Placement / reason |
 |---|---|---|
@@ -70,7 +76,10 @@ a dialog, or a pairing, discovery, connection or calibration step.
 | Sensitivity & calibration | **Recommended** | End of the long page, after "Reset tuning". Hidden while calibrating. |
 | Diagnostics | Not recommended | Troubleshooting context with live data; users there are fixing a problem. |
 | TV devices | Not recommended (re-evaluate) | Setup / discovery / pairing flow. A slot below the saved-TV list could be evaluated with real usage data. |
-| Presentation, PC Mouse, TV Remote, Media Player | **Excluded** | Main interaction areas: accidental taps, gesture conflicts. |
+| Presentation | **Yes, compact** | Small ad (icon, headline, button, no media) at the **top**, under the toolbar. Thumbs work the bottom half (Next/Previous); the gesture pad gives up the space. |
+| PC Mouse | **Yes, compact** | Small ad at the **top**, above the mode tabs. The touchpad stays the largest area; nothing is placed beside the Left/Right buttons. |
+| TV Remote | **Yes** | Full ad at the **end of the scroll**, below the limitations panel, well clear of every key. |
+| Media Player | **Yes** | Full ad at the **end of the scroll**, below playback, seek, volume, speed and subtitles. |
 | All dialogs (connect-first, PIN, TV code, keyboard) | **Excluded** | Focused tasks. |
 
 The plan is code: `ads/AdPlacementPolicy.kt` (unit-tested).

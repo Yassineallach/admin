@@ -81,6 +81,8 @@ import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.airpointer.remote.AppGraph
+import com.airpointer.remote.ads.AdPlacement
+import com.airpointer.remote.ui.components.NativeAdCard
 import com.airpointer.remote.MainActivity
 import com.airpointer.remote.hid.MouseButtons
 import com.airpointer.remote.presenter.PointerMode
@@ -115,6 +117,8 @@ fun RemoteScreen(graph: AppGraph, activity: MainActivity, onBack: () -> Unit, na
     RemoteFrame(graph, "Presentation", onBack, navigate, actions = {
         IconButton(onClick = { navigate(Route.SETTINGS) }) { Icon(Icons.Rounded.Tune, "Presentation settings", tint = Palette.TextPrimary) }
     }) {
+        // Compact ad at the top edge: thumbs work the bottom half (Next / Previous).
+        NativeAdCard(AdPlacement.PRESENTATION, allowed = true)
         // Gesture pad + scroll strip (main interaction area)
         Row(Modifier.fillMaxWidth().weight(1f), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             GesturePad(graph, Modifier.weight(1f).fillMaxHeight())

@@ -71,6 +71,8 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.airpointer.remote.AppGraph
+import com.airpointer.remote.ads.AdPlacement
+import com.airpointer.remote.ui.components.NativeAdCard
 import com.airpointer.remote.tv.IrCodeSet
 import com.airpointer.remote.tv.IrRemote
 import com.airpointer.remote.tv.SavedTv
@@ -222,6 +224,8 @@ fun TvRemoteScreen(graph: AppGraph, onBack: () -> Unit, navigate: (Route) -> Uni
                 if (showLimits) c.limitations.forEach { Text("• $it", style = MaterialTheme.typography.bodySmall, color = Palette.TextSecondary) }
                 TextButton(onClick = { showLimits = !showLimits }) { Text(if (showLimits) "Less" else "More details", color = Palette.TextSecondary) }
             }
+            // End of the scroll, well below every key.
+            NativeAdCard(AdPlacement.TV, allowed = true, modifier = Modifier.padding(top = 16.dp))
         }
     }
 }

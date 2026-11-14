@@ -67,6 +67,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.airpointer.remote.AppGraph
+import com.airpointer.remote.ads.AdPlacement
+import com.airpointer.remote.ui.components.NativeAdCard
 import com.airpointer.remote.MainActivity
 import com.airpointer.remote.core.AirGestureEngine
 import com.airpointer.remote.core.TouchpadGestureEngine
@@ -99,6 +101,8 @@ fun PcMouseScreen(graph: AppGraph, activity: MainActivity, onBack: () -> Unit, n
     RemoteFrame(graph, "PC Mouse", onBack, navigate, actions = {
         IconButton(onClick = { keyboard = true }) { Icon(Icons.Rounded.Keyboard, "Keyboard", tint = Palette.TextPrimary) }
     }) {
+        // Compact ad at the top edge, above the tabs — never beside the touchpad's Left/Right buttons.
+        NativeAdCard(AdPlacement.PC_MOUSE, allowed = true)
         Segmented(MouseMode.entries.toList(), mode, { it.label }) { mode = it }
         when (mode) {
             MouseMode.TOUCHPAD -> TouchpadPane(graph, Modifier.weight(1f))

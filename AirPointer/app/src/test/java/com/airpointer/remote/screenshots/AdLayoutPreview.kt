@@ -39,4 +39,17 @@ class AdLayoutPreview {
         activity.setContentView(host)
         host.captureRoboImage("build/screenshots/audit/native-ad-layout.png")
     }
+
+    @Test fun compactNativeAdLayout() {
+        val activity = Robolectric.buildActivity(ComponentActivity::class.java).setup().get()
+        val host = FrameLayout(activity).apply { setBackgroundColor(0xFF090A0D.toInt()); setPadding(60, 60, 60, 60) }
+        val ad = LayoutInflater.from(activity).inflate(R.layout.native_ad_compact, host, false) as NativeAdView
+        ad.findViewById<TextView>(R.id.ad_advertiser).text = "Sponsored · Example Advertiser"
+        ad.findViewById<TextView>(R.id.ad_headline).text = "Sample headline for layout review"
+        ad.findViewById<ImageView>(R.id.ad_icon).setImageResource(R.drawable.ic_launcher_foreground)
+        ad.findViewById<TextView>(R.id.ad_cta).text = "Install"
+        host.addView(ad)
+        activity.setContentView(host)
+        host.captureRoboImage("build/screenshots/audit/native-ad-compact.png")
+    }
 }

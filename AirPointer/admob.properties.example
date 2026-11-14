@@ -10,6 +10,10 @@ admob.native=ca-app-pub-XXXXXXXXXXXXXXXX/ZZZZZZZZZZ
 #admob.native.home=ca-app-pub-XXXXXXXXXXXXXXXX/1111111111
 #admob.native.connection=ca-app-pub-XXXXXXXXXXXXXXXX/2222222222
 #admob.native.settings=ca-app-pub-XXXXXXXXXXXXXXXX/3333333333
+#admob.native.presentation=ca-app-pub-XXXXXXXXXXXXXXXX/4444444444
+#admob.native.mouse=ca-app-pub-XXXXXXXXXXXXXXXX/5555555555
+#admob.native.tv=ca-app-pub-XXXXXXXXXXXXXXXX/6666666666
+#admob.native.media=ca-app-pub-XXXXXXXXXXXXXXXX/7777777777
 
 # Optional, for testing the consent form on a real device outside the EEA (UMP logs the hashed id):
 #ump.testDeviceHashedId=33BE2250B43518CCDA7DE426D04EE231
