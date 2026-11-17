@@ -13,7 +13,9 @@ from pathlib import Path
 
 from openpyxl import Workbook
 from openpyxl.chart import BarChart, Reference
-from openpyxl.chart.label import DataLabelList
+from openpyxl.chart.label import DataLabelList  # noqa: F401
+from openpyxl.chart.shapes import GraphicalProperties
+from openpyxl.drawing.line import LineProperties
 from openpyxl.formatting.rule import FormulaRule
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Protection, Side
 from openpyxl.utils import get_column_letter as L
@@ -112,6 +114,20 @@ def LR(col):
 # DASHBOARD selector cells
 D_MONTH, D_YEAR = "$C$6", "$F$6"
 D_MNUM, D_KEY = "$P$6", "$P$7"            # hidden helpers
+
+
+def style_chart(ch):
+    """Keep text clear of the bars: category labels sit outside the plot (below or left of the lowest value, so a
+    negative bar never runs over them), light gridlines, and a legend that never overlaps the plot."""
+    ch.x_axis.delete = False
+    ch.y_axis.delete = False
+    ch.x_axis.tickLblPos = "low"
+    ch.y_axis.tickLblPos = "nextTo"
+    ch.y_axis.numFmt = "#,##0"
+    ch.y_axis.majorGridlines.spPr = GraphicalProperties(ln=LineProperties(solidFill=BORDER))
+    if ch.legend is not None:
+        ch.legend.position = "b"
+        ch.legend.overlay = False
 
 
 def dref(cell):
@@ -751,11 +767,7 @@ class Builder:
         s = ch.series[0]
         s.graphicalProperties.solidFill = BRASS
         s.graphicalProperties.line.solidFill = BRASS
-        ch.y_axis.numFmt = "#,##0"
-        ch.y_axis.majorGridlines.spPr = None
-        ch.x_axis.delete = False
-        ch.y_axis.delete = False
-        ch.x_axis.tickLblPos = "low"
+        style_chart(ch)
         if ch.type == "bar":
             ch.x_axis.scaling.orientation = "maxMin"
         ch.gapWidth = 60
@@ -805,11 +817,7 @@ class Builder:
         for s, colr in zip(ch.series, (GREEN, BRASS)):
             s.graphicalProperties.solidFill = colr
             s.graphicalProperties.line.solidFill = colr
-        ch.legend.position = "b"
-        ch.y_axis.numFmt = "#,##0"
-        ch.y_axis.majorGridlines.spPr = None
-        ch.x_axis.delete = False
-        ch.y_axis.delete = False
+        style_chart(ch)
         ch.gapWidth = 60
         ch.height = (ir - r + 1) * 0.53
         ch.width = 15.5

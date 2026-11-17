@@ -41,10 +41,13 @@ SHOTS = {
 }
 
 
-def shoot(name, out: Path):
-    sheet, area, hide, width = SHOTS[name]
+def shoot(name, out: Path, edit=None, area=None, as_name=None):
+    sheet, area0, hide, width = SHOTS[name]
+    area = area or area0
     b = B.Builder(sample=True)
     wb = b.build()
+    if edit:
+        edit(wb)
     for ws in wb.worksheets:
         if ws.title == sheet:
             ws.print_area = area
@@ -78,7 +81,7 @@ def shoot(name, out: Path):
     stem = tmp / "hi"
     subprocess.run(["pdftoppm", "-f", str(best), "-l", str(best), "-r", str(dpi), "-png", "-singlefile", str(pdf), str(stem)], capture_output=True)
     out.mkdir(parents=True, exist_ok=True)
-    dest = out / f"{name}.png"
+    dest = out / f"{as_name or name}.png"
     subprocess.run(["convert", f"{stem}.png", "-trim", "+repage", "-bordercolor", "#FAF7F2", "-border", "12", str(dest)])
     shutil.rmtree(tmp, ignore_errors=True)
     return dest

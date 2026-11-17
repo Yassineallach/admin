@@ -327,6 +327,21 @@ def main(out_dir: Path):
     check("blank: dashboard defaults to the current month and year",
           d["C6"].value == MONTHS[today.month - 1] and d["F6"].value == today.year, f"{d['C6'].value} {d['F6'].value}")
 
+    # 5. charts: category labels kept outside the plot so bars (including negative ones) never cover them
+    import re
+    import zipfile
+    for p in (blank, sample):
+        z = zipfile.ZipFile(p)
+        charts = [n for n in z.namelist() if n.startswith("xl/charts/chart")]
+        xml = [z.read(n).decode() for n in charts]
+        cat_low = sum(1 for x in xml if re.search(r"<(?:c:)?catAx>.*?<(?:c:)?tickLblPos val=\"low\".*?</(?:c:)?catAx>", x, re.S))
+        legends = [x for x in xml if re.search(r"<(?:c:)?legend>", x)]
+        overlay = len(legends) == 1 and all(re.search(r"<(?:c:)?legend>.*?<(?:c:)?overlay val=\"0\"", x, re.S) for x in legends)
+        check(f"{p.name}: {len(charts)} charts, category labels outside the plot on all", len(charts) == 4 and cat_low == 4,
+              f"{cat_low} of {len(charts)}")
+        check(f"{p.name}: chart legends never overlap the plot", overlay)
+    report["charts"] = "4 charts per file; category-axis labels at 'low' (outside the plot); legend overlay off"
+
     fails = [r for r in RESULTS if not r[1]]
     print(f"PASSED {len(RESULTS) - len(fails)} checks, FAILED {len(fails)}")
     for name, _, detail in fails[:40]:

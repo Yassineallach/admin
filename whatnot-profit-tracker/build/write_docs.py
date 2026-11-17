@@ -238,13 +238,23 @@ A layout linter estimated text widths for every cell in the recalculated files. 
 strictly (every value must fit its own cell). Result: 0 problems: no "####", no clipped text, no chart overlapping cells.
 The final renders (used for the images) were checked by eye at 100 %.
 
-## 6. Structure (technical requirements)
+## 6. Charts: no text colliding with bars
+
+The four dashboard charts (time slot, weekday, category, monthly trend) put their category labels outside the plot area
+(`tickLblPos = low`): below the lowest value on column charts and to the left on the category bar chart, so a negative bar never
+runs over a label. The value axis sits beside the plot, gridlines are light, and the trend chart's legend sits below the plot
+without overlapping it. The test suite checks these settings in the chart XML of both files.
+
+Stress test: one sample show was given an extra $1,500 cost so a time slot, a weekday, a category and a month all turned
+negative. All four charts were rendered and checked by eye: no label, legend or axis number touched a bar.
+
+## 7. Structure (technical requirements)
 
 ```
 {structure.strip()}
 ```
 
-## 7. Google Sheets: what can behave differently, and how it is handled
+## 8. Google Sheets: what can behave differently, and how it is handled
 
 | Feature | In Google Sheets | Handling |
 |---|---|---|
@@ -260,7 +270,7 @@ The final renders (used for the images) were checked by eye at 100 %.
 Not tested in this environment: real Microsoft Excel and real Google Sheets (only LibreOffice was available). Open both files once
 in each before publishing.
 
-## 8. Choices made (and why)
+## 9. Choices made (and why)
 
 - **Giveaway cost** is an optional input ("blank = auto") plus a calculated column, so the default from SETTINGS applies without
   overwriting a formula.
