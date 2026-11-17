@@ -20,3 +20,7 @@ productivity-bundle/listings/pins/*.png
 # brand reference art (sent to the owner, not stored here)
 productivity-bundle/brand/*.png
 productivity-bundle/listings/LAUNCH_SCHEDULE.pdf
+
+# Whatnot tracker deliverables (sent to the owner, not stored here)
+whatnot-profit-tracker/dist/
+whatnot-profit-tracker/build/__pycache__/
