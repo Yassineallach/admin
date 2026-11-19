@@ -31,3 +31,6 @@ home-daycare-tax-workbook/build/__pycache__/
 
 # Lawn Care Pricing Calculator deliverables (sent directly, rebuilt by the build scripts)
 lawn-care-pricing-calculator/dist/
+
+# Pressure Washing Bid Calculator deliverables (sent directly, rebuilt by the build scripts)
+pressure-washing-bid-calculator/dist/
