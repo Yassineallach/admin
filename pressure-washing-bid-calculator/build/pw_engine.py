@@ -973,9 +973,9 @@ class PWEngine(base.Engine):
             self.calc(ws[f"U{r}"], "0.0", align="center", value=f'=IF(S{r}="","",SUMIFS({R("G")},{R("D")},$R{r},{R("G")},">0",{R("F")},">0"))')
             self.calc(ws[f"V{r}"], '+0%;-0%;0%', bold=True, align="center", value=f'=IF(S{r}="","",U{r}/T{r}-1)')
             rate_ref = f"{q(S_SET)}!$E${s1 + i}"
-            self.calc(ws[f"W{r}"], value=(f'=IF(S{r}="","",IF(V{r}>0.15,"Slower than estimated: lower its units per hour on SETTINGS to about "'
-                                         f'&FIXED(N({rate_ref})*T{r}/U{r},0)&".",IF(V{r}<-0.15,"Faster than estimated: you can raise its units per hour '
-                                         f'on SETTINGS to about "&FIXED(N({rate_ref})*T{r}/U{r},0)&".","On target.")))'))
+            self.calc(ws[f"W{r}"], value=(f'=IF(S{r}="","",IF(V{r}>0.15,"Slower than estimated: try "'
+                                         f'&FIXED(N({rate_ref})*T{r}/U{r},0)&" units/h on SETTINGS",IF(V{r}<-0.15,"Faster than estimated: try "'
+                                         f'&FIXED(N({rate_ref})*T{r}/U{r},0)&" units/h on SETTINGS","On target.")))'))
             ws[f"W{r}"].alignment = Alignment(horizontal="left", vertical="center", indent=1, shrink_to_fit=True)
         last = JOB_FIRST + SVC_ROWS - 1
         ws.conditional_formatting.add(f"W{JOB_FIRST}:W{last}", FormulaRule(formula=[f'LEFT($W{JOB_FIRST},6)="Slower"'], font=Font(color=NEG, bold=True), fill=fill(NEG_TINT)))
