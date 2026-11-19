@@ -77,7 +77,26 @@ def _live(c="FFFFFF", size=64):
     return icons._out(im, size)
 
 
-icons.ICONS.update({"house": _house, "meal": _meal, "car": _car, "box": _box, "live": _live})
+def _calc(c="FFFFFF", size=64):
+    im = icons._new(); d = ImageDraw.Draw(im); col = icons._rgb(c)
+    d.rounded_rectangle((44, 16, 212, 240), 22, fill=col)
+    d.rounded_rectangle((70, 42, 186, 92), 8, fill=(0, 0, 0, 0))
+    for r in range(3):
+        for k in range(3):
+            x, y = 70 + k * 42, 112 + r * 42
+            d.rounded_rectangle((x, y, x + 30, y + 30), 6, fill=(0, 0, 0, 0))
+    return icons._out(im, size)
+
+
+def _pin(c="FFFFFF", size=64):
+    im = icons._new(); d = ImageDraw.Draw(im); col = icons._rgb(c)
+    d.ellipse((52, 16, 204, 168), fill=col)
+    d.polygon([(66, 124), (190, 124), (128, 242)], fill=col)
+    d.ellipse((98, 62, 158, 122), fill=(0, 0, 0, 0))
+    return icons._out(im, size)
+
+
+icons.ICONS.update({"house": _house, "meal": _meal, "car": _car, "box": _box, "live": _live, "calc": _calc, "pin": _pin})
 
 
 # ---------------------------------------------------------------- sidebar
@@ -135,11 +154,14 @@ def fix_indents(wb):
                     c.alignment = n
 
 
-def add_sidebars(wb, nav, last_rows: dict, default_last=80):
-    """Sidebar on every tab. Freezes column A so the bar stays visible when scrolling sideways. Returns {tab: Layer}."""
+def add_sidebars(wb, nav, last_rows: dict, default_last=80, skip=()):
+    """Sidebar on every tab (except `skip`, e.g. a customer-facing page). Freezes column A so the bar stays visible when
+    scrolling sideways. Returns {tab: Layer}."""
     fix_indents(wb)
     layers = {}
     for ws in wb.worksheets:
+        if ws.title in skip:
+            continue
         last = min(max(last_rows.get(ws.title, default_last), 60), 140)
         sidebar_cells(ws, nav, ws.title, last)
         fp = ws.freeze_panes
