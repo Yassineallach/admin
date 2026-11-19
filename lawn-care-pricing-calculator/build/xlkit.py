@@ -143,7 +143,7 @@ class Kit:
         c.value = text
         c.fill = fill(fill_color)
         c.font = font(9, True, color)
-        c.alignment = Alignment(horizontal=align, vertical="center", wrap_text=True)
+        c.alignment = Alignment(horizontal=align, vertical="center", wrap_text=True, indent=1 if align == "left" else 0)
         c.border = Border(left=Side(style="thin", color=fill_color), right=Side(style="thin", color=PAPER))
 
     def label(self, c, text, bold=True, color=INK, size=10, indent=0, wrap=False):

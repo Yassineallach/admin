@@ -443,7 +443,7 @@ class Engine(Kit):
         c, S, Q = self.cfg, self.S, self.Q
         ws = self.ws[S_QQ]
         QQ = q(S_QQ)
-        widths = {"B": 36, "C": 15, "D": 14, "E": 18, "F": 40, "G": 16, "H": 20, "I": 17, "K": 10, "L": 10}
+        widths = {"B": 36, "C": 15, "D": 22, "E": 18, "F": 40, "G": 16, "H": 20, "I": 17, "K": 10, "L": 10}
         self.page(ws, widths, 9, 60, "Quick quote", "Fill the white cells from top to bottom. The price builds on the right.")
         for col in ("K", "L"):
             ws.column_dimensions[col].hidden = True
@@ -1224,7 +1224,7 @@ class Engine(Kit):
             self.calc(ws[f"D{rr}"], "0%", align="center",
                       value=f'=IF(SUM($C${q1}:$C${q1 + len(c.STATUSES) - 1})=0,"",C{rr}/SUM($C${q1}:$C${q1 + len(c.STATUSES) - 1}))')
         q2 = q1 + len(c.STATUSES) - 1
-        BP.databar(ws, f"D{q1}:D{q2}", GREEN, max_value=1)
+        BP.databar(ws, f"D{q1}:D{q2}", BRASS, max_value=1)
         ch = DoughnutChart(holeSize=55)
         ch.add_data(Reference(ws, min_col=3, min_row=q1, max_row=q2), titles_from_data=False)
         ch.set_categories(Reference(ws, min_col=2, min_row=q1, max_row=q2))
@@ -1305,6 +1305,7 @@ class Engine(Kit):
             ws.row_dimensions[r].height = 48
             r += 1
         self.link(ws[f"C{r}"], "Routes and season  ›", S_ROUTE)
+        ws[f"C{r}"].alignment = Alignment(vertical="top")
         ws.merge_cells(f"D{r}:F{r}")
         ws[f"D{r}"] = "Once you have regular clients, list them on ROUTE PLANNER and fill SEASON TRACKER each month."
         ws[f"D{r}"].font = font(10, color=INK2)
@@ -1389,8 +1390,8 @@ class Engine(Kit):
         return self.wb
 
     def add_sidebars(self):
-        return BP.add_sidebars(self.wb, NAV, {S_START: 60, S_SET: 140, S_QQ: 60, S_LOG: 120, S_ROUTE: 120,
-                                              S_SEASON: 60, S_DASH: 70}, skip=(S_CQ,))
+        return BP.add_sidebars(self.wb, NAV, {S_START: 60, S_SET: self.rows["set_last"] + 2, S_QQ: 60, S_LOG: 120, S_ROUTE: 120,
+                                              S_SEASON: 60, S_DASH: 70}, skip=(S_CQ,), max_last=200)
 
 
 def main(cfg, out_dir: Path):

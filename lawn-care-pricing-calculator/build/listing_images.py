@@ -126,7 +126,7 @@ def included():
 def quote_closeup():
     img = canvas()
     y = head(img, "Quick quote", "The price, and what you keep, for every visit.") + 60
-    sh = shot("quote_top", (0.46, 0.075, 1.0, 0.62))
+    sh = shot("quote_top", (0.4895, 0.08, 1.0, 0.62))
     box = frame(img, sh, (M + 700, y, W - M, H - M - 40), "tl")
     s = (box[2] - box[0] - 28) / sh.width
     d = ImageDraw.Draw(img)

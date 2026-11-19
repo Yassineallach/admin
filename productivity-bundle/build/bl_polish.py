@@ -154,7 +154,7 @@ def fix_indents(wb):
                     c.alignment = n
 
 
-def add_sidebars(wb, nav, last_rows: dict, default_last=80, skip=()):
+def add_sidebars(wb, nav, last_rows: dict, default_last=80, skip=(), max_last=140):
     """Sidebar on every tab (except `skip`, e.g. a customer-facing page). Freezes column A so the bar stays visible when
     scrolling sideways. Returns {tab: Layer}."""
     fix_indents(wb)
@@ -162,7 +162,7 @@ def add_sidebars(wb, nav, last_rows: dict, default_last=80, skip=()):
     for ws in wb.worksheets:
         if ws.title in skip:
             continue
-        last = min(max(last_rows.get(ws.title, default_last), 60), 140)
+        last = min(max(last_rows.get(ws.title, default_last), 60), max_last)
         sidebar_cells(ws, nav, ws.title, last)
         fp = ws.freeze_panes
         if fp is None:
