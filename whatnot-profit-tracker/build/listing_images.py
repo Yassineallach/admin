@@ -119,10 +119,13 @@ def show_log():
     y = head(img, "The show log", "One row per show. Profit appears as you type.") + 60
     sh = shot("log_profit")
     box = frame(img, sh, (M, y, W - M, y + 1020), "tl")
-    # find the brass NET PROFIT header in the screenshot and outline that column
+    # find the brass NET PROFIT header: brass pixels inside the green header row of the real screenshot
     px = sh.load()
-    xs = [x for x in range(sh.width) for yy in range(0, int(sh.height * 0.3), 4)
-          if abs(px[x, yy][0] - 210) < 12 and abs(px[x, yy][1] - 154) < 12 and abs(px[x, yy][2] - 58) < 12]
+    green = lambda p: p[0] < 70 and 50 < p[1] < 100 and p[2] < 90
+    brass = lambda p: abs(p[0] - 210) < 14 and abs(p[1] - 154) < 14 and abs(p[2] - 58) < 14
+    band = [y for y in range(sh.height) if sum(green(px[x, y]) for x in range(0, sh.width, 9)) > sh.width / 9 * 0.45]
+    hy = band[len(band) // 2]
+    xs = [x for x in range(sh.width) if brass(px[x, hy])]
     s = (box[2] - box[0] - 28) / sh.width
     x0, x1 = box[0] + 14 + min(xs) * s, box[0] + 14 + max(xs) * s
     d = ImageDraw.Draw(img)
@@ -147,15 +150,21 @@ def show_log():
 def dashboard():
     img = canvas()
     y = head(img, "The dashboard", "Find the time slots and categories that pay.") + 60
-    a, b = shot("dash_slot", (0, 0, 1, 0.78)), shot("dash_cat")
+    a, b = shot("dash_slot"), shot("dash_cat")
     stack = Image.new("RGB", (max(a.width, b.width), a.height + b.height + 40), PAPER)
     stack.paste(a, (0, 0))
     stack.paste(b, (0, a.height + 40))
-    box = frame(img, stack, (M, y, 1900, H - M - 210), "tl")
-    points(img, [("Profit by time slot", "Shows, net profit, average per show and profit per hour."),
-                 ("Profit by category", "See which categories carry your shop."),
-                 ("A plain-English line", "Each table names your most profitable time slot, day or category.")],
-           box[2] + 80, y + 10, W - M - box[2] - 80, 46, 38)
+    box = frame(img, stack, (M, y, W - M, y + 1180), "tl")
+    items = [("Profit by time slot", "Shows, net profit, average per show and profit per hour."),
+             ("Profit by category", "See which categories carry your shop."),
+             ("A plain-English line", "Each table names your best time slot, day or category.")]
+    cw = (W - 2 * M - 2 * 60) // 3
+    for k, it in enumerate(items):
+        x = M + k * (cw + 60)
+        d = ImageDraw.Draw(img)
+        d.text((x, box[3] + 64), f"{k + 1:02d}", font=F(34, 700), fill=BRASS)
+        yy = para(img, (x + 90, box[3] + 58), it[0], F(44, 700), GREEN, cw - 90, 1.2)
+        para(img, (x + 90, yy + 4), it[1], F(36, 400), INK2, cw - 90, 1.35)
     logo(img)
     save(img, "04_dashboard.png")
 

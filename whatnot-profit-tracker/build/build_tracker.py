@@ -25,7 +25,13 @@ from openpyxl.worksheet.hyperlink import Hyperlink
 
 from sample_data import ITEMS, SHOWS
 
+sys.path.insert(0, "/home/user/admin/productivity-bundle/build")
+import bl_polish as BP  # noqa: E402
+from openpyxl.chart import DoughnutChart  # noqa: E402
+from openpyxl.chart.series import DataPoint  # noqa: E402
+
 PRODUCT = "Whatnot Live Show Profit Tracker"
+SHORT = "Whatnot Profit Tracker"
 OUT_NAME = "BrassLedger_Whatnot_Profit_Tracker"
 
 # ---------------------------------------------------------------- brand
@@ -36,6 +42,8 @@ BODY, TITLE = "Inter", "Georgia"          # Fraunces is not available in Excel: 
 
 S_START, S_SET, S_LOG, S_ITEM, S_DASH, S_YEAR = "START HERE", "SETTINGS", "SHOW LOG", "ITEM SALES", "DASHBOARD", "YEAR SUMMARY"
 ORDER = [S_START, S_SET, S_LOG, S_ITEM, S_DASH, S_YEAR]
+NAV = [(S_DASH, "bar_chart", "Home"), (S_START, "question", "Start"), (S_SET, "gear", "Setup"), (S_LOG, "live", "Shows"),
+       (S_ITEM, "box", "Items"), (S_YEAR, "calendar", "Year")]
 
 MONEY = '#,##0.00;-#,##0.00'
 MONEY0 = '#,##0;-#,##0'
@@ -146,35 +154,43 @@ class Builder:
         ws.sheet_view.showGridLines = False
         ws.sheet_view.zoomScale = 100
         ws.column_dimensions["A"].width = 2.5
+        widths = dict(widths)
+        widths[L(last_col)] = max(widths.get(L(last_col), 8.43), 17)    # room for BRASS LEDGER and the home link
         for col, w in widths.items():
             ws.column_dimensions[col].width = w
         for r in range(1, last_row + 1):
             for c in range(1, last_col + 2):
                 ws.cell(row=r, column=c).fill = fill(PAPER)
                 ws.cell(row=r, column=c).font = font()
-        # title bar: product name in paper, BRASS LEDGER small in brass on the right
+        # title bar (as on the earlier products): tab name + product name in paper, BRASS LEDGER in brass on the right,
+        # then a line with the sample marker, what the tab is for, and a link home
         lc = L(last_col)
         for r in (1, 2):
             for c in range(1, last_col + 2):
                 ws.cell(row=r, column=c).fill = fill(GREEN)
-        ws.row_dimensions[1].height = 34
+        ws.row_dimensions[1].height = 36
         ws.row_dimensions[2].height = 22
         ws.row_dimensions[3].height = 10
-        ws.merge_cells(f"B1:{L(last_col - 2)}1")
+        ws.merge_cells(f"B1:{L(last_col - 1)}1")
         t = ws["B1"]
-        t.value = PRODUCT
+        t.value = f"{tab_label.upper()}  ·  {PRODUCT}"
         t.font = Font(name=TITLE, size=17, bold=True, color=PAPER)
         t.alignment = Alignment(vertical="center")
-        ws.merge_cells(f"{L(last_col - 1)}1:{lc}1")
-        b = ws[f"{L(last_col - 1)}1"]
+        b = ws[f"{lc}1"]
         b.value = "BRASS LEDGER"
         b.font = font(9, True, BRASS)
         b.alignment = Alignment(horizontal="right", vertical="center")
-        ws.merge_cells(f"B2:{lc}2")
+        ws.merge_cells(f"B2:{L(last_col - 1)}2")
         k = ws["B2"]
-        k.value = f"{tab_label.upper()}   ·   {subtitle}"
+        k.value = ("●  SAMPLE DATA   ·   " if self.sample else "") + subtitle
         k.font = font(9, True, MUTED)
         k.alignment = Alignment(vertical="center")
+        home = ws[f"{lc}2"]
+        target, label = (S_START, "Start here  →") if ws.title == S_DASH else (S_DASH, "←  Dashboard")
+        home.value = label
+        home.hyperlink = Hyperlink(ref=home.coordinate, location=f"{q(target)}!A1")
+        home.font = Font(name=BODY, size=9, bold=True, color=BRASS, underline=None)
+        home.alignment = Alignment(horizontal="right", vertical="center")
         ws.sheet_properties.tabColor = GREEN
         ws.page_setup.orientation = "landscape"
         ws.page_setup.fitToWidth = 1
@@ -372,7 +388,7 @@ class Builder:
     # ------------------------------------------------------------ SETTINGS
     def build_settings(self):
         ws = self.ws[S_SET]
-        self.page(ws, {"B": 40, "C": 18, "D": 18, "E": 60}, 5, 50, "Settings", "All rates and lists live here. Change a white cell and every tab updates.")
+        self.page(ws, {"B": 40, "C": 18, "D": 26, "E": 60}, 5, 50, "Settings", "All rates and lists live here. Change a white cell; every tab updates.")
         self.kicker(ws, "B5", "Fees", rule_to=5)
         rows = [(6, "Currency symbol", "$", None, "Shown in headings and dashboard text."),
                 (7, "Whatnot commission", 0.08, "0.0%", "Percent of each sale."),
@@ -552,6 +568,7 @@ class Builder:
         ws.conditional_formatting.add(rng, FormulaRule(
             formula=[f'AND(${p}{LOG_FIRST}<>"",COUNT(${p}${LOG_FIRST}:${p}${LOG_LAST})>=4,${p}{LOG_FIRST}>=QUARTILE(${p}${LOG_FIRST}:${p}${LOG_LAST},3))'],
             fill=fill(POS_TINT), font=Font(color=POS, bold=True)))
+        BP.databar(ws, f"{C['margin']}{LOG_FIRST}:{C['margin']}{LOG_LAST}", BRASS, max_value=1)
         ws.freeze_panes = f"D{LOG_FIRST}"
         ws.auto_filter.ref = f"B5:AC{LOG_LAST}"
         ws.print_area = f"A1:AC{LOG_LAST}"
@@ -652,7 +669,7 @@ class Builder:
         widths = {L(c): 14 for c in range(2, 14)}
         widths["B"] = 17
         widths["F"] = widths["L"] = 16
-        self.page(ws, widths, 13, 92, "Dashboard", "Pick a month. Tiles show that month; tables and charts show the whole year.")
+        self.page(ws, widths, 13, 112, "Dashboard", "Pick a month. Tiles show that month; tables and charts show the whole year.")
         ws.column_dimensions["P"].hidden = True
         ws.column_dimensions["Q"].hidden = True
         ws.column_dimensions["R"].hidden = True
@@ -710,15 +727,76 @@ class Builder:
         ws["B13"].alignment = Alignment(vertical="center", indent=1)
         ws.row_dimensions[13].height = 22
         self.charts = []
-        r = 15
+        r = self.where_sales_went(ws, 15)
+        self.dash_rows = {"slot": r}
         r = self.breakdown(ws, r, "Profit by time slot", "time slot", [f"={q(S_SET)}!$C${22 + i}" for i in range(4)], "slot")
+        self.dash_rows["wday"] = r
         r = self.breakdown(ws, r, "Profit by weekday", "day",
                            ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"], "wnum")
+        self.dash_rows["cat"] = r
         r = self.breakdown(ws, r, "Profit by category", "category", [f"={q(S_SET)}!$B${22 + i}" for i in range(10)], "cat")
+        self.dash_rows["trend"] = r
         r = self.trend(ws, r)
+        self.dash_rows["topbottom"] = r
         r = self.top_bottom(ws, r)
+        self.dash_rows["end"] = r
         ws.print_area = f"A1:N{r}"
         self.protect(ws)
+
+    def where_sales_went(self, ws, r):
+        """This month's gross sales split into fees, item costs, giveaways, supplies and other costs, and net profit."""
+        self.kicker(ws, f"B{r}", "Where this month's sales went", rule_to=13)
+        hr = r + 1
+        cur = lambda t: f'="{t} ("&{CUR}&")"'
+        for c, text in zip("BCDE", ["Part of gross sales", cur("Amount"), "Share", ""]):
+            if text:
+                self.header(ws[f"{c}{hr}"], text, align="left" if c == "B" else "center")
+        ws.merge_cells(f"D{hr}:E{hr}")
+        ws.row_dimensions[hr].height = 26
+        key = "$P$7"
+        sm = lambda k: f"SUMIFS({LR(k)},{LR('key')},{key})"
+        parts = [("Whatnot fees", sm("fees")), ("Item costs", sm("cogs")), ("Giveaways", sm("gcost")),
+                 ("Supplies, other", f"{sm('supplies')}+{sm('other')}"), ("Net profit kept", f"MAX(0,{sm('profit')})")]
+        first = hr + 1
+        for i, (lab, f) in enumerate(parts):
+            rr = first + i
+            ws[f"B{rr}"] = lab
+            ws[f"B{rr}"].font = font(10, True, INK)
+            ws[f"B{rr}"].fill, ws[f"B{rr}"].border = fill(WHITE), BOX
+            ws[f"C{rr}"] = f"={f}"
+            self.calc(ws[f"C{rr}"], MONEY, bold=(lab == "Net profit kept"))
+            ws[f"D{rr}"] = f'=IF(SUMIFS({LR("gross")},{LR("key")},{key})=0,"",C{rr}/SUMIFS({LR("gross")},{LR("key")},{key}))'
+            self.calc(ws[f"D{rr}"], "0%", align="left")
+            self.calc(ws[f"E{rr}"])
+            ws.merge_cells(f"D{rr}:E{rr}")
+        last = first + len(parts) - 1
+        BP.databar(ws, f"D{first}:D{last}", BRASS, max_value=1)
+        tr = last + 1
+        ws[f"B{tr}"] = "Gross sales"
+        ws[f"C{tr}"] = f"=SUMIFS({LR('gross')},{LR('key')},{key})"
+        for c in "BC":
+            x = ws[f"{c}{tr}"]
+            x.fill, x.font = fill(GREEN), font(10, True, BRASS if c == "C" else PAPER)
+            x.number_format = MONEY
+        ws.merge_cells(f"D{tr}:F{tr}")
+        ws[f"D{tr}"] = (f'=IF(C{tr}=0,"No shows in "&$C$6&" yet.",IF(SUMIFS({LR("profit")},{LR("key")},{key})<0,'
+                        f'"This month lost money: costs were more than sales.","Net profit kept: "&FIXED(100*C{last}/C{tr},0)&"% of sales."))')
+        ws[f"D{tr}"].font = font(10, True, GREEN)
+        ws[f"D{tr}"].alignment = Alignment(indent=1, vertical="center")
+        ch = DoughnutChart(holeSize=55)
+        ch.add_data(Reference(ws, min_col=3, min_row=first, max_row=last), titles_from_data=False)
+        ch.set_categories(Reference(ws, min_col=2, min_row=first, max_row=last))
+        colours = ["B3261E", "6B7F79", "D29A3A", "C9D3CF", "2E7D4F"]
+        for i, colr in enumerate(colours):
+            pt = DataPoint(idx=i)
+            pt.graphicalProperties.solidFill = colr
+            pt.graphicalProperties.line.solidFill = "FFFFFF"
+            ch.series[0].dPt.append(pt)
+        BP.clean_chart(ch, legend=True, axes=False, legend_pos="r")
+        ch.height, ch.width = 4.9, 15.5
+        ch.anchor = f"H{r + 1}"
+        ws.add_chart(ch)
+        return tr + 3
 
     def breakdown(self, ws, r, title, noun, names, col):
         """Table (B:F) + chart (H:M) for one dimension, for the selected year. Returns the next free row."""
@@ -767,7 +845,7 @@ class Builder:
         s = ch.series[0]
         s.graphicalProperties.solidFill = BRASS
         s.graphicalProperties.line.solidFill = BRASS
-        style_chart(ch)
+        BP.clean_chart(ch, legend=False)
         if ch.type == "bar":
             ch.x_axis.scaling.orientation = "maxMin"
         ch.gapWidth = 60
@@ -817,7 +895,7 @@ class Builder:
         for s, colr in zip(ch.series, (GREEN, BRASS)):
             s.graphicalProperties.solidFill = colr
             s.graphicalProperties.line.solidFill = colr
-        style_chart(ch)
+        BP.clean_chart(ch, legend=True)
         ch.gapWidth = 60
         ch.height = (ir - r + 1) * 0.53
         ch.width = 15.5
@@ -915,6 +993,7 @@ class Builder:
             x.number_format = {"C": "0", "K": PCT1}.get(c, MONEY)
             x.alignment = Alignment(horizontal="center" if c in "CK" else None, vertical="center", indent=1 if c == "B" else 0)
         ws.row_dimensions[tr].height = 24
+        BP.databar(ws, "J9:J20", "2E7D4F")
         p = f"J9:J{tr}"
         ws.conditional_formatting.add(p, FormulaRule(formula=["J9<0"], font=Font(color=NEG, bold=True)))
         self.note(ws, "B23:K23", "Net profit = gross sales − fees − cost of items − giveaways − supplies − other costs. Shipping "
@@ -925,6 +1004,10 @@ class Builder:
         self.protect(ws)
 
     # ------------------------------------------------------------ assemble
+    def add_sidebars(self):
+        """Icon sidebar on every tab (Excel shapes, with text links underneath for Google Sheets)."""
+        return BP.add_sidebars(self.wb, NAV, {S_START: 50, S_SET: 48, S_LOG: 120, S_ITEM: 120, S_DASH: 120, S_YEAR: 60})
+
     def build(self):
         self.build_start()
         self.build_settings()
@@ -945,9 +1028,12 @@ def main(out_dir: Path):
     out_dir.mkdir(parents=True, exist_ok=True)
     paths = []
     for sample in (False, True):
-        wb = Builder(sample).build()
+        b = Builder(sample)
+        wb = b.build()
+        layers = b.add_sidebars()
         p = out_dir / (OUT_NAME + ("_SAMPLE" if sample else "") + ".xlsx")
         wb.save(p)
+        BP.finish(p, layers)
         paths.append(p)
         print("wrote", p)
     return paths

@@ -238,15 +238,20 @@ A layout linter estimated text widths for every cell in the recalculated files. 
 strictly (every value must fit its own cell). Result: 0 problems: no "####", no clipped text, no chart overlapping cells.
 The final renders (used for the images) were checked by eye at 100 %.
 
-## 6. Charts: no text colliding with bars
+## 6. Charts and design
 
-The four dashboard charts (time slot, weekday, category, monthly trend) put their category labels outside the plot area
-(`tickLblPos = low`): below the lowest value on column charts and to the left on the category bar chart, so a negative bar never
-runs over a label. The value axis sits beside the plot, gridlines are light, and the trend chart's legend sits below the plot
-without overlapping it. The test suite checks these settings in the chart XML of both files.
+The workbook uses the same design system as the earlier Brass Ledger products:
+- **Icon sidebar on every tab** (Excel shapes: gradient bar, clickable icons, current tab highlighted). Underneath it sits a dark
+  column of text links, which is what Google Sheets shows because it does not import shapes, so one file works in both.
+- **Title bars** with the tab name and product name, a sample-data marker in the sample file, and a link back to the dashboard.
+- **Dashboard:** 8 tiles, a "where this month's sales went" table with data bars and a doughnut chart, then profit by time slot,
+  weekday and category, the monthly trend and the top/bottom 5 shows. Data bars also on the show log's profit margin and the
+  year summary's net profit.
 
-Stress test: one sample show was given an extra $1,500 cost so a time slot, a weekday, a category and a month all turned
-negative. All four charts were rendered and checked by eye: no label, legend or axis number touched a bar.
+Charts (5 per file: 4 bar/column + 1 doughnut) use the earlier products' chart style: no frame, light gridlines, whole-number axes.
+Category labels sit outside the plot area (`tickLblPos = low`), so a negative bar never runs over a label; legends never overlap
+the plot. The test suite checks these settings in the chart XML of both files. Stress test: one sample show was given an extra
+$1,500 cost so a time slot, a weekday, a category and a month turned negative; all charts were rendered and checked by eye.
 
 ## 7. Structure (technical requirements)
 

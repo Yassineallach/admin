@@ -334,13 +334,14 @@ def main(out_dir: Path):
         z = zipfile.ZipFile(p)
         charts = [n for n in z.namelist() if n.startswith("xl/charts/chart")]
         xml = [z.read(n).decode() for n in charts]
-        cat_low = sum(1 for x in xml if re.search(r"<(?:c:)?catAx>.*?<(?:c:)?tickLblPos val=\"low\".*?</(?:c:)?catAx>", x, re.S))
+        with_axis = [x for x in xml if re.search(r"<(?:c:)?catAx>", x)]
+        cat_low = sum(1 for x in with_axis if re.search(r"<(?:c:)?catAx>.*?<(?:c:)?tickLblPos val=\"low\".*?</(?:c:)?catAx>", x, re.S))
         legends = [x for x in xml if re.search(r"<(?:c:)?legend>", x)]
-        overlay = len(legends) == 1 and all(re.search(r"<(?:c:)?legend>.*?<(?:c:)?overlay val=\"0\"", x, re.S) for x in legends)
-        check(f"{p.name}: {len(charts)} charts, category labels outside the plot on all", len(charts) == 4 and cat_low == 4,
-              f"{cat_low} of {len(charts)}")
+        overlay = len(legends) == 2 and all(re.search(r"<(?:c:)?legend>.*?<(?:c:)?overlay val=\"0\"", x, re.S) for x in legends)
+        check(f"{p.name}: {len(charts)} charts (4 bar/column + 1 donut), category labels outside the plot on all bar charts",
+              len(charts) == 5 and len(with_axis) == 4 and cat_low == 4, f"{cat_low} of {len(with_axis)}")
         check(f"{p.name}: chart legends never overlap the plot", overlay)
-    report["charts"] = "4 charts per file; category-axis labels at 'low' (outside the plot); legend overlay off"
+    report["charts"] = "5 charts per file (4 bar/column + donut); category-axis labels at 'low'; legend overlay off"
 
     fails = [r for r in RESULTS if not r[1]]
     print(f"PASSED {len(RESULTS) - len(fails)} checks, FAILED {len(fails)}")

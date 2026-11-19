@@ -167,7 +167,10 @@ def build():
                      ["ITEM SALES", "Optional. One row per item, with a summary that totals sales and cost for each show."],
                      ["DASHBOARD", "Pick a month: profit, fees, giveaways and goal progress, plus profit by time slot, weekday, category and month."],
                      ["YEAR SUMMARY", "Month-by-month totals and a year total."]], [0.22, 0.78], bold_first=True),
-              Spacer(1, 10), P("Cell colours", "h2"),
+              Spacer(1, 6),
+              P("<b>Getting around.</b> Every tab has an icon bar on the left: click an icon to jump to that tab (in Google "
+                "Sheets the bar shows short text links instead). The link at the top right of each tab goes back to the dashboard."),
+              Spacer(1, 4), P("Cell colours", "h2"),
               table([["Cell", "Meaning"], ["White with a border", "Type here, or pick from the dropdown."],
                      ["Shaded", "A formula. Locked so it can't be overwritten by accident."],
                      ["Green block, brass figure", "A headline result."],
@@ -261,7 +264,9 @@ def build():
                      ["Fees paid · giveaway cost year to date", "What Whatnot fees and giveaways have cost you this year."],
                      ["Monthly goal progress", "Profit this month as a share of your goal on SETTINGS."]], [0.42, 0.58], bold_first=True),
               Spacer(1, 8),
-              P("Under the tiles: profit by <b>time slot</b>, <b>weekday</b> and <b>category</b>, a 12-month <b>trend</b>, and your "
+              P("Below the tiles, <b>where this month's sales went</b> splits gross sales into Whatnot fees, item costs, giveaways, "
+                "supplies and the net profit you kept, with a doughnut chart."),
+              P("Further down: profit by <b>time slot</b>, <b>weekday</b> and <b>category</b>, a 12-month <b>trend</b>, and your "
                 "<b>top 5 and bottom 5</b> shows. Each table ends with a plain-English line such as <i>\"Your most profitable time "
                 "slot is Evening.\"</i>"),
               shot("dash_cat"),

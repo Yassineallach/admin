@@ -25,12 +25,14 @@ RECALC = (glob.glob("/root/.claude/skills/synced/*/xlsx/scripts/recalc.py") or [
 
 # name: (sheet, print area, columns to hide for this view, target width in px)
 SHOTS = {
-    "dash_top": (B.S_DASH, "A1:N25", [], 2600),
-    "dash_hero": (B.S_DASH, "A1:N37", [], 2600),
-    "dash_slot": (B.S_DASH, "A15:N26", [], 2600),
-    "dash_cat": (B.S_DASH, "A39:N52", [], 2600),
-    "dash_trend": (B.S_DASH, "A54:N68", [], 2600),
-    "dash_topbottom": (B.S_DASH, "A70:N77", [], 2600),
+    # dashboard areas follow the section rows recorded by the builder (Builder.dash_rows)
+    "dash_top": (B.S_DASH, "A1:N{slot_1}", [], 2600),
+    "dash_hero": (B.S_DASH, "A1:N{wday_1}", [], 2600),
+    "dash_sales": (B.S_DASH, "A15:N{slot_1}", [], 2600),
+    "dash_slot": (B.S_DASH, "A{slot}:N{wday_1}", [], 2600),
+    "dash_cat": (B.S_DASH, "A{cat}:N{trend_1}", [], 2600),
+    "dash_trend": (B.S_DASH, "A{trend}:N{topbottom_1}", [], 2600),
+    "dash_topbottom": (B.S_DASH, "A{topbottom}:N{end}", [], 2600),
     "log_full": (B.S_LOG, "A1:AC18", [], 3600),
     "log_profit": (B.S_LOG, "A4:AC18", ["D", "E", "F", "G", "H", "J", "K", "L", "M", "N", "O", "P", "Q", "R"], 2600),
     "log_inputs": (B.S_LOG, "A4:R18", [], 3000),
@@ -41,13 +43,32 @@ SHOTS = {
 }
 
 
+def crop_tail(path):
+    """Cut the empty page below the content: the sidebar bar runs past the print area (as on the earlier products)."""
+    im = Image.open(path).convert("RGB")
+    w, h = im.size
+    px = im.load()
+    x0 = int(w * 0.06)
+    last = h - 1
+    while last > 0 and all(min(px[x, last]) > 240 for x in range(x0, w, 7)):
+        last -= 1
+    first = 0
+    while first < last and all(min(px[x, first]) > 240 for x in range(x0, w, 7)):
+        first += 1
+    im.crop((0, max(0, first - 14), w, min(h, last + 14))).save(path)
+
+
 def shoot(name, out: Path, edit=None, area=None, as_name=None):
     sheet, area0, hide, width = SHOTS[name]
     area = area or area0
     b = B.Builder(sample=True)
     wb = b.build()
+    rows = dict(b.dash_rows)
+    rows.update({k + "_1": v - 1 for k, v in b.dash_rows.items()})
+    area = area.format(**rows)
     if edit:
         edit(wb)
+    layers = b.add_sidebars()
     for ws in wb.worksheets:
         if ws.title == sheet:
             ws.print_area = area
@@ -62,6 +83,7 @@ def shoot(name, out: Path, edit=None, area=None, as_name=None):
     tmp = Path(tempfile.mkdtemp())
     p = tmp / "s.xlsx"
     wb.save(p)
+    B.BP.finish(p, layers)
     subprocess.run([sys.executable, RECALC, str(p), "300"], capture_output=True)
     subprocess.run(["soffice", "--headless", "--convert-to", "pdf", "--outdir", str(tmp), str(p)], capture_output=True)
     pdf = tmp / "s.pdf"
@@ -82,7 +104,9 @@ def shoot(name, out: Path, edit=None, area=None, as_name=None):
     subprocess.run(["pdftoppm", "-f", str(best), "-l", str(best), "-r", str(dpi), "-png", "-singlefile", str(pdf), str(stem)], capture_output=True)
     out.mkdir(parents=True, exist_ok=True)
     dest = out / f"{as_name or name}.png"
-    subprocess.run(["convert", f"{stem}.png", "-trim", "+repage", "-bordercolor", "#FAF7F2", "-border", "12", str(dest)])
+    subprocess.run(["convert", f"{stem}.png", "-trim", "+repage", str(dest)])
+    crop_tail(dest)
+    subprocess.run(["convert", str(dest), "-bordercolor", "#FAF7F2", "-border", "12", str(dest)])
     shutil.rmtree(tmp, ignore_errors=True)
     return dest
 
