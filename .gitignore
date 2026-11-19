@@ -28,3 +28,6 @@ whatnot-profit-tracker/build/__pycache__/
 # Home daycare workbook deliverables (sent to the owner, not stored here)
 home-daycare-tax-workbook/dist/
 home-daycare-tax-workbook/build/__pycache__/
+
+# Lawn Care Pricing Calculator deliverables (sent directly, rebuilt by the build scripts)
+lawn-care-pricing-calculator/dist/
