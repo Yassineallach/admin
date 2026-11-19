@@ -317,12 +317,66 @@ def compare(path, inp, label):
     bad = sum(1 for i, v in enumerate(m["mvals"]) if not close(me[f"J{B.M_FIRST + i}"].value, v))
     n += len(m["mvals"])
     check(f"{label}: MEALS all {len(m['mvals'])} rows valued", bad == 0, f"{bad} differ")
+    n += dashboard_checks(wb, m, inp, label)
     # statement mirrors summary
     stmt_vals = [stt[f"F{r}"].value for r in range(1, stt.max_row + 1) if stt[f"F{r}"].value not in (None, "")]
     n += 1
     check(f"{label}: STATEMENT shows the summary figures", any(close(v, m["ts"], 1e-9) for v in stmt_vals)
           and any(close(v, m["time"], 1e-9) for v in stmt_vals) and any(close(v, m["bizhours"]) for v in stmt_vals))
     return n, m
+
+
+# ================================================================== dashboard
+def dashboard_checks(wb, m, inp, label):
+    """DASHBOARD tiles, month table, space, deduction split and the top-8 category list against the model."""
+    db = wb[B.S_DASH]
+    n = 0
+    rowof = {}
+    for r in range(1, db.max_row + 1):
+        v = db[f"B{r}"].value
+        if isinstance(v, str) and v not in rowof:
+            rowof[v] = r
+    for cell, exp in (("B6", m["ts"]), ("E6", m["time"]), ("H6", m["bizhours"]), ("K6", m["to_confirm"]),
+                      ("B9", m["home_total"]), ("E9", m["simp"]), ("H9", m["sc_total"]), ("K9", m["food_net"])):
+        n += 1
+        check(f"{label}: DASHBOARD tile {cell}", close(db[cell].value, exp, 1e-6 if exp < 2 else 0.006), f"{db[cell].value!r} vs {exp!r}")
+    hr = rowof["Month"]
+    for i, mm in enumerate(m["months"]):
+        r = hr + 1 + i
+        got = (db[f"C{r}"].value, db[f"D{r}"].value, db[f"E{r}"].value)
+        n += 1
+        check(f"{label}: DASHBOARD month {i + 1}", all(close(a, b) for a, b in zip(got, (mm[2], mm[4], mm[3]))), f"{got} vs {mm}")
+    none = sum(r[1] for r in inp["rooms"] if r[2] == B.USES[2])
+    for lab, exp in (("Exclusive", m["excl"]), ("Regular", m["reg"]), ("Not used", none)):
+        r = rowof[lab]
+        n += 2
+        check(f"{label}: DASHBOARD space {lab} sq ft", close(db[f"C{r}"].value, exp), f"{db[f'C{r}'].value!r} vs {exp!r}")
+        share = exp / m["home"] if m["home"] else 0
+        check(f"{label}: DASHBOARD space {lab} share", close(db[f"D{r}"].value, share, 1e-9), f"{db[f'D{r}'].value!r} vs {share!r}")
+    parts = [("Home expenses (8829)", m["home_total"]), ("Supplies and other (Sch. C)", m["sc_total"] - m["mile_ded"] - m["food_net"]),
+             ("Car: standard mileage", m["mile_ded"]), ("Food for children (net)", m["food_net"])]
+    tot = sum(v for _, v in parts)
+    for lab, exp in parts:
+        r = rowof[lab]
+        n += 2
+        check(f"{label}: DASHBOARD deductions {lab}", close(db[f"D{r}"].value, exp), f"{db[f'D{r}'].value!r} vs {exp!r}")
+        check(f"{label}: DASHBOARD deductions {lab} share", close(db[f"E{r}"].value, exp / tot if tot else 0, 1e-9))
+    # top 8 categories: Schedule C deductible and Form 8829 deductible, largest first, ties in category-list order
+    amounts = []
+    for i, c in enumerate(x for x in B.CATS if x[1] in ("Schedule C", "Form 8829")):
+        v = m["sc"].get(c[0], [0.0, 0.0])[1] if c[1] == "Schedule C" else m["home_rows"][c[0]][2]
+        amounts.append((round(v, 2), -i, c[0], v))
+    amounts.sort(reverse=True)
+    t1 = rowof["Category"] + 1
+    for k in range(8):
+        amt, _i, name, v = amounts[k]
+        r = t1 + k
+        got_name, got_v = db[f"B{r}"].value, db[f"E{r}"].value
+        exp_name = name if v > 0 else ""
+        n += 1
+        check(f"{label}: DASHBOARD top category {k + 1}", (got_name or "") == exp_name and close(got_v, max(0, v)),
+              f"{got_name!r} {got_v!r} vs {exp_name!r} {v!r}")
+    return n
 
 
 # ================================================================== known examples on the blank workbook
@@ -407,6 +461,23 @@ def main():
             sample_rc = rp
         else:
             blank_rc = rp
+    # design: tab order, dashboard charts, sidebar on every tab, title bars with a home link
+    from openpyxl import load_workbook as _lw
+    wbs = _lw(sample)
+    check("tab order: START HERE, DASHBOARD, then the working tabs", wbs.sheetnames == B.ORDER, str(wbs.sheetnames))
+    check("DASHBOARD has 4 charts (hours, space, deductions, categories)", len(wbs[B.S_DASH]._charts) == 4, str(len(wbs[B.S_DASH]._charts)))
+    import zipfile
+    names = zipfile.ZipFile(sample).namelist()
+    check("Excel sidebar icons on every tab", sum(n_.startswith("xl/media/shape_icon") for n_ in names) >= len(B.ORDER) * len(B.NAV),
+          str(sum(n_.startswith("xl/media/shape_icon") for n_ in names)))
+    for ws in wbs.worksheets:
+        links = [c for c in ws["A"] if c.hyperlink is not None and c.value]
+        check(f"{ws.title}: Google Sheets sidebar has {len(B.NAV) - 1} text links", len(links) == len(B.NAV) - 1, str(len(links)))
+        last = ws.max_column
+        home = [c for c in ws[2] if c.hyperlink is not None]
+        check(f"{ws.title}: title bar names the tab and links home", str(ws["B1"].value).startswith(ws.title) and "  ·  " in str(ws["B1"].value) and len(home) == 1,
+              f"{ws['B1'].value!r} {len(home)}")
+        check(f"{ws.title}: frozen sidebar column", (ws.freeze_panes or "A").startswith(("B", "C", "D")), str(ws.freeze_panes))
     # known examples
     report["known_examples"] = known_examples(blank)
     # sample vs model

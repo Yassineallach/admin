@@ -25,6 +25,14 @@ RECALC = (glob.glob("/root/.claude/skills/synced/*/xlsx/scripts/recalc.py") or [
 
 # name: (sheet, print area, columns to hide for this view, target width in px)
 SHOTS = {
+    # dashboard areas follow the section rows recorded by the builder (Builder.dash_rows)
+    "dash_top": (B.S_DASH, "A1:N{space_1}", [], 2600),
+    "dash_hero": (B.S_DASH, "A1:N{hours_1}", [], 2600),
+    "dash_hours": (B.S_DASH, "A{hours}:N{space_1}", [], 2600),
+    "dash_space": (B.S_DASH, "A{space}:N{ded_1}", [], 2600),
+    "dash_ded": (B.S_DASH, "A{ded}:N{cats_1}", [], 2600),
+    "dash_cats": (B.S_DASH, "A{cats}:N{end}", [], 2600),
+    "dash_lower": (B.S_DASH, "A{space}:N{cats_1}", [], 2600),
     "start": (B.S_START, "A1:G58", [], 2000),
     "settings": (B.S_SET, "A1:I43", [], 2600),
     "rooms": (B.S_ROOMS, "A1:F31", [], 2200),
@@ -40,12 +48,31 @@ SHOTS = {
 }
 
 
+def crop_tail(path):
+    """Cut the empty page below the content: the sidebar bar runs past the print area (as on the earlier products)."""
+    im = Image.open(path).convert("RGB")
+    w, h = im.size
+    px = im.load()
+    x0 = int(w * 0.06)
+    last = h - 1
+    while last > 0 and all(min(px[x, last]) > 240 for x in range(x0, w, 7)):
+        last -= 1
+    first = 0
+    while first < last and all(min(px[x, first]) > 240 for x in range(x0, w, 7)):
+        first += 1
+    im.crop((0, max(0, first - 14), w, min(h, last + 14))).save(path)
+
+
 def shoot(name, out: Path, edit=None, area=None, as_name=None):
     sheet, area0, hide, width = SHOTS[name]
     area = area or area0
     B.SM.clear()
     b = B.Builder(sample=True)
     wb = b.build()
+    rows = dict(b.dash_rows)
+    rows.update({k + "_1": v - 1 for k, v in b.dash_rows.items()})
+    area = area.format(**rows)
+    layers = B.add_sidebars(wb)
     if edit:
         edit(wb)
     for ws in wb.worksheets:
@@ -62,6 +89,7 @@ def shoot(name, out: Path, edit=None, area=None, as_name=None):
     tmp = Path(tempfile.mkdtemp())
     p = tmp / "s.xlsx"
     wb.save(p)
+    B.BP.finish(p, layers)
     subprocess.run([sys.executable, RECALC, str(p), "300"], capture_output=True)
     subprocess.run(["soffice", "--headless", "--convert-to", "pdf", "--outdir", str(tmp), str(p)], capture_output=True)
     pdf = tmp / "s.pdf"
@@ -82,7 +110,9 @@ def shoot(name, out: Path, edit=None, area=None, as_name=None):
     subprocess.run(["pdftoppm", "-f", str(best), "-l", str(best), "-r", str(dpi), "-png", "-singlefile", str(pdf), str(stem)], capture_output=True)
     out.mkdir(parents=True, exist_ok=True)
     dest = out / f"{as_name or name}.png"
-    subprocess.run(["convert", f"{stem}.png", "-trim", "+repage", "-bordercolor", "#FAF7F2", "-border", "12", str(dest)])
+    subprocess.run(["convert", f"{stem}.png", "-trim", "+repage", str(dest)])
+    crop_tail(dest)
+    subprocess.run(["convert", str(dest), "-bordercolor", "#FAF7F2", "-border", "12", str(dest)])
     shutil.rmtree(tmp, ignore_errors=True)
     return dest
 

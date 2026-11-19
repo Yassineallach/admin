@@ -35,11 +35,16 @@ def q(sheet):
 
 class Kit:
     product = ""
+    sample = False
+    home_tab = "DASHBOARD"
+    start_tab = "START HERE"
 
     def page(self, ws, widths: dict, last_col: int, last_row: int, tab_label: str, subtitle: str, landscape=True):
         ws.sheet_view.showGridLines = False
         ws.sheet_view.zoomScale = 100
         ws.column_dimensions["A"].width = 2.5
+        widths = dict(widths)
+        widths[L(last_col)] = max(widths.get(L(last_col), 8.43), 17)    # room for BRASS LEDGER and the home link
         for col, w in widths.items():
             ws.column_dimensions[col].width = w
         for r in range(1, last_row + 1):
@@ -50,24 +55,31 @@ class Kit:
         for r in (1, 2):
             for c in range(1, last_col + 2):
                 ws.cell(row=r, column=c).fill = fill(GREEN)
-        ws.row_dimensions[1].height = 34
+        ws.row_dimensions[1].height = 36
         ws.row_dimensions[2].height = 22
         ws.row_dimensions[3].height = 10
-        ws.merge_cells(f"B1:{L(last_col - 2)}1")
+        # title bar as on the earlier products: tab name + product, BRASS LEDGER on the right,
+        # then the sample marker, what the tab is for, and a link home
+        ws.merge_cells(f"B1:{L(last_col - 1)}1")
         t = ws["B1"]
-        t.value = self.product
-        t.font = Font(name=TITLE, size=17, bold=True, color=PAPER)
+        t.value = f"{tab_label.upper()}  ·  {self.product}"
+        t.font = Font(name=TITLE, size=17 if len(t.value) <= 44 else 14, bold=True, color=PAPER)
         t.alignment = Alignment(vertical="center")
-        ws.merge_cells(f"{L(last_col - 1)}1:{L(last_col)}1")
-        b = ws[f"{L(last_col - 1)}1"]
+        b = ws[f"{L(last_col)}1"]
         b.value = "BRASS LEDGER"
         b.font = font(9, True, BRASS)
         b.alignment = Alignment(horizontal="right", vertical="center")
-        ws.merge_cells(f"B2:{L(last_col)}2")
+        ws.merge_cells(f"B2:{L(last_col - 1)}2")
         k = ws["B2"]
-        k.value = f"{tab_label.upper()}   ·   {subtitle}"
+        k.value = ("●  SAMPLE DATA   ·   " if self.sample else "") + subtitle
         k.font = font(9, True, MUTED)
         k.alignment = Alignment(vertical="center")
+        home = ws[f"{L(last_col)}2"]
+        target, lab = (self.start_tab, "Start here  →") if ws.title == self.home_tab else (self.home_tab, "←  Dashboard")
+        home.value = lab
+        home.hyperlink = Hyperlink(ref=home.coordinate, location=f"{q(target)}!A1")
+        home.font = Font(name=BODY, size=9, bold=True, color=BRASS)
+        home.alignment = Alignment(horizontal="right", vertical="center")
         ws.sheet_properties.tabColor = GREEN
         ws.page_setup.orientation = "landscape" if landscape else "portrait"
         ws.page_setup.paperSize = ws.PAPERSIZE_LETTER

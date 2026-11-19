@@ -184,7 +184,7 @@ def build():
               Spacer(1, 6), Rule(110, 34), Spacer(1, 12),
               Paragraph("Your time-space percentage, calculated and documented.", ParagraphStyle("st", fontName="Body", fontSize=14, leading=19, textColor=c(INK))),
               Spacer(1, 4), P("For family child care providers in the United States. Excel and Google Sheets.", "small"),
-              Spacer(1, 10 * mm), shot("summary1", crop=(0, 0, 1, 0.5)), Spacer(1, 8 * mm),
+              Spacer(1, 10 * mm), shot("dash_hero"), Spacer(1, 8 * mm),
               P("For record keeping and estimates only. Not tax or legal advice.", "small"), PageBreak()]
     # ------------------------------------------------------------ included + opening
     story += section("1 · What's included", "What's in your download")
@@ -195,6 +195,7 @@ def build():
               Spacer(1, 8),
               table([["Tab", "What it does"],
                      ["START HERE", "Quick start, colour key, what to give your preparer, disclaimer."],
+                     ["DASHBOARD", "Key figures, hours by month, how your home is used, where deductions come from."],
                      ["SETTINGS", "Tax year, business dates, rates (simplified method, mileage, meals) and your usual hours."],
                      ["ROOMS", "Each room's square feet and use type. Works out your space shares."],
                      ["HOURS LOG", "One row per day for the whole tax year, prefilled from your usual hours."],
@@ -313,8 +314,13 @@ def build():
                 "standard mileage rate, don't also enter gas, repairs or insurance for the car."),
               PageBreak()]
     # ------------------------------------------------------------ summary + preparer
-    story += section("7 · Results", "The summary and your tax preparer")
-    story += [P("The <b>SUMMARY</b> shows the time-space percentage step by step, then Schedule C expenses by category, home "
+    story += section("7 · Results", "The dashboard, the summary and your tax preparer")
+    story += [P("The <b>DASHBOARD</b> shows where your year stands: the time-space percentage, hours counted, days still to "
+                "confirm, home and Schedule C expenses, then charts of your hours by month, how your home is used, where your "
+                "deductions come from and your largest categories. It only reads the other tabs, so there is nothing to type there."),
+              P("<b>Getting around:</b> the dark bar on the left of every tab links to every other tab (icons in Excel, short text "
+                "links in Google Sheets). The brass link at the top right of each tab goes back to the dashboard.", "small"),
+              P("The <b>SUMMARY</b> shows the time-space percentage step by step, then Schedule C expenses by category, home "
                 "expenses for Form 8829 (direct and indirect columns), food, mileage, and a simplified method estimate next to the "
                 "regular method total. The <b>TIME-SPACE STATEMENT</b> is a one-page printout of the calculation."),
               shot("statement", crop=(0, 0, 1, 0.82), max_h=330), Spacer(1, 6),

@@ -19,15 +19,27 @@ from openpyxl.styles import Alignment, Border, Font, Protection, Side
 from openpyxl.utils import get_column_letter as L
 from openpyxl.worksheet.datavalidation import DataValidation
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "productivity-bundle" / "build"))
+import bl_polish as BP  # noqa: E402
+from openpyxl.chart import BarChart, DoughnutChart, Reference  # noqa: E402
+from openpyxl.chart.series import DataPoint  # noqa: E402
+
 from xlkit import (BORDER, BOX, BRASS, BRASS_TINT, CALC, DATE, GREEN, GREEN2, GREY, HRS, INK, INK2, Kit, MONEY, NEG,
                    NEG_TINT, PAPER, PCT2, POS, POS_TINT, SQFT, TIME, TITLE, WHITE, fill, font, q)
 
 PRODUCT = "Home Daycare Tax Workbook"
 OUT_NAME = "BrassLedger_Home_Daycare_Tax_Workbook"
+S_DASH = "DASHBOARD"
 S_START, S_SET, S_ROOMS, S_HOURS, S_EXP, S_MEALS, S_MILES, S_SUM, S_STMT, S_PREP = (
     "START HERE", "SETTINGS", "ROOMS", "HOURS LOG", "EXPENSES", "MEALS", "MILEAGE", "SUMMARY", "TIME-SPACE STATEMENT",
     "FOR YOUR TAX PREPARER")
-ORDER = [S_START, S_SET, S_ROOMS, S_HOURS, S_EXP, S_MEALS, S_MILES, S_SUM, S_STMT, S_PREP]
+ORDER = [S_START, S_DASH, S_SET, S_ROOMS, S_HOURS, S_EXP, S_MEALS, S_MILES, S_SUM, S_STMT, S_PREP]
+
+# icon sidebar: (tab, icon, short label shown in Google Sheets)
+NAV = [(S_DASH, "bar_chart", "Home"), (S_START, "question", "Start"), (S_SET, "gear", "Setup"), (S_ROOMS, "house", "Rooms"),
+       (S_HOURS, "clock", "Hours"), (S_EXP, "receipt", "Costs"), (S_MEALS, "meal", "Meals"), (S_MILES, "car", "Miles"),
+       (S_SUM, "pie", "Summary"), (S_STMT, "clipboard", "Statement"), (S_PREP, "people", "Preparer")]
+DONUT = ["1F3D36", "D29A3A", "6B7F79", "2E7D4F", "C9D3CF"]
 
 DISCLAIMER = ("For record keeping and estimates only. Not tax or legal advice. Tax rules and rates change; confirm with IRS "
               "Publication 587, the Form 8829 instructions, or a tax professional. For US providers.")
@@ -219,7 +231,12 @@ class Builder(Kit):
             ws[f"D{r}"].alignment = Alignment(wrap_text=True, vertical="top")
             ws.row_dimensions[r].height = 48
             r += 1
-        r += 1
+        self.link(ws[f"C{r}"], "Dashboard  ›", S_DASH)
+        ws.merge_cells(f"D{r}:F{r}")
+        ws[f"D{r}"].value = "Then see where your year stands: key figures and charts. Use the bar on the left to move between tabs."
+        ws[f"D{r}"].font = font(10, color=INK2)
+        ws.row_dimensions[r].height = 24
+        r += 2
         self.kicker(ws, f"B{r}", "How the hours log counts", rule_to=6)
         r += 1
         self.note(ws, f"B{r}:F{r}", "Every day starts prefilled from your usual hours in grey. A day counts toward your time "
@@ -419,7 +436,7 @@ class Builder(Kit):
     def build_rooms(self):
         ws = self.ws[S_ROOMS]
         self.page(ws, {"B": 40, "C": 15, "D": 32, "E": 44}, 5, R_LAST + 3, "Rooms",
-                  "One row per room or area. Square feet and how it is used decide your space percentage.", landscape=False)
+                  "One row per room: square feet and use type set your space %.", landscape=False)
         self.kicker(ws, "B5", "Your home", rule_to=5)
         self.label(ws["B6"], "Total square feet of the home")
         self.inp(ws["C6"], SQFT, "right")
@@ -756,7 +773,7 @@ class Builder(Kit):
         ws = self.ws[S_MILES]
         widths = dict(B=13, C=34, D=20, E=20, F=10, G=11, H=13, I=6)
         self.page(ws, widths, 8, MI_LAST + 2, "Mileage (optional)",
-                  "Business trips only. If you use the standard mileage rate, don't also enter gas, repairs or insurance for the car.",
+                  "Business trips only. With the mileage rate, don't also enter car costs.",
                   landscape=False)
         ws.column_dimensions["I"].hidden = True
         self.label(ws["F5"], "Total", color=GREEN)
@@ -876,6 +893,7 @@ class Builder(Kit):
             ws[f"D{r}"].font = font(10, False, INK2)
             self.calc(ws[f"E{r}"], MONEY, value=f'=SUMIFS({ER("amount")},{ER("cat")},$C{r},{IY},1)')
             self.calc(ws[f"F{r}"], MONEY, bold=True, value=f'=SUMIFS({ER("ded")},{ER("cat")},$C{r})')
+            SM.setdefault("cat_cells", []).append((cat, f"$F${r}"))
             r += 1
         SM["mile_row"] = r
         ws[f"C{r}"] = "Car: standard mileage (MILEAGE tab)"
@@ -920,6 +938,7 @@ class Builder(Kit):
                                                  f'+SUMIFS({ER("ded")},{ER("cat")},$C{r},{TY},{TYPE(2)})'))
             self.calc(ws[f"F{r}"], MONEY, value=f'=SUMIFS({ER("colb")},{ER("cat")},$C{r})')
             self.calc(ws[f"G{r}"], MONEY, bold=True, value=f"=E{r}+F{r}*{SM['ts']}")
+            SM.setdefault("cat_cells", []).append((cat, f"$G${r}"))
             r += 1
         h_last = r - 1
         ws[f"C{r}"] = "Total home expenses (before limits)"
@@ -1029,6 +1048,218 @@ class Builder(Kit):
             g.value = formula
         SM[key] = f"$G${r}"
         ws.row_dimensions[r].height = 20
+
+    # ============================================================ DASHBOARD
+    def build_dashboard(self):
+        ws = self.ws[S_DASH]
+        widths = {L(c): 12.5 for c in range(2, 13)}
+        widths["B"] = 15
+        self.page(ws, widths, 13, 72, "Dashboard", "Where your year stands: percentages, hours, space and deductions.")
+        SQ = lambda k: f"{SUMQ}!{SM[k]}"
+        ws.merge_cells("B4:M4")
+        self.label(ws["B4"], "=" + S("name") + '&IF(' + S("name") + '="","","  ·  ")&"Tax year "&' + S("year"), color=GREEN, size=11)
+        tiles1 = [("TIME-SPACE PERCENTAGE", f"={SQ('ts')}", PCT2), ("TIME PERCENTAGE (CHECKED DAYS)", f"={SQ('time')}", PCT2),
+                  ("BUSINESS HOURS COUNTED", f"={SQ('bizhours')}", HRS),
+                  ("DAYS STILL TO CONFIRM", f'=COUNTIF({HR("status")},"Not yet confirmed")', "#,##0")]
+        tiles2 = [("HOME EXPENSES (FORM 8829)", f"={SQ('home_total')}", MONEY), ("SIMPLIFIED METHOD ESTIMATE", f"={SQ('simp')}", MONEY),
+                  ("SCHEDULE C EXPENSES", f"={SQ('sc_total')}", MONEY), ("FOOD DEDUCTION (NET)", f"={SQ('food_net')}", MONEY)]
+        for r, tiles in ((5, tiles1), (8, tiles2)):
+            for i, (lab, f, fmt) in enumerate(tiles):
+                self.tile(ws, r, 2 + 3 * i, 4 + 3 * i, lab, f, fmt)
+        ws.row_dimensions[7].height = 6
+        ws.merge_cells("B11:M11")
+        c = ws["B11"]
+        c.value = (f'=IF(COUNTIF({HR("status")},"Not yet confirmed")=0,"All days in the hours log are checked.",'
+                   f'COUNTIF({HR("status")},"Not yet confirmed")&" days in the HOURS LOG are not confirmed yet. If they match your '
+                   f'usual hours, the full-year time percentage would be "&FIXED(100*{SQ("proj")},2)&"%.")')
+        c.font, c.fill = font(9, True, GREEN), fill(BRASS_TINT)
+        c.alignment = Alignment(vertical="center", indent=1, wrap_text=True)
+        for col in range(2, 14):
+            ws.cell(row=11, column=col).fill = fill(BRASS_TINT)
+        ws.row_dimensions[11].height = 24
+
+        def table_head(r, heads):
+            for col, t in heads:
+                self.header(ws[f"{col}{r}"], t, align="left" if col == "B" else "center")
+            ws.row_dimensions[r].height = 24
+
+        def total_row(r, cols):
+            for col in cols:
+                x = ws[f"{col}{r}"]
+                x.fill, x.font = fill(GREEN), font(10, True, PAPER if col == "B" else BRASS)
+
+        # ---- hours by month
+        r = 13
+        rows = {"hours": r}
+        self.kicker(ws, f"B{r}", "Business hours by month", rule_to=13)
+        hr = r + 1
+        table_head(hr, [("B", "Month"), ("C", "Hours counted"), ("D", "Projected hours"), ("E", "Days to confirm")])
+        HZ = f"{q(S_HOURS)}!"
+        for m in range(1, 13):
+            rr = hr + m
+            ws[f"B{rr}"] = MONTHS[m - 1][:3]
+            ws[f"B{rr}"].font = font(10, True, INK)
+            self.calc(ws[f"C{rr}"], HRS, bold=True, value=f"={HZ}$Z${8 + m}")
+            self.calc(ws[f"D{rr}"], HRS, value=f"={HZ}$AB${8 + m}")
+            self.calc(ws[f"E{rr}"], "#,##0", align="center", value=f"={HZ}$AA${8 + m}")
+        yr = hr + 13
+        ws[f"B{yr}"] = "Year"
+        for col in "CDE":
+            ws[f"{col}{yr}"] = f"=SUM({col}{hr + 1}:{col}{hr + 12})"
+            ws[f"{col}{yr}"].number_format = HRS if col != "E" else "#,##0"
+            ws[f"{col}{yr}"].alignment = Alignment(horizontal="center" if col == "E" else None)
+        total_row(yr, "BCDE")
+        ch = BarChart()
+        ch.type, ch.style = "col", 10
+        ch.add_data(Reference(ws, min_col=3, max_col=4, min_row=hr, max_row=hr + 12), titles_from_data=True)
+        ch.set_categories(Reference(ws, min_col=2, min_row=hr + 1, max_row=hr + 12))
+        for s_, colr in zip(ch.series, (GREEN, "E3C68F")):
+            s_.graphicalProperties.solidFill = colr
+            s_.graphicalProperties.line.solidFill = colr
+        BP.clean_chart(ch, legend=True)
+        ch.gapWidth, ch.overlap = 50, -10
+        ch.height, ch.width = 7.6, 17.2
+        ch.anchor = f"G{hr}"
+        ws.add_chart(ch)
+
+        # ---- space
+        r = yr + 2
+        rows["space"] = r
+        self.kicker(ws, f"B{r}", "How your home is used", rule_to=13)
+        hr = r + 1
+        table_head(hr, [("B", "Use"), ("C", "Square feet"), ("D", "Share of home")])
+        ws.merge_cells(f"E{hr}:F{hr}")
+        RQ = lambda k: f"{q(S_ROOMS)}!{RM[k]}"
+        uses = [("Exclusive", "excl"), ("Regular", "reg"), ("Not used", "none")]
+        for i, (lab, k) in enumerate(uses):
+            rr = hr + 1 + i
+            ws[f"B{rr}"] = lab
+            ws[f"B{rr}"].font = font(10, True, INK)
+            self.calc(ws[f"C{rr}"], SQFT, value=f"={RQ(k)}")
+            self.calc(ws[f"D{rr}"], PCT2, value=f"=IF(N({RQ('home')})=0,0,C{rr}/{RQ('home')})")
+        sp_first, sp_last = hr + 1, hr + 3
+        BP.databar(ws, f"D{sp_first}:D{sp_last}", BRASS, max_value=1)
+        tr = hr + 4
+        ws[f"B{tr}"] = "Home"
+        ws[f"C{tr}"] = f"={RQ('home')}"
+        ws[f"D{tr}"] = f"=SUM(D{sp_first}:D{sp_last})"
+        ws[f"C{tr}"].number_format, ws[f"D{tr}"].number_format = SQFT, PCT2
+        total_row(tr, "BCD")
+        nr = tr + 1
+        ws.merge_cells(f"B{nr}:F{nr + 1}")
+        ws[f"B{nr}"] = (f'="Exclusive space counts in full. Regular space counts for the share of the day it is used: "'
+                        f'&FIXED(100*{SQ("reg_pct")},2)&"% × "&FIXED(100*{SQ("time")},2)&"% time = "&FIXED(100*{SQ("reg_time")},2)'
+                        f'&"%. Time-space percentage: "&FIXED(100*{SQ("ts")},2)&"%."')
+        ws[f"B{nr}"].font = font(9, False, INK2)
+        ws[f"B{nr}"].alignment = Alignment(wrap_text=True, vertical="top")
+        ch = DoughnutChart(holeSize=55)
+        ch.add_data(Reference(ws, min_col=3, min_row=sp_first, max_row=sp_last), titles_from_data=False)
+        ch.set_categories(Reference(ws, min_col=2, min_row=sp_first, max_row=sp_last))
+        for i, colr in enumerate((GREEN, BRASS, "C9D3CF")):
+            pt = DataPoint(idx=i)
+            pt.graphicalProperties.solidFill = colr
+            pt.graphicalProperties.line.solidFill = "FFFFFF"
+            ch.series[0].dPt.append(pt)
+        BP.clean_chart(ch, legend=True, axes=False, legend_pos="r")
+        ch.height, ch.width = 4.4, 12.5
+        ch.anchor = f"G{hr}"
+        ws.add_chart(ch)
+
+        # ---- deductions
+        ws.row_dimensions[nr].height = ws.row_dimensions[nr + 1].height = 18
+        r = nr + 3
+        rows["ded"] = r
+        self.kicker(ws, f"B{r}", "Where your deductions come from", rule_to=13)
+        hr = r + 1
+        table_head(hr, [("B", "Part"), ("C", ""), ("D", "Amount"), ("E", "Share")])
+        ws.merge_cells(f"B{hr}:C{hr}")
+        parts = [("Home expenses (8829)", f"={SQ('home_total')}"),
+                 ("Supplies and other (Sch. C)", f"={SQ('sc_total')}-{SQ('mile_ded')}-{SQ('food_net')}"),
+                 ("Car: standard mileage", f"={SQ('mile_ded')}"),
+                 ("Food for children (net)", f"={SQ('food_net')}")]
+        d_first = hr + 1
+        d_last = hr + len(parts)
+        for i, (lab, f) in enumerate(parts):
+            rr = d_first + i
+            ws.merge_cells(f"B{rr}:C{rr}")
+            ws[f"B{rr}"] = lab
+            ws[f"B{rr}"].font = font(10, True, INK)
+            self.calc(ws[f"D{rr}"], MONEY, value=f)
+            self.calc(ws[f"E{rr}"], PCT2, value=f"=IF(SUM($D${d_first}:$D${d_last})=0,0,D{rr}/SUM($D${d_first}:$D${d_last}))")
+        BP.databar(ws, f"E{d_first}:E{d_last}", GREEN, max_value=1)
+        tr = d_last + 1
+        ws.merge_cells(f"B{tr}:C{tr}")
+        ws[f"B{tr}"] = "Total (before limits)"
+        ws[f"D{tr}"] = f"=SUM(D{d_first}:D{d_last})"
+        ws[f"E{tr}"] = f"=SUM(E{d_first}:E{d_last})"
+        ws[f"D{tr}"].number_format, ws[f"E{tr}"].number_format = MONEY, PCT2
+        total_row(tr, "BCDE")
+        nr = tr + 1
+        ws.merge_cells(f"B{nr}:F{nr + 1}")
+        ws[f"B{nr}"] = ("Home expenses are before depreciation and the business-income limit. Your tax preparer applies "
+                        "both and chooses between the regular and simplified methods.")
+        ws[f"B{nr}"].font = font(9, False, INK2)
+        ws[f"B{nr}"].alignment = Alignment(wrap_text=True, vertical="top")
+        ch = DoughnutChart(holeSize=55)
+        ch.add_data(Reference(ws, min_col=4, min_row=d_first, max_row=d_last), titles_from_data=False)
+        ch.set_categories(Reference(ws, min_col=2, min_row=d_first, max_row=d_last))
+        for i, colr in enumerate(DONUT[:4]):
+            pt = DataPoint(idx=i)
+            pt.graphicalProperties.solidFill = colr
+            pt.graphicalProperties.line.solidFill = "FFFFFF"
+            ch.series[0].dPt.append(pt)
+        BP.clean_chart(ch, legend=True, axes=False, legend_pos="r")
+        ch.height, ch.width = 4.4, 12.5
+        ch.anchor = f"G{hr}"
+        ws.add_chart(ch)
+
+        # ---- largest categories (helper list in hidden columns O:Q, sorted with LARGE + a row tie-break)
+        r = nr + 3
+        rows["cats"] = r
+        self.kicker(ws, f"B{r}", "Largest deductible categories", rule_to=13)
+        hr = r + 1
+        table_head(hr, [("B", "Category"), ("C", ""), ("D", ""), ("E", "Deductible")])
+        ws.merge_cells(f"B{hr}:D{hr}")
+        cats = SM["cat_cells"]
+        h1 = hr + 1
+        h2 = h1 + len(cats) - 1
+        for i, (cat, cell_) in enumerate(cats):
+            rr = h1 + i
+            ws[f"O{rr}"] = cat
+            ws[f"P{rr}"] = f"=N({SUMQ}!{cell_})"
+            ws[f"Q{rr}"] = f"=ROUND(P{rr},2)+({len(cats)}-{i})/1000000"
+        for col in "OPQ":
+            ws.column_dimensions[col].hidden = True
+        TOP = 8
+        t1 = hr + 1
+        for k in range(TOP):
+            rr = t1 + k
+            m = f"MATCH(LARGE($Q${h1}:$Q${h2},{k + 1}),$Q${h1}:$Q${h2},0)"
+            ws.merge_cells(f"B{rr}:D{rr}")
+            ws[f"B{rr}"] = f'=IF(INDEX($P${h1}:$P${h2},{m})<=0,"",INDEX($O${h1}:$O${h2},{m}))'
+            ws[f"B{rr}"].font = font(10, False, INK)
+            self.calc(ws[f"E{rr}"], MONEY, bold=True, value=f"=MAX(0,INDEX($P${h1}:$P${h2},{m}))")
+        BP.databar(ws, f"E{t1}:E{t1 + TOP - 1}", BRASS)
+        ch = BarChart()
+        ch.type, ch.style = "bar", 10
+        ch.add_data(Reference(ws, min_col=5, min_row=t1, max_row=t1 + TOP - 1), titles_from_data=False)
+        ch.set_categories(Reference(ws, min_col=2, min_row=t1, max_row=t1 + TOP - 1))
+        s_ = ch.series[0]
+        s_.graphicalProperties.solidFill = BRASS
+        s_.graphicalProperties.line.solidFill = BRASS
+        BP.clean_chart(ch, legend=False)
+        ch.x_axis.scaling.orientation = "maxMin"
+        ch.x_axis.tickLblSkip = 1
+        ch.gapWidth = 40
+        ch.height, ch.width = 8.4, 17.2
+        ch.anchor = f"G{hr}"
+        ws.add_chart(ch)
+        r = t1 + TOP + 7
+        self.note(ws, f"B{r}:M{r}", DISCLAIMER, height=34, size=9, color=INK, bold=True)
+        ws.print_area = f"A1:M{r}"
+        rows["end"] = r
+        self.dash_rows = rows
+        self.protect(ws)
 
     # ============================================================ TIME-SPACE STATEMENT
     def build_statement(self):
@@ -1197,6 +1428,7 @@ class Builder(Kit):
         self.build_mileage()
         self.build_statement()
         self.build_preparer()
+        self.build_dashboard()
         # hours tiles that point at SUMMARY
         hs = self.ws[S_HOURS]
         hs["I5"].value = f"={SUMQ}!{SM['time']}"
@@ -1211,6 +1443,12 @@ class Builder(Kit):
         return self.wb
 
 
+def add_sidebars(wb):
+    """Icon sidebar on every tab (Excel shapes, with text links underneath for Google Sheets)."""
+    return BP.add_sidebars(wb, NAV, {S_START: 70, S_DASH: 72, S_SET: 90, S_ROOMS: 60, S_HOURS: 120, S_EXP: 120,
+                                     S_MEALS: 120, S_MILES: 120, S_SUM: 120, S_STMT: 60, S_PREP: 70})
+
+
 def main(out_dir: Path):
     out_dir.mkdir(parents=True, exist_ok=True)
     paths = []
@@ -1218,7 +1456,9 @@ def main(out_dir: Path):
         SM.clear()
         wb = Builder(sample).build()
         p = out_dir / (OUT_NAME + ("_SAMPLE" if sample else "") + ".xlsx")
+        layers = add_sidebars(wb)
         wb.save(p)
+        BP.finish(p, layers)
         paths.append(p)
         print("wrote", p)
     return paths

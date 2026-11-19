@@ -40,11 +40,13 @@ WHAT IT DOES
 ✔ Optional mileage log, with two standard mileage rates by date
 ✔ Simplified method estimate shown next to the regular method total
 ✔ A page for your tax preparer: home purchase details, improvements, carryovers, income and a document checklist
+✔ A dashboard with your key figures and four charts: hours by month, how your home is used, where your deductions come from, largest categories
+✔ Icon sidebar on every tab to move around the workbook (text links in Google Sheets)
 
 ━━━━━━━━━━━━━━━━━━━━
 WHAT'S INCLUDED
 ━━━━━━━━━━━━━━━━━━━━
-• Blank workbook (.xlsx) with 10 tabs: Start Here, Settings, Rooms, Hours Log, Expenses, Meals, Mileage, Summary, Time-Space Statement, For Your Tax Preparer
+• Blank workbook (.xlsx) with 11 tabs: Start Here, Dashboard, Settings, Rooms, Hours Log, Expenses, Meals, Mileage, Summary, Time-Space Statement, For Your Tax Preparer
 • Sample workbook (.xlsx): a full 2026 year for a fictional provider, so you can see every tab working
 • Quick-start guide (PDF, 9 pages): set-up, what counts as business hours, expense types with examples, meals and mileage, FAQ and the IRS sources to check
 
@@ -118,7 +120,7 @@ Files are in `listing-images/`, 2700 × 2025 px PNG. Every screenshot is a real 
 | # | File | Alt text |
 |---|---|---|
 | 1 | 01_hero.png | Home daycare tax workbook summary on a laptop showing the step-by-step time-space percentage |
-| 2 | 02_whats_included.png | The ten tabs of the workbook and the files in the download |
+| 2 | 02_whats_included.png | The eleven tabs of the workbook and the files in the download |
 | 3 | 03_hours_log.png | Daily hours log prefilled from usual hours, with the other business hours columns highlighted: counts prep and cleaning time too |
 | 4 | 04_rooms_and_summary.png | Rooms tab with square feet by use type, and the summary's step-by-step time and space calculation |
 | 5 | 05_how_it_works.png | Four steps: settings, rooms, hours each week, expenses |
@@ -153,7 +155,7 @@ Files are in `listing-images/`, 2700 × 2025 px PNG. Every screenshot is a real 
 - Comparable listings found in a search on 18 Nov 2026: home daycare tax and expense trackers on Etsy and elsewhere at about
   $15–20 (for example $14.99, $17.99, $18.99 and $19.99). Most multiply space by time for the whole home and do not handle
   exclusive-use rooms, part-year businesses, meal rate limits or CACFP reimbursements.
-- This workbook does more (10 tabs, a printable statement, IRS-checked rules, meals and mileage), which supports the upper half
+- This workbook does more (11 tabs, a dashboard with charts, a printable statement, IRS-checked rules, meals and mileage), which supports the upper half
   of your $19–29 range once it has reviews. Starting at $19.99 keeps it close to the market while the shop has no reviews.
 - Demand is seasonal: providers buy in December to March for tax season, and again in January to start the year's records.
 - Etsy fees at $19.99 (US): 6.5 % transaction ($1.30) + payment processing about 3 % + $0.25 ($0.85) + $0.20 listing ≈ **$2.35**,
@@ -236,6 +238,8 @@ The Python model reads the same inputs as the workbook (sample_data.py) and reco
   category (direct column, indirect column, deductible); totals.
 - Every meal row's value; meal counts by type; standard-rate total vs food receipts; CACFP netting; mileage with two rates by date;
   the simplified method estimate (including rounding the reduced rate to cents, half up); the Time-Space Statement figures.
+- DASHBOARD tiles, month table, space shares, deduction split and the top-8 category list (ties in category order).
+- Design: tab order, 4 dashboard charts, sidebar icons and text links on every tab, title bar with a home link, frozen sidebar.
 
 Sample results (tax year 2026): {s['bizhours']:,.2f} business hours of {s['avail']:,} → time **{s['time'] * 100:.2f} %**; exclusive
 {s['excl_pct'] * 100:.2f} % + regular {s['reg_pct'] * 100:.2f} % × time → time-space **{s['ts'] * 100:.2f} %**. Home expenses (Form 8829,

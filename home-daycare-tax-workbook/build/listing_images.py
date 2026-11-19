@@ -21,8 +21,8 @@ ROOT = Path(__file__).resolve().parent.parent
 SCREENS = ROOT / "dist" / "screens"
 OUT = ROOT / "dist" / "home-daycare-tax-workbook" / "listing-images"
 POS = BR.rgb(BR.POSITIVE)
-# HOURS LOG column widths A..O (from build_workbook.py), used to place the callout on the real screenshot
-H_WIDTHS = [w + 0.71 for w in (13, 7, 11, 11, 11, 11, 24, 44, 9, 11, 11, 11, 11, 17)]   # columns B..O (+5 px padding each)
+# HOURS LOG column widths A..O (A = the sidebar column) (from build_workbook.py), used to place the callout on the real screenshot
+H_WIDTHS = [w + 0.71 for w in (7.65, 13, 7, 11, 11, 11, 11, 24, 44, 9, 11, 11, 11, 11, 17)]   # columns A..O (+5 px padding each)
 
 
 def shot(name, crop=None):
@@ -67,18 +67,18 @@ def hero():
                      "Prints a statement for your tax preparer"], M, y + 60, 1040, size=46, gap=30, color=GREEN)
     x = pill(img, (M, y + 34), "Excel + Google Sheets", 42)
     pill(img, (x + 24, y + 34), "For US providers", 42, fill=BR.rgb("F6EBD3"), color=GREEN)
-    laptop(img, shot("summary1", (0, 0, 1, 0.56)), (1250, 360, 2620, 1520))
+    frame(img, shot("dash_top"), (1180, 330, W - M, 1700), "tl")
     logo(img)
     save(img, "01_hero.png")
 
 
 def included():
     img = canvas()
-    y = head(img, "What's included", "Ten tabs and a quick-start guide.") + 70
+    y = head(img, "What's included", "Eleven tabs and a quick-start guide.") + 70
     cols = [("Set up and log", ["START HERE: 4-step quick start", "SETTINGS: tax year, dates, rates, usual hours",
                                 "ROOMS: square feet and use type", "HOURS LOG: every day of the year, prefilled",
                                 "EXPENSES: 500 rows, share applied for you"]),
-            ("Optional and results", ["MEALS: standard meal and snack rates", "MILEAGE: two rates by date",
+            ("Results and optional", ["DASHBOARD: key figures and four charts", "MEALS: standard meal and snack rates", "MILEAGE: two rates by date",
                                       "SUMMARY: step-by-step percentage and totals", "TIME-SPACE STATEMENT: one printable page",
                                       "FOR YOUR TAX PREPARER: home details and checklist"]),
             ("Also in your download", ["Blank workbook for your records", "Sample workbook: a full year for a fictional provider",
@@ -117,11 +117,11 @@ def hours():
         return box[0] + 14 + (left + (right - left) * sum(H_WIDTHS[:i]) / total) * s
     top = box[1] + 14 + hy * s
     d = ImageDraw.Draw(img)
-    for col in (5, 11):                                      # G: other business hours (typed), M: other hours (used)
+    for col in (6, 12):                                      # G: other business hours (typed), M: other hours (used)
         x0, x1 = xcol(col), xcol(col + 1)
         d.rounded_rectangle((x0 - 6, top - 6, x1 + 6, box[3] - 8), 14, outline=BRASS, width=9)
     cy = box[3] + 60
-    cx = (xcol(5) + xcol(6)) / 2
+    cx = (xcol(6) + xcol(7)) / 2
     d.polygon([(cx - 28, cy), (cx + 28, cy), (cx, box[3] - 2)], fill=BRASS)
     tw = 1400
     bx0 = max(M, cx - 200)
@@ -138,7 +138,7 @@ def hours():
 def rooms_summary():
     img = canvas()
     y = head(img, "Rooms and summary", "The calculation, step by step.") + 60
-    a = shot("rooms", (0, 0.2, 0.62, 0.5))
+    a = shot("rooms", (0, 0.17, 0.66, 0.485))
     b = shot("summary1", (0, 0.07, 1, 0.524))
     boxa = frame(img, a, (M, y, 1040, H - M - 230), "tl")
     frame(img, b, (1100, y, W - M, H - M - 230), "tl")
