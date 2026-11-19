@@ -323,7 +323,7 @@ def build():
               P("The <b>SUMMARY</b> shows the time-space percentage step by step, then Schedule C expenses by category, home "
                 "expenses for Form 8829 (direct and indirect columns), food, mileage, and a simplified method estimate next to the "
                 "regular method total. The <b>TIME-SPACE STATEMENT</b> is a one-page printout of the calculation."),
-              shot("statement", crop=(0, 0, 1, 0.82), max_h=330), Spacer(1, 6),
+              shot("statement", crop=(0, 0, 1, 0.66), max_h=250), Spacer(1, 6),
               P("Give your preparer", "h2"),
               bullets(["The printed SUMMARY and TIME-SPACE STATEMENT, and this file.",
                        "The FOR YOUR TAX PREPARER tab: purchase date and price, land value, improvements, last year's carryovers.",

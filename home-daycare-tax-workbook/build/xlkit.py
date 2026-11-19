@@ -103,6 +103,15 @@ class Kit:
                 ws.cell(row=r, column=col).border = Border(bottom=Side(style="medium", color=BRASS))
         ws.row_dimensions[c.row].height = 20
 
+    @staticmethod
+    def _align(fmt, align):
+        """Text cells get a small left indent so they never touch a right-aligned number in the next column."""
+        if align:
+            return Alignment(horizontal=align, vertical="center")
+        if fmt is None:
+            return Alignment(horizontal="left", vertical="center", indent=1)
+        return Alignment(vertical="center")
+
     def inp(self, c, fmt=None, align=None, value=None):
         c.fill = fill(WHITE)
         c.border = BOX
@@ -110,7 +119,7 @@ class Kit:
         c.protection = Protection(locked=False)
         if fmt:
             c.number_format = fmt
-        c.alignment = Alignment(horizontal=align, vertical="center") if align else Alignment(vertical="center")
+        c.alignment = self._align(fmt, align)
         if value is not None:
             c.value = value
 
@@ -121,7 +130,7 @@ class Kit:
         c.protection = Protection(locked=True)
         if fmt:
             c.number_format = fmt
-        c.alignment = Alignment(horizontal=align, vertical="center") if align else Alignment(vertical="center")
+        c.alignment = self._align(fmt, align)
         if value is not None:
             c.value = value
 

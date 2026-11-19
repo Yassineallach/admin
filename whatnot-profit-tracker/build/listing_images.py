@@ -129,7 +129,7 @@ def show_log():
     s = (box[2] - box[0] - 28) / sh.width
     x0, x1 = box[0] + 14 + min(xs) * s, box[0] + 14 + max(xs) * s
     d = ImageDraw.Draw(img)
-    d.rounded_rectangle((x0 - 10, box[1] + 6, x1 + 10, box[3] - 6), 16, outline=BRASS, width=10)
+    d.rounded_rectangle((x0 - 4, box[1] + 6, x1 + 9, box[3] - 6), 14, outline=BRASS, width=7)
     # callout below
     cy = box[3] + 60
     cx = (x0 + x1) / 2

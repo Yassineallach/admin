@@ -121,8 +121,23 @@ def sidebar_layer(ws, nav, current, last_row):
     return lay
 
 
+def fix_indents(wb):
+    """An indent only shows when the cell has an explicit horizontal alignment (LibreOffice and Google Sheets ignore it
+    otherwise), so text that touched the next column still touched it. Make indented text cells left-aligned."""
+    from copy import copy
+    for ws in wb.worksheets:
+        for row in ws.iter_rows():
+            for c in row:
+                a = c.alignment
+                if a is not None and a.indent and a.horizontal in (None, "general") and isinstance(c.value, str):
+                    n = copy(a)
+                    n.horizontal = "left"
+                    c.alignment = n
+
+
 def add_sidebars(wb, nav, last_rows: dict, default_last=80):
     """Sidebar on every tab. Freezes column A so the bar stays visible when scrolling sideways. Returns {tab: Layer}."""
+    fix_indents(wb)
     layers = {}
     for ws in wb.worksheets:
         last = min(max(last_rows.get(ws.title, default_last), 60), 140)

@@ -218,6 +218,10 @@ class Builder:
             c.number_format = fmt
         if align:
             c.alignment = Alignment(horizontal=align, vertical="center")
+        elif fmt is None:                    # text: small indent so it never touches a number in the next column
+            c.alignment = Alignment(horizontal="left", vertical="center", indent=1)
+        else:
+            c.alignment = Alignment(vertical="center")
 
     def calc(self, c, fmt=None, bold=False, align=None, color=INK):
         c.fill = fill(CALC)
@@ -228,6 +232,10 @@ class Builder:
             c.number_format = fmt
         if align:
             c.alignment = Alignment(horizontal=align, vertical="center")
+        elif fmt is None:                    # text: small indent so it never touches a number in the next column
+            c.alignment = Alignment(horizontal="left", vertical="center", indent=1)
+        else:
+            c.alignment = Alignment(vertical="center")
 
     def header(self, c, text, fill_color=GREEN, color=PAPER, align="center"):
         c.value = text
@@ -398,6 +406,7 @@ class Builder:
         for r, label, val, fmt, hint in rows:
             ws[f"B{r}"].value = label
             ws[f"B{r}"].font = font(10, True, INK)
+            ws[f"B{r}"].alignment = Alignment(vertical="center")
             c = ws[f"C{r}"]
             c.value = val
             self.inp(c, fmt, "right" if fmt else "center")
@@ -407,6 +416,7 @@ class Builder:
                 self.inp(ws["D10"])
             ws[f"E{r}"].value = hint
             ws[f"E{r}"].font = font(9, color=INK2)
+            ws[f"E{r}"].alignment = Alignment(vertical="center")
             ws.row_dimensions[r].height = 20
         self.note(ws, "B11:E11", "Defaults are based on published rates as of 2025. Check Whatnot's current seller fees and update these cells.",
                   height=26, size=10, color=INK, bold=True)
@@ -419,6 +429,7 @@ class Builder:
                                     (17, "Monthly profit goal", 1500, "Used for the goal tile on DASHBOARD.")]:
             ws[f"B{r}"].value = label
             ws[f"B{r}"].font = font(10, True, INK)
+            ws[f"B{r}"].alignment = Alignment(vertical="center")
             self.inp(ws[f"C{r}"], MONEY, "right")
             ws[f"C{r}"].value = val
             ws[f"E{r}"].value = hint
@@ -474,7 +485,7 @@ class Builder:
     # ------------------------------------------------------------ SHOW LOG
     def build_log(self):
         ws = self.ws[S_LOG]
-        widths = dict(B=13, C=28, D=15, E=12, F=12, G=11, H=11, I=12, J=9, K=12, L=12, M=10, N=13, O=11, P=11, Q=9, R=28,
+        widths = dict(B=13, C=28, D=17, E=12, F=12, G=11, H=11, I=12, J=9, K=12, L=12, M=10, N=13, O=11, P=11, Q=9, R=28,
                       S=9, T=8, U=11, V=12, W=12, X=12, Y=13, Z=9, AA=11, AB=11, AC=11)
         last_col = 29                                      # AC
         self.page(ws, widths, last_col, LOG_LAST + 2, "Show log",
@@ -508,7 +519,7 @@ class Builder:
         ws.row_dimensions[5].height = 44
         fmts = dict(date=DATE, start=TIME, end=TIME, gross=MONEY, orders="0", ship=MONEY, cogs=MONEY, gives="0", gover=MONEY,
                     supplies=MONEY, other=MONEY, viewers="#,##0")
-        aligns = dict(cat="left", slot="left", fmt="left", title="left", notes="left")
+        aligns = {}                            # text columns get the default left + indent from inp()
         S = lambda k: sref(k)
         for r in range(LOG_FIRST, LOG_LAST + 1):
             for k in INPUT_COLS:
@@ -585,7 +596,7 @@ class Builder:
     # ------------------------------------------------------------ ITEM SALES
     def build_items(self):
         ws = self.ws[S_ITEM]
-        widths = dict(B=13, C=26, D=26, E=15, F=11, G=11, H=16, I=9, J=3, K=10, L=6, M=6, N=3, O=13, P=26, Q=8, R=12, S=12, T=10, U=11)
+        widths = dict(B=13, C=26, D=26, E=15, F=11, G=11, H=18, I=9, J=3, K=10, L=6, M=6, N=3, O=13, P=26, Q=8, R=12, S=12, T=10, U=11)
         self.page(ws, widths, 21, ITEM_LAST + 2, "Item sales (optional)",
                   "Detailed mode: one row per item. The summary on the right totals each show; copy its sales and cost into SHOW LOG.")
         for col in ("K", "L", "M"):
@@ -676,12 +687,13 @@ class Builder:
         self.kicker(ws, "B5", "Choose the month", rule_to=13)
         ws["B6"].value = "Month"
         ws["B6"].font = font(10, True, INK)
+        ws["B6"].alignment = Alignment(vertical="center")
         ws.merge_cells("C6:D6")
         self.inp(ws["C6"], align="center")
         self.inp(ws["D6"])
         ws["E6"].value = "Year"
         ws["E6"].font = font(10, True, INK)
-        ws["E6"].alignment = Alignment(horizontal="right", indent=1)
+        ws["E6"].alignment = Alignment(horizontal="right", vertical="center", indent=1)
         self.inp(ws["F6"], "0", "center")
         if self.sample:
             ws["C6"].value, ws["F6"].value = "October", 2026
@@ -766,7 +778,7 @@ class Builder:
             ws[f"C{rr}"] = f"={f}"
             self.calc(ws[f"C{rr}"], MONEY, bold=(lab == "Net profit kept"))
             ws[f"D{rr}"] = f'=IF(SUMIFS({LR("gross")},{LR("key")},{key})=0,"",C{rr}/SUMIFS({LR("gross")},{LR("key")},{key}))'
-            self.calc(ws[f"D{rr}"], "0%", align="left")
+            self.calc(ws[f"D{rr}"], "0%", align="right")
             self.calc(ws[f"E{rr}"])
             ws.merge_cells(f"D{rr}:E{rr}")
         last = first + len(parts) - 1
@@ -782,7 +794,7 @@ class Builder:
         ws[f"D{tr}"] = (f'=IF(C{tr}=0,"No shows in "&$C$6&" yet.",IF(SUMIFS({LR("profit")},{LR("key")},{key})<0,'
                         f'"This month lost money: costs were more than sales.","Net profit kept: "&FIXED(100*C{last}/C{tr},0)&"% of sales."))')
         ws[f"D{tr}"].font = font(10, True, GREEN)
-        ws[f"D{tr}"].alignment = Alignment(indent=1, vertical="center")
+        ws[f"D{tr}"].alignment = Alignment(horizontal="left", indent=1, vertical="center")
         ch = DoughnutChart(holeSize=55)
         ch.add_data(Reference(ws, min_col=3, min_row=first, max_row=last), titles_from_data=False)
         ch.set_categories(Reference(ws, min_col=2, min_row=first, max_row=last))
@@ -868,7 +880,7 @@ class Builder:
         first = hr + 1
         for m in range(1, 13):
             rr = first + m - 1
-            ws[f"B{rr}"] = f"={q(S_SET)}!$C${35 + m}"
+            ws[f"B{rr}"] = f"=LEFT({q(S_SET)}!$C${35 + m},3)"
             ws[f"B{rr}"].font = font(10, True, INK)
             ws[f"B{rr}"].fill, ws[f"B{rr}"].border = fill(WHITE), BOX
             ws[f"C{rr}"] = f"=COUNTIFS({AE},{yr},{AF},{m})"
@@ -880,7 +892,7 @@ class Builder:
         last = first + 11
         ir = last + 1
         ws.merge_cells(f"B{ir}:F{ir}")
-        rp, rn, rc = f"$F${first}:$F${last}", f"$B${first}:$B${last}", f"$C${first}:$C${last}"
+        rp, rn, rc = f"$F${first}:$F${last}", f"{q(S_SET)}!$C$36:$C$47", f"$C${first}:$C${last}"
         ws[f"B{ir}"] = (f'=IF(SUM({rc})=0,"Log a few shows to see your monthly trend.",'
                         f'"Your best month this year is "&INDEX({rn},MATCH(MAX({rp}),{rp},0))&" ("&{money_text(f"MAX({rp})")}&" net profit).")')
         ws[f"B{ir}"].font = font(10, True, GREEN)

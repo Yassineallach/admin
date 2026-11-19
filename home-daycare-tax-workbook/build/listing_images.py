@@ -104,24 +104,42 @@ def hours():
     y = head(img, "The hours log", "Every day of the year, prefilled from your usual hours.") + 60
     sh = shot("hours_left", (0, 0, 1, 0.58))
     box = frame(img, sh, (M, y, W - M, y + 1000), "tl")
-    total = sum(H_WIDTHS)
     s = (box[2] - box[0] - 28) / sh.width
-    # find the table's left and right edges from the green header row of the real screenshot
+    # measure the real column borders: the header is the last full-width green band, the grid lines run below it
     px = sh.load()
     green = lambda p: p[0] < 70 and 50 < p[1] < 100 and p[2] < 90
-    hy = next(y for y in range(int(sh.height * 0.2), sh.height) if sum(green(px[x, y]) for x in range(0, sh.width, 7)) > sh.width / 7 * 0.8)
-    gx = [x for x in range(sh.width) if green(px[x, hy + 4])]
-    left, right = min(gx), max(gx)
+    x_from = int(sh.width * 0.08)                            # skip the sidebar
+    is_band = lambda y: sum(green(px[x, y]) for x in range(x_from, sh.width, 7)) > (sh.width - x_from) / 7 * 0.6
+    runs, y0 = [], None
+    for yy in range(int(sh.height * 0.1), sh.height):
+        if is_band(yy) and y0 is None:
+            y0 = yy
+        elif not is_band(yy) and y0 is not None:
+            runs.append((y0, yy))
+            y0 = None
+    hy, hy1 = runs[-1]                                       # header row: the last green band (title bar and tiles are above it)
+    body = range(hy1 + 10, sh.height - 5)                    # vertical cell borders run through every body row
+    line = lambda p: 200 <= p[0] <= 236 and abs(p[0] - p[2]) < 20
+    seps = [x for x in range(x_from, sh.width) if sum(line(px[x, y]) for y in body) > len(body) * 0.8]
+    cols = []
+    for x in seps:                                           # cluster 1-2 px borders
+        if not cols or x - cols[-1][-1] > 3:
+            cols.append([x])
+        else:
+            cols[-1].append(x)
+    seps = [sum(c) / len(c) for c in cols]
+    edge = lambda x: box[0] + 14 + x * s
 
-    def xcol(i):
-        return box[0] + 14 + (left + (right - left) * sum(H_WIDTHS[:i]) / total) * s
+    def span(i):                                             # i = 0 for column B; seps[0] is the B|C border
+        return edge(seps[i - 1]), edge(seps[i])
     top = box[1] + 14 + hy * s
     d = ImageDraw.Draw(img)
-    for col in (6, 12):                                      # G: other business hours (typed), M: other hours (used)
-        x0, x1 = xcol(col), xcol(col + 1)
-        d.rounded_rectangle((x0 - 6, top - 6, x1 + 6, box[3] - 8), 14, outline=BRASS, width=9)
+    for i in (5, 11):                                        # G: other business hours (typed), M: other hours (used)
+        x0, x1 = span(i)
+        d.rounded_rectangle((x0 + 1, top - 6, x1 + 8, box[3] - 8), 14, outline=BRASS, width=8)
+    g0, g1 = span(5)
     cy = box[3] + 60
-    cx = (xcol(6) + xcol(7)) / 2
+    cx = (g0 + g1) / 2
     d.polygon([(cx - 28, cy), (cx + 28, cy), (cx, box[3] - 2)], fill=BRASS)
     tw = 1400
     bx0 = max(M, cx - 200)
@@ -138,7 +156,7 @@ def hours():
 def rooms_summary():
     img = canvas()
     y = head(img, "Rooms and summary", "The calculation, step by step.") + 60
-    a = shot("rooms", (0, 0.17, 0.66, 0.485))
+    a = shot("rooms", (0, 0.15, 0.66, 0.485))
     b = shot("summary1", (0, 0.07, 1, 0.524))
     boxa = frame(img, a, (M, y, 1040, H - M - 230), "tl")
     frame(img, b, (1100, y, W - M, H - M - 230), "tl")

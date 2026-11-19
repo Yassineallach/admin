@@ -189,6 +189,7 @@ def compare_all(path: Path, cfg, label, year, month):
     for i, t in enumerate(exp["trend"]):
         for c, e in zip("BCDEF", t):
             n_cmp += 1
+            e = e[:3] if c == "B" else e            # month labels are short (Jan, Feb) so the chart axis never crowds
             check(f"{label}: trend {t[0]} {c}", close(dash[f"{c}{r0 + i}"].value, e), f"{dash[f'{c}{r0 + i}'].value!r} vs {e!r}")
     g = dash[f"B{r0 + 12}"].value
     n_cmp += 1

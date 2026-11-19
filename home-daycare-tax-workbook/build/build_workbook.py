@@ -235,7 +235,9 @@ class Builder(Kit):
         ws.merge_cells(f"D{r}:F{r}")
         ws[f"D{r}"].value = "Then see where your year stands: key figures and charts. Use the bar on the left to move between tabs."
         ws[f"D{r}"].font = font(10, color=INK2)
-        ws.row_dimensions[r].height = 24
+        ws[f"D{r}"].alignment = Alignment(wrap_text=True, vertical="top")
+        ws[f"C{r}"].alignment = Alignment(vertical="top")
+        ws.row_dimensions[r].height = 36
         r += 2
         self.kicker(ws, f"B{r}", "How the hours log counts", rule_to=6)
         r += 1
@@ -506,7 +508,7 @@ class Builder(Kit):
         self.hours_tiles = tiles
         for i, (lab, f, fmt) in enumerate(tiles):
             c1 = 2 + i * 3 + (1 if i >= 2 else 0)
-            self.tile(ws, 4, [2, 5, 9, 12][i], [4, 7, 11, 15][i], lab, f, fmt)
+            self.tile(ws, 4, [2, 5, 9, 12][i], [4, 8, 11, 15][i], lab, f, fmt)
         ws.row_dimensions[6].height = 8
         ws.merge_cells("B7:O7")
         ws["B7"].value = "YOU TYPE: children's times (or hours directly), other business hours, Closed, Confirmed   ·   CALCULATED: the shaded columns"
@@ -613,7 +615,7 @@ class Builder(Kit):
     # ============================================================ EXPENSES
     def build_expenses(self):
         ws = self.ws[S_EXP]
-        widths = dict(B=13, C=22, D=36, E=12, F=26, G=30, H=10, I=40, J=22, K=11, L=13, M=50, O=6, P=6, Q=6)
+        widths = dict(B=13, C=25, D=36, E=12, F=29, G=30, H=10, I=40, J=22, K=11, L=13, M=50, O=6, P=6, Q=6)
         self.page(ws, widths, 13, E_LAST + 2, "Expenses",
                   "One row per receipt. The expense type decides the deductible share; the category decides where it goes.")
         for k in ("inyear", "colb", "form"):
@@ -699,7 +701,7 @@ class Builder(Kit):
     def build_meals(self):
         ws = self.ws[S_MEALS]
         widths = dict(B=13, C=20, D=10, E=10, F=10, G=10, H=22, I=11, J=13, K=3, L=6, M=6, N=3,
-                      O=20, P=13, Q=13, R=11, S=24)
+                      O=20, P=13, Q=13, R=11, S=32)
         self.page(ws, widths, 19, M_LAST + 2, "Meals (optional)",
                   "Daily food log for the standard meal and snack rates. One row per child per day. List each child once on the right.")
         for c in ("L", "M"):
@@ -771,7 +773,7 @@ class Builder(Kit):
     # ============================================================ MILEAGE
     def build_mileage(self):
         ws = self.ws[S_MILES]
-        widths = dict(B=13, C=34, D=20, E=20, F=10, G=11, H=13, I=6)
+        widths = dict(B=13, C=34, D=22, E=23, F=10, G=11, H=13, I=6)
         self.page(ws, widths, 8, MI_LAST + 2, "Mileage (optional)",
                   "Business trips only. With the mileage rate, don't also enter car costs.",
                   landscape=False)
@@ -981,7 +983,7 @@ class Builder(Kit):
         ws[cell("chosen")] = f'=IF({SM["method"]}="Standard rates",{SM["std"]},{SM["actual"]})'
         ws[cell("food_net")] = f'=MAX(0,{SM["chosen"]}-N({SM["reimb"]}))'
         ws[cell("food_inc")] = f'=MAX(0,N({SM["reimb"]})-{SM["chosen"]})'
-        ws[cell("method")].alignment = Alignment(horizontal="right", shrink_to_fit=True)
+        ws[cell("method")].alignment = Alignment(horizontal="right", vertical="center", shrink_to_fit=True)
         self.note(ws, f"C{r}:G{r}", "Use one method for the whole year. Only the chosen method is counted, never both. Pub. 587: CACFP "
                   "reimbursements are taxable only to the extent they exceed your food costs for eligible children.", height=34)
         r += 2
