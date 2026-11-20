@@ -1,0 +1,100 @@
+{
+  "name": "Brass Ledger — Design System",
+  "version": "3.0.0 (Brass Ledger)",
+  "color": {
+    "primary": {
+      "deep_navy": "#1F3D36",
+      "midnight_blue": "#2B5148",
+      "professional_blue": "#D29A3A",
+      "soft_blue": "#EFEAE0"
+    },
+    "accent": {
+      "teal": "#2E7D4F",
+      "soft_teal": "#E4EFE8",
+      "lavender": "#A87620",
+      "soft_lavender": "#F6EBD3"
+    },
+    "neutral": {
+      "background": "#FAF7F2",
+      "white": "#FFFFFF",
+      "light_gray": "#F1ECE2",
+      "medium_gray": "#B8B2A6",
+      "dark_text": "#222222",
+      "secondary_text": "#444444",
+      "border": "#E6E1D8"
+    },
+    "status": {
+      "success": "#2E7D4F",
+      "success_bg": "#E4EFE8",
+      "warning": "#9A5B14",
+      "warning_bg": "#FBEFD9",
+      "danger": "#B3382C",
+      "danger_bg": "#F8E4E0",
+      "info": "#1F3D36",
+      "info_bg": "#E7EDEA"
+    },
+    "finance": {
+      "income": "#2E7D4F",
+      "expense": "#B3382C",
+      "savings": "#A87620",
+      "goals": "#1F3D36"
+    }
+  },
+  "cell_conventions": {
+    "user_input": {
+      "fill": "#FFFFFF",
+      "meaning": "White with a border — type or pick a value here"
+    },
+    "standard": {
+      "fill": "#FFFFFF",
+      "meaning": "White — standard information / labels"
+    },
+    "calculated": {
+      "fill": "#F1ECE2",
+      "meaning": "Paper tint — formula, do not overwrite"
+    },
+    "positive": {
+      "fill": "#E2F4F0",
+      "meaning": "Light teal — positive result"
+    },
+    "warning": {
+      "fill": "#FCEAEC",
+      "meaning": "Light red — warning or negative result"
+    },
+    "optional": {
+      "fill": "#F0EDFC",
+      "meaning": "Lavender — optional / secondary information"
+    }
+  },
+  "typography": {
+    "excel": "Arial (available in every Excel version)",
+    "google_sheets": "Arial",
+    "onenote": "Segoe UI / Aptos",
+    "sizes_pt": {
+      "dashboard_title": 22,
+      "sheet_title": 18,
+      "section": 12,
+      "kpi_value": 20,
+      "kpi_label": 9,
+      "table_header": 10,
+      "body": 10,
+      "note": 9
+    }
+  },
+  "spacing": {
+    "gutter_column_width": 2.5,
+    "title_row_height": 36,
+    "section_row_height": 22,
+    "body_row_height": 18
+  },
+  "number_formats": {
+    "date": "mmm d, yyyy",
+    "short_date": "mmm d",
+    "currency": "#,##0.00",
+    "currency_whole": "#,##0",
+    "percent": "0%",
+    "hours": "0.0",
+    "time": "h:mm AM/PM"
+  },
+  "note": "Roles keep their original key names (deep_navy = darkest brand colour, professional_blue = primary accent) so every product picks the theme up automatically."
+}
