@@ -380,6 +380,7 @@ class CakeEngine(base.Engine):
             l1, l2 = r0 + 4, r0 + 4 + REC_LINES - 1
             ws[f"B{i}"] = f'=IF(C{r0 + 1}="","",C{r0 + 1})'
             ws[f"B{i}"].font = font(10, True, INK)
+            ws[f"B{i}"].alignment = Alignment(horizontal="left", vertical="center", indent=1)
             self.link(ws[f"I{i}"], f"Recipe {k + 1}  ›", S_REC, f"B{r0}")
             ws[f"I{i}"].font = font(9, True, GREEN2)
             self.calc(ws[f"C{i}"], align="center", value=f'=IF(B{i}="","",IF(G{r0 + 1}="","",G{r0 + 1}))')
@@ -1155,7 +1156,7 @@ class CakeEngine(base.Engine):
         c, S = self.cfg, self.S
         ws = self.ws[S_ORD]
         widths = dict(B=14, C=24, D=27, E=14, F=17, G=13, H=42, I=9, J=11, K=11, L=14, M=9, N=11, O=24, P=11, Q=20,
-                      R=6, S=6, T=6, U=6, V=3, W=12, X=20, Y=30, Z=10, AA=12)
+                      R=6, S=6, T=6, U=6, V=3, W=15, X=22, Y=32, Z=10, AA=12)
         self.page(ws, widths, 27, ORD_LAST + 1, "Order tracker",
                   "One row per order. Orders due in the next 7 days and unpaid balances are highlighted.")
         for col in "RSTU":
@@ -1278,6 +1279,7 @@ class CakeEngine(base.Engine):
             rr = hr + 1 + k
             ws[f"B{rr}"] = c.MONTHS[k][:3]
             ws[f"B{rr}"].font = font(10, True, INK)
+            ws[f"B{rr}"].alignment = Alignment(horizontal="left", vertical="center", indent=1)
             self.calc(ws[f"C{rr}"], "0", align="center", value=f"=COUNTIFS({O('T')},{k + 1},{yr},{live})")
             self.calc(ws[f"D{rr}"], MONEY0, value=f"=SUMIFS({O('J')},{O('T')},{k + 1},{yr},{live})")
         ch = BarChart()
@@ -1302,6 +1304,7 @@ class CakeEngine(base.Engine):
             rr = d1 + k
             ws[f"B{rr}"] = f"=INDEX({S['otypes']},{k + 1})"
             ws[f"B{rr}"].font = font(10, True, INK)
+            ws[f"B{rr}"].alignment = Alignment(horizontal="left", vertical="center", indent=1)
             self.calc(ws[f"C{rr}"], "0", align="center", value=f"=COUNTIFS({O('G')},B{rr},{live})")
             self.calc(ws[f"D{rr}"], MONEY0, value=f"=SUMIFS({O('J')},{O('G')},B{rr},{live})")
         ch = DoughnutChart(holeSize=55)
