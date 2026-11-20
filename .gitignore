@@ -34,3 +34,6 @@ lawn-care-pricing-calculator/dist/
 
 # Pressure Washing Bid Calculator deliverables (sent directly, rebuilt by the build scripts)
 pressure-washing-bid-calculator/dist/
+
+# Cake Pricing Calculator deliverables (sent directly, rebuilt by the build scripts)
+cake-pricing-calculator/dist/
