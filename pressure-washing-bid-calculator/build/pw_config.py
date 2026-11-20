@@ -113,14 +113,14 @@ LOG = [
     (dt.date(2026, 4, 2), "Luis Ortega", "3 Brook Lane", "Residential", "Pavers: clean + re-sand + seal",
      1450, 600, 1450, 6.8, "Declined", None, "Price too high"),
     (dt.date(2026, 4, 7), "Anna Fischer", "122 Ridge Road", "Residential", "Roof soft wash",
-     690, 0, 0, 3.6, "Accepted", None, ""),
+     690, None, None, 3.6, "Accepted", None, ""),
     (dt.date(2026, 4, 14), "Rachel Moreno", "15 Larkspur Court", "Residential",
-     "House wash (soft wash) + Concrete driveway + Sidewalk / walkway + more", 531, 1120, 190, 7.4, "Accepted",
+     "House wash + driveway + walkway + gutters", 531, 1120, 190, 7.4, "Accepted",
      None, "Booked for May 2"),
     (dt.date(2026, 4, 20), "Greenway Plaza", "900 Commerce Drive", "Commercial", "Commercial flatwork + Drive-thru lane",
      1240, 12000, 1240, 9.2, "No reply", dt.date(2026, 4, 27), "Ask for the manager"),
     (dt.date(2026, 5, 5), "Sam Whitaker", "40 Pine Street", "Residential", "Deck clean + stain/seal",
-     980, 0, 0, 5.9, "Accepted", None, ""),
+     980, None, None, 5.9, "Accepted", None, ""),
 ]
 
 # job log: (date, client, main service, quoted price, est hours, actual hours, crew, actual chemicals, extra costs, paid)

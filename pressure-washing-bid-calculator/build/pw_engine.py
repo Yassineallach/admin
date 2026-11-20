@@ -61,7 +61,7 @@ class PWEngine(base.Engine):
         c, S = self.cfg, self.S
         ws = self.ws[S_SET]
         SQ = q(S_SET)
-        widths = {"B": 40, "C": 16, "D": 14, "E": 14, "F": 16, "G": 16, "H": 14, "I": 40}
+        widths = {"B": 42, "C": 16, "D": 14, "E": 14, "F": 16, "G": 16, "H": 14, "I": 40}
         self.page(ws, widths, 9, 220, "Settings", "Your costs, services, rates and multipliers. Every other tab reads from here.")
         self.note(ws, "B4:I4", "EXAMPLE VALUES: adjust every white cell to your area and equipment. Rates and prices "
                   "below are typical US figures, not advice.", height=30, size=10, color=INK, bold=True)
@@ -113,7 +113,7 @@ class PWEngine(base.Engine):
 
         self.kicker(ws, f"B{r}", "Pricing targets", rule_to=9)
         r += 1
-        rows = [("hours", "Working hours per year (on site and driving)", T["hours"], "#,##0",
+        rows = [("hours", "Working hours per year (incl. driving)", T["hours"], "#,##0",
                  "Example: 35 busy weeks x about 30 hours. Spreads equipment and overhead."),
                 ("owner_pay", "Your target pay per hour", T["owner_pay"], MONEY, "What you want to earn for your own time."),
                 ("helper_wage", "Helper wage per hour", T["helper_wage"], MONEY, "Only used when crew size is 2 or more."),
@@ -468,7 +468,7 @@ class PWEngine(base.Engine):
 
         # ---------------- time and cost (left), price (right)
         def out(rr, key, label, f, fmt, bold=False, note="", col="B", vcol="F", ncol=None):
-            self.label(ws[f"{col}{rr}"], label, bold=bold, indent=1 if col != "B" else 0)
+            self.label(ws[f"{col}{rr}"], label, bold=bold, indent=1)
             self.calc(ws[f"{vcol}{rr}"], fmt, bold=bold, align="right", value=f)
             if note and ncol:
                 ws[f"{ncol}{rr}"] = note
@@ -1102,6 +1102,7 @@ class PWEngine(base.Engine):
             rr = hr + 1 + m
             ws[f"B{rr}"] = c.MONTHS[m][:3]
             ws[f"B{rr}"].font = font(10, True, INK)
+            ws[f"B{rr}"].alignment = Alignment(horizontal="left", vertical="center", indent=1)
             yrc = f"{J('Y')},N({S['year']})"
             self.calc(ws[f"C{rr}"], "0", align="center", value=f"=COUNTIFS({J('X')},{m + 1},{yrc})")
             self.calc(ws[f"D{rr}"], MONEY0, value=f"=SUMIFS({J('E')},{J('X')},{m + 1},{yrc})")
@@ -1128,6 +1129,7 @@ class PWEngine(base.Engine):
             rr = q1 + i
             ws[f"B{rr}"] = f"=INDEX({S['statuses']},{i + 1})"
             ws[f"B{rr}"].font = font(10, True, INK)
+            ws[f"B{rr}"].alignment = Alignment(horizontal="left", vertical="center", indent=1)
             self.calc(ws[f"C{rr}"], "0", align="center", value=f"=COUNTIF({st},B{rr})")
             self.calc(ws[f"D{rr}"], "0%", align="center",
                       value=f'=IF(SUM($C${q1}:$C${q1 + len(c.STATUSES) - 1})=0,"",C{rr}/SUM($C${q1}:$C${q1 + len(c.STATUSES) - 1}))')
@@ -1156,6 +1158,7 @@ class PWEngine(base.Engine):
             rr = d1 + i
             ws[f"B{rr}"] = f"=INDEX({S['cats']},{i + 1})"
             ws[f"B{rr}"].font = font(10, True, INK)
+            ws[f"B{rr}"].alignment = Alignment(horizontal="left", vertical="center", indent=1)
             self.calc(ws[f"C{rr}"], "0", align="center", value=f"=COUNTIFS({J('Z')},B{rr},{J('E')},\">0\")")
             self.calc(ws[f"D{rr}"], MONEY0, value=f"=SUMIFS({J('E')},{J('Z')},B{rr})")
             self.calc(ws[f"E{rr}"], "0%", align="center", value=f'=IF(SUM($D${d1}:$D${d1 + n - 1})=0,"",D{rr}/SUM($D${d1}:$D${d1 + n - 1}))')

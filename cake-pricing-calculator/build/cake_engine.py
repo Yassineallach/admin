@@ -540,6 +540,7 @@ class CakeEngine(base.Engine):
 
         left(R + 1, "customer", "Customer")
         left(R + 2, "event", "Event date", DATE, "left")
+        ws[f"D{R + 2}"].alignment = Alignment(horizontal="left", vertical="center", indent=1)
         left(R + 3, "occasion", "Occasion")
         left(R + 4, "style", "Serving style")
         left(R + 5, "delivery", "Pickup or delivery")
@@ -676,8 +677,6 @@ class CakeEngine(base.Engine):
         self.header(ws[f"H{lh}"], "Task", align="left")
         self.header(ws[f"I{lh}"], "Hours")
         self.header(ws[f"J{lh}"], "Counted", GREEN2)
-        ws.merge_cells(f"K{lh}:O{lh}")
-        self.header(ws[f"K{lh}"], "", GREEN2)
         for j, task in enumerate(c.TASKS):
             rr = lh + 1 + j
             self.label(ws[f"H{rr}"], task, bold=False, indent=1)

@@ -146,10 +146,11 @@ class Kit:
         c.alignment = Alignment(horizontal=align, vertical="center", wrap_text=True, indent=1 if align == "left" else 0)
         c.border = Border(left=Side(style="thin", color=fill_color), right=Side(style="thin", color=PAPER))
 
-    def label(self, c, text, bold=True, color=INK, size=10, indent=0, wrap=False):
+    def label(self, c, text, bold=True, color=INK, size=10, indent=1, wrap=False):
+        """Labels get a small left margin by default so they never touch the sidebar or a cell edge."""
         c.value = text
         c.font = font(size, bold, color)
-        c.alignment = Alignment(vertical="center", indent=indent, wrap_text=wrap)
+        c.alignment = Alignment(horizontal="left", vertical="center", indent=indent, wrap_text=wrap)
 
     def note(self, ws, rng, text, tint=BRASS_TINT, height=None, size=9, color=INK2, bold=False):
         ws.merge_cells(rng)

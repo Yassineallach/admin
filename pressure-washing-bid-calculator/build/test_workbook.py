@@ -306,7 +306,7 @@ def main():
     check("Quote log: average quote", lg["F5"].value == money(sum(totals) / len(totals)), f"{lg['F5'].value!r}")
     for stt, cell in (("Accepted", "G5"), ("Declined", "K5")):
         rows = [x for x in L_ if x[9] == stt]
-        v = sum(x[7] for x in rows) / sum(x[6] for x in rows)
+        v = sum(x[7] or 0 for x in rows) / sum(x[6] or 0 for x in rows)
         check(f"Quote log: flatwork per sq ft {stt}", lg[cell].value == f"${v:,.3f}", f"{lg[cell].value!r} vs {v:.3f}")
     check("Quote log: empty rows blank", all(lg[f"N{r}"].value in (None, "") for r in range(E.LOG_FIRST + len(L_), E.LOG_LAST + 1)))
 
