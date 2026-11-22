@@ -109,7 +109,8 @@ transcript empty makes it transcribe the clip with Whisper (an extra ~1.6 GB dow
 **Chatterbox:** set `MODEL = "Chatterbox"` (or `"Chatterbox-Turbo"`) in the notebook. Chatterbox
 pins PyTorch 2.6 and NumPy 1.x, so the notebook installs it into its own Python 3.11 environment
 (`cbenv`). On your own PC: `uv venv -p 3.11 cbenv && uv pip install --python cbenv/bin/python
-chatterbox-tts fastapi "uvicorn[standard]" python-multipart soundfile`, then
+chatterbox-tts "setuptools<81" fastapi "uvicorn[standard]" python-multipart soundfile` (its watermark
+library needs `pkg_resources`, which setuptools 81+ no longer includes), then
 `cbenv/bin/python server.py --engine chatterbox` (add `--chatterbox-variant turbo` for Turbo).
 
 **IndexTTS-2.5:** in the Colab or Kaggle notebook set `MODEL = "IndexTTS-2.5"` in the first cell.

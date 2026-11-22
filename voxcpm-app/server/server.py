@@ -328,6 +328,18 @@ class ChatterboxEngine:
         self.turbo = CHATTERBOX_VARIANT == "turbo"
         self.name = "Chatterbox-Turbo" if self.turbo else "Chatterbox"
         print(f"Loading {self.name} on {self.device} ...", flush=True)
+        import perth
+
+        if perth.PerthImplicitWatermarker is None:
+            # perth hides the import error and leaves None, which later fails as "'NoneType' object is not
+            # callable"; import it directly to report the real cause.
+            try:
+                from perth.perth_net.perth_net_implicit.perth_watermarker import PerthImplicitWatermarker  # noqa: F401
+            except ImportError as e:
+                raise RuntimeError(
+                    f"Chatterbox's watermark library can't load ({e}). "
+                    'If it mentions pkg_resources, install "setuptools<81" into the same Python.'
+                ) from e
         if self.turbo:
             from chatterbox.tts_turbo import ChatterboxTurboTTS
 
