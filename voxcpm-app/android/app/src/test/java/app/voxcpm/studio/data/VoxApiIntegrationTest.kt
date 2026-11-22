@@ -70,6 +70,22 @@ class VoxApiIntegrationTest {
         assertEquals(2.0f, result.durationSec)
     }
 
+    @Test fun chatterboxCapabilities() {
+        val cb = System.getenv("VOX_TEST_CB_URL") ?: ""
+        assumeTrue(cb.isNotEmpty())
+        val api = VoxApi(cb, "")
+        val info = api.health()
+        assertEquals("chatterbox", info.engine)
+        assertEquals(listOf(0f, 1f, 0.5f), listOf(info.cfgMin, info.cfgMax, info.cfgDefault))
+        assertEquals(listOf(0.25f, 2f, 0.5f), info.expressiveness)
+        assertTrue("fr" in info.languages && "default" in info.modes && !info.steps)
+        val result = api.synthesize(
+            TtsRequest("Bonjour", "", ref, "", 0.3f, 10, 5, language = "fr", exaggeration = 0.9f),
+            File.createTempFile("vox", ".wav"),
+        )
+        assertEquals(5, result.seed)
+    }
+
     @Test fun serverInfoOfOldVoxcpmServer() {
         val old = System.getenv("VOX_TEST_OLD_URL") ?: ""
         assumeTrue(old.isNotEmpty())

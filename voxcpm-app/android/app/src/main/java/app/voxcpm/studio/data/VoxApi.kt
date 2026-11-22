@@ -31,6 +31,8 @@ data class TtsRequest(
     val emoVector: List<Float>? = null,
     val emoAlpha: Float = 1f,
     val durationFactor: Float = 1f,
+    /** Chatterbox only. */
+    val exaggeration: Float = 0.5f,
 )
 
 data class TtsResult(val seed: Int?, val durationSec: Float?, val generationSec: Float?)
@@ -114,6 +116,7 @@ class VoxApi(private val baseUrl: String, private val apiKey: String) {
         req.emoVector?.let { body.addFormDataPart("emo_vector", it.joinToString(",")) }
         body.addFormDataPart("emo_alpha", req.emoAlpha.toString())
         body.addFormDataPart("duration_factor", req.durationFactor.toString())
+        body.addFormDataPart("exaggeration", req.exaggeration.toString())
         req.referenceAudio?.let {
             body.addFormDataPart(
                 "reference_audio", it.name,

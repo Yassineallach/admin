@@ -278,6 +278,20 @@ fun GenerateScreen(vm: MainViewModel, modifier: Modifier = Modifier) {
             }
         }
 
+        info.expressiveness?.let { (min, max, _) ->
+            Text("Expressiveness: %.2f".format(vm.expressiveness), style = MaterialTheme.typography.titleSmall)
+            Slider(
+                value = vm.expressiveness.coerceIn(min, max),
+                onValueChange = { vm.expressiveness = (it * 20).roundToInt() / 20f },
+                valueRange = min..max,
+                steps = ((max - min) * 20).roundToInt() - 1,
+            )
+            Text(
+                "Higher is more dramatic and often faster; for dramatic speech also lower Guidance (Advanced) to about 0.3.",
+                style = MaterialTheme.typography.bodySmall,
+            )
+        }
+
         if (info.languages.isNotEmpty()) {
             Text("Language", style = MaterialTheme.typography.titleSmall)
             Row(
@@ -299,11 +313,14 @@ fun GenerateScreen(vm: MainViewModel, modifier: Modifier = Modifier) {
         }
         if (showAdvanced) {
             if (info.cfg) {
-                Text("Guidance (CFG): %.1f".format(vm.cfgValue))
+                // 0.05 steps on short ranges such as Chatterbox's 0–1, 0.1 otherwise.
+                val cfgStep = if (info.cfgMax - info.cfgMin <= 1.5f) 0.05f else 0.1f
+                Text("Guidance (CFG): %.2f".format(vm.cfgValue))
                 Slider(
-                    value = vm.cfgValue,
-                    onValueChange = { vm.cfgValue = (it * 10).roundToInt() / 10f },
-                    valueRange = 1f..3f, steps = 19,
+                    value = vm.cfgValue.coerceIn(info.cfgMin, info.cfgMax),
+                    onValueChange = { vm.cfgValue = (it / cfgStep).roundToInt() * cfgStep },
+                    valueRange = info.cfgMin..info.cfgMax,
+                    steps = ((info.cfgMax - info.cfgMin) / cfgStep).roundToInt() - 1,
                 )
             }
             if (info.steps) {

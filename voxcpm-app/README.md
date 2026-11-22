@@ -1,10 +1,12 @@
-# VoxCPM Studio — Android voice generator for VoxCPM2, IndexTTS-2.5 and OmniVoice
+# VoxCPM Studio — Android voice generator for VoxCPM2, IndexTTS-2.5, OmniVoice and Chatterbox
 
 An Android app (Kotlin + Jetpack Compose) for generating speech with
 [VoxCPM2](https://github.com/OpenBMB/VoxCPM) (`openbmb/VoxCPM2`, 48 kHz, 30 languages) or
 [IndexTTS-2.5](https://github.com/index-tts/index-tts) (`IndexTeam/IndexTTS-2.5`, 22 kHz,
 English / Chinese / Japanese / Spanish / Arabic, emotion control) or
-[OmniVoice](https://github.com/k2-fsa/OmniVoice) (`k2-fsa/OmniVoice`, 24 kHz, 600+ languages).
+[OmniVoice](https://github.com/k2-fsa/OmniVoice) (`k2-fsa/OmniVoice`, 24 kHz, 600+ languages) or
+[Chatterbox](https://github.com/resemble-ai/chatterbox) (`ResembleAI/chatterbox` Multilingual V3,
+24 kHz, 23 languages; or Chatterbox-Turbo, English).
 
 Both models need a GPU, so they can't run inside a phone. The app is a client: it sends requests
 to a small server (`server/server.py`) that runs one of the models on a PC or in Google Colab /
@@ -16,13 +18,13 @@ Android app  ──HTTP (multipart)──▶  server.py --engine voxcpm | indext
              ◀──────── WAV ────────
 ```
 
-| | VoxCPM2 | IndexTTS-2.5 | OmniVoice |
-|---|---|---|---|
-| Voice | default voice, voice design, cloning | cloning only (needs a reference voice) | default voice, voice design (fixed attributes), cloning |
-| Control | style text, CFG, inference steps | 8 emotions + strength, emotion description, speech length | CFG, diffusion steps, speech length, tags like `[laughter]` |
-| Languages | 30, detected automatically | EN, ZH, JA, ES, AR (auto-detected or picked) | 600+, detected automatically |
-| Download | ~5 GB | ~8.5 GB | ~3.3 GB |
-| License | Apache-2.0 | bilibili Model Use License (large companies need a separate license; read it before commercial use) | Apache-2.0 |
+| | VoxCPM2 | IndexTTS-2.5 | OmniVoice | Chatterbox (Multilingual V3 / Turbo) |
+|---|---|---|---|---|
+| Voice | default voice, voice design, cloning | cloning only (needs a reference voice) | default voice, voice design (fixed attributes), cloning | built-in voice, cloning |
+| Control | style text, CFG, inference steps | 8 emotions + strength, emotion description, speech length | CFG, diffusion steps, speech length, tags like `[laughter]` | expressiveness, CFG (0–1); Turbo: tags like `[laugh]` |
+| Languages | 30, detected automatically | EN, ZH, JA, ES, AR (auto-detected or picked) | 600+, detected automatically | 23 (pick Latin-script ones; others detected); Turbo: English |
+| Download | ~5 GB | ~8.5 GB | ~3.3 GB | ~3.2 GB / ~3 GB |
+| License | Apache-2.0 | bilibili Model Use License (large companies need a separate license; read it before commercial use) | Apache-2.0 | MIT; no longer maintained by Resemble AI; output carries an inaudible Perth watermark |
 
 ## Features
 
@@ -73,7 +75,7 @@ runtime still uses up your free GPU time.
 2. Create → New Notebook → File → Import Notebook → upload `server/VoxCPM_Server_Kaggle.ipynb`.
    No file to upload? Create a new notebook instead and paste this into its single cell:
    ```python
-   MODEL = "OmniVoice"   # or "VoxCPM2" or "IndexTTS-2.5"
+   MODEL = "OmniVoice"   # or "VoxCPM2", "IndexTTS-2.5", "Chatterbox", "Chatterbox-Turbo"
    API_KEY = ""          # optional: same key as in the app's Settings
    import json, urllib.request
    nb = json.load(urllib.request.urlopen("https://raw.githubusercontent.com/yassineallach/admin/claude/android-voxcpm-voice-app-8pkl1u/voxcpm-app/server/VoxCPM_Server_Kaggle.ipynb"))
@@ -103,6 +105,12 @@ after a pause takes 1–3 minutes while the model starts.
 `python server.py --engine omnivoice`. Voice design only accepts its attribute words (gender,
 age, pitch, whisper, accent), e.g. `female, young adult, british accent`. Leaving the clone
 transcript empty makes it transcribe the clip with Whisper (an extra ~1.6 GB download).
+
+**Chatterbox:** set `MODEL = "Chatterbox"` (or `"Chatterbox-Turbo"`) in the notebook. Chatterbox
+pins PyTorch 2.6 and NumPy 1.x, so the notebook installs it into its own Python 3.11 environment
+(`cbenv`). On your own PC: `uv venv -p 3.11 cbenv && uv pip install --python cbenv/bin/python
+chatterbox-tts fastapi "uvicorn[standard]" python-multipart soundfile`, then
+`cbenv/bin/python server.py --engine chatterbox` (add `--chatterbox-variant turbo` for Turbo).
 
 **IndexTTS-2.5:** in the Colab or Kaggle notebook set `MODEL = "IndexTTS-2.5"` in the first cell.
 The notebook clones [index-tts](https://github.com/index-tts/index-tts), builds its Python 3.11
@@ -162,7 +170,8 @@ as a `(…)` prefix; IndexTTS-2.5: emotion description), `reference_audio` (file
 `prompt_text` (transcript of the reference, VoxCPM2), `cfg_value` (default 2.0) and
 `inference_timesteps` (default 10) for VoxCPM2, `language` (`auto`/`en`/`zh`/`ja`/`es`/`ar`),
 `emo_vector` (8 comma-separated values: happy, angry, sad, afraid, disgusted, melancholic,
-surprised, calm), `emo_alpha` and `duration_factor` (0.5–2.0) for IndexTTS-2.5, and `seed`.
+surprised, calm), `emo_alpha` and `duration_factor` (0.5–2.0) for IndexTTS-2.5, `exaggeration` (0.25–2.0) for
+Chatterbox, and `seed`.
 `/health` returns the `engine` and its `capabilities`.
 Response headers: `X-Seed`, `X-Duration`, `X-Sample-Rate`, `X-Generation-Seconds`.
 

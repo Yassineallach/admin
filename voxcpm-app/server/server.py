@@ -7,12 +7,16 @@ Two engines, one per server process (they need different Python environments):
               EN / ZH / JA / ES / AR. Run it from an index-tts checkout (see the notebooks).
     omnivoice OmniVoice (k2-fsa/OmniVoice): auto voice, attribute-based voice design and
               cloning in 600+ languages. `pip install omnivoice`.
+    chatterbox Chatterbox (ResembleAI/chatterbox) Multilingual V3: built-in voice and cloning in
+              23 languages with expressiveness control; CHATTERBOX_VARIANT=turbo for the faster
+              English-only Turbo with sound tags. `pip install chatterbox-tts` (own venv).
 
 Run:
     pip install -r requirements.txt
     python server.py --host 0.0.0.0 --port 8000                     # VoxCPM2
     python server.py --engine indextts --model-dir checkpoints      # IndexTTS-2.5
     python server.py --engine omnivoice                             # OmniVoice
+    python server.py --engine chatterbox [--chatterbox-variant turbo]  # Chatterbox
 
 Endpoints:
     GET    /health           -> engine, model info and what the engine supports
@@ -47,6 +51,7 @@ ENGINE = os.environ.get("TTS_ENGINE", "voxcpm")
 MODEL_ID = os.environ.get("VOXCPM_MODEL", "openbmb/VoxCPM2")
 INDEXTTS_MODEL_DIR = os.environ.get("INDEXTTS_MODEL_DIR", "checkpoints")
 OMNIVOICE_MODEL = os.environ.get("OMNIVOICE_MODEL", "k2-fsa/OmniVoice")
+CHATTERBOX_VARIANT = os.environ.get("CHATTERBOX_VARIANT", "multilingual")  # or "turbo"
 API_KEY = os.environ.get("VOXCPM_API_KEY", "")
 MAX_TEXT_CHARS = int(os.environ.get("VOXCPM_MAX_CHARS", "2000"))
 
@@ -145,16 +150,26 @@ INDEXTTS_LANGUAGES = ["auto", "en", "zh", "ja", "es", "ar"]
 INDEXTTS_EMOTIONS = ["happy", "angry", "sad", "afraid", "disgusted", "melancholic", "surprised", "calm"]
 
 
-def detect_language(text: str) -> str:
-    """Picks an IndexTTS language code from the script the text is written in."""
-    if re.search(r"[؀-ۿݐ-ݿ]", text):
-        return "ar"
-    if re.search(r"[぀-ヿ]", text):  # hiragana / katakana
-        return "ja"
-    if re.search(r"[一-鿿]", text):
-        return "zh"
-    if re.search(r"[ñÑ¿¡]|\b(el|la|los|las|que|de|y|es|por|para|con|una?)\b", text, re.IGNORECASE):
-        return "es"
+def detect_language(text: str, allowed) -> str:
+    """Picks a language code from the script the text is written in; "en" when unsure.
+
+    Latin-script languages other than English and Spanish can't be told apart this way,
+    so the app lets the user pick those.
+    """
+    scripts = [
+        (r"[؀-ۿݐ-ݿ]", "ar"),
+        (r"[֐-׿]", "he"),
+        (r"[ऀ-ॿ]", "hi"),
+        (r"[Ͱ-Ͽ]", "el"),
+        (r"[가-힯ᄀ-ᇿ]", "ko"),
+        (r"[぀-ヿ]", "ja"),  # hiragana / katakana, checked before shared CJK characters
+        (r"[一-鿿]", "zh"),
+        (r"[Ѐ-ӿ]", "ru"),
+        (r"[ñÑ¿¡]|\b(el|la|los|las|que|de|y|es|por|para|con|una?)\b", "es"),
+    ]
+    for pattern, code in scripts:
+        if code in allowed and re.search(pattern, text, re.IGNORECASE):
+            return code
     return "en"
 
 
@@ -199,7 +214,7 @@ class IndexTTSEngine:
             raise GenerationError("IndexTTS-2.5 needs a reference voice: use Voice clone with a clip or saved voice")
         lang = p["language"].lower() or "auto"
         if lang == "auto":
-            lang = detect_language(p["text"])
+            lang = detect_language(p["text"], INDEXTTS_LANGUAGES)
         kwargs = {
             "spk_audio_prompt": p["ref_path"],
             "text": p["text"],
@@ -296,8 +311,80 @@ class OmniVoiceEngine:
         return np.asarray(audios[0], dtype=np.float32).squeeze()
 
 
-ENGINES = {"voxcpm": VoxCPMEngine, "indextts": IndexTTSEngine, "omnivoice": OmniVoiceEngine}
-ENGINE_NAMES = {"voxcpm": "VoxCPM2", "indextts": "IndexTTS-2.5", "omnivoice": "OmniVoice"}
+CHATTERBOX_LANGUAGES = [
+    "auto", "ar", "da", "de", "el", "en", "es", "fi", "fr", "he", "hi", "it", "ja", "ko", "ms",
+    "nl", "no", "pl", "pt", "ru", "sv", "sw", "tr", "zh",
+]
+
+
+class ChatterboxEngine:
+    """Chatterbox Multilingual V3 (23 languages), or Chatterbox-Turbo (English, sound tags)."""
+
+    def __init__(self):
+        import torch
+
+        on_gpu = torch.cuda.is_available()
+        self.device = "cuda" if on_gpu else "cpu"
+        self.turbo = CHATTERBOX_VARIANT == "turbo"
+        self.name = "Chatterbox-Turbo" if self.turbo else "Chatterbox"
+        print(f"Loading {self.name} on {self.device} ...", flush=True)
+        if self.turbo:
+            from chatterbox.tts_turbo import ChatterboxTurboTTS
+
+            self.model = ChatterboxTurboTTS.from_pretrained(device=self.device)
+        else:
+            from chatterbox.mtl_tts import ChatterboxMultilingualTTS
+
+            self.model = ChatterboxMultilingualTTS.from_pretrained(device=self.device, t3_model="v3")
+        # Cloning replaces model.conds with the clip's voice; keep the built-in one to go back to.
+        self.default_conds = self.model.conds
+        self.sample_rate = int(self.model.sr)
+
+    def info(self):
+        info = {
+            "modes": ["default", "clone"] if self.default_conds is not None else ["clone"],
+            "languages": [] if self.turbo else CHATTERBOX_LANGUAGES,
+            "cfg": not self.turbo,
+            "cfg_range": [0.0, 1.0, 0.5],  # min, max, default
+            "steps": False,
+            "transcript": False,
+            "emotion_vector": False,
+            "emotion_text": False,
+            "duration": False,
+        }
+        if self.turbo:
+            info["text_hint"] = "English only. Tags like [laugh], [chuckle], [sigh], [cough] or [gasp] add sounds."
+        else:
+            info["expressiveness_range"] = [0.25, 2.0, 0.5]
+            info["text_hint"] = "23 languages. For French, German and other Latin-script languages, pick the language below."
+        return info
+
+    def generate(self, p: dict) -> np.ndarray:
+        kwargs = {}
+        if p["ref_path"]:
+            kwargs["audio_prompt_path"] = p["ref_path"]
+        else:
+            self.model.conds = self.default_conds  # an earlier clone left its voice behind
+        if not self.turbo:
+            lang = p["language"].lower() or "auto"
+            if lang == "auto":
+                lang = detect_language(p["text"], CHATTERBOX_LANGUAGES)
+            kwargs.update(
+                language_id=lang,
+                cfg_weight=max(0.0, min(p["cfg_value"], 1.0)),
+                exaggeration=max(0.25, min(p["exaggeration"], 2.0)),
+            )
+        try:
+            wav = self.model.generate(p["text"], **kwargs)
+        except ValueError as e:  # e.g. an unsupported language code
+            raise GenerationError(str(e))
+        return wav.squeeze(0).cpu().numpy().astype(np.float32)
+
+
+ENGINES = {
+    "voxcpm": VoxCPMEngine, "indextts": IndexTTSEngine, "omnivoice": OmniVoiceEngine, "chatterbox": ChatterboxEngine,
+}
+ENGINE_NAMES = {"voxcpm": "VoxCPM2", "indextts": "IndexTTS-2.5", "omnivoice": "OmniVoice", "chatterbox": "Chatterbox"}
 
 
 _load_lock = threading.Lock()
@@ -335,7 +422,7 @@ def ready_model():
         return _engine
     if _load_error:
         raise HTTPException(status_code=500, detail=f"The model failed to load: {_load_error}")
-    name = ENGINE_NAMES[ENGINE]
+    name = "Chatterbox-Turbo" if ENGINE == "chatterbox" and CHATTERBOX_VARIANT == "turbo" else ENGINE_NAMES[ENGINE]
     raise HTTPException(
         status_code=503,
         detail=f"Still loading {name}. The first start also downloads the model; try again in a minute.",
@@ -436,6 +523,7 @@ def prepare(form: dict, reference_audio, workdir) -> dict:
         "emo_vector": parse_emo_vector(form["emo_vector"]),
         "emo_alpha": max(0.0, min(form["emo_alpha"], 1.0)),
         "duration_factor": form["duration_factor"],
+        "exaggeration": form["exaggeration"],
         "ref_path": ref_path,
     }
 
@@ -478,11 +566,13 @@ def form_fields(
     emo_vector: str = Form(""),
     emo_alpha: float = Form(1.0),
     duration_factor: float = Form(1.0),
+    exaggeration: float = Form(0.5),
 ) -> dict:
     return dict(
         text=text, control=control, prompt_text=prompt_text, cfg_value=cfg_value,
         inference_timesteps=inference_timesteps, seed=seed, language=language,
         emo_vector=emo_vector, emo_alpha=emo_alpha, duration_factor=duration_factor,
+        exaggeration=exaggeration,
     )
 
 
@@ -631,8 +721,10 @@ if __name__ == "__main__":
     parser.add_argument("--port", type=int, default=8000)
     parser.add_argument("--engine", choices=sorted(ENGINES), default=ENGINE)
     parser.add_argument("--model-dir", default=INDEXTTS_MODEL_DIR, help="IndexTTS-2.5 checkpoints folder")
+    parser.add_argument("--chatterbox-variant", choices=["multilingual", "turbo"], default=CHATTERBOX_VARIANT)
     args = parser.parse_args()
     ENGINE = args.engine
     INDEXTTS_MODEL_DIR = args.model_dir
+    CHATTERBOX_VARIANT = args.chatterbox_variant
     start_loading()  # answer /health with "loading" (503) meanwhile, and the error if loading fails
     uvicorn.run(app, host=args.host, port=args.port)

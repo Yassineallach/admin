@@ -49,6 +49,7 @@ private fun ttsRequest(
     cfgValue = cfgValue, inferenceTimesteps = timesteps, seed = seed,
     language = options.language, emoVector = options.emotionVector(),
     emoAlpha = if (options.emotion.isNotEmpty()) 1f else 0.6f, durationFactor = options.durationFactor,
+    exaggeration = options.expressiveness,
 )
 
 /** Short texts still pay fixed overhead (network, model setup), so they count as at least this long. */
@@ -87,6 +88,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     var emotion by mutableStateOf("")
     var emotionStrength by mutableStateOf(0.8f)
     var durationFactor by mutableStateOf(1f)
+    var expressiveness by mutableStateOf(0.5f)
 
     /** What the connected server's model supports; the last known one until it is checked again. */
     var serverInfo by mutableStateOf(settings.serverInfo)
@@ -188,8 +190,11 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         if (info.engine != serverInfo.engine) {
             settings.secPerChar = 0f // different model, different speed
             timesteps = info.stepsDefault
+            cfgValue = info.cfgDefault
+            info.expressiveness?.let { expressiveness = it[2] }
         }
         timesteps = timesteps.coerceIn(info.stepsMin, info.stepsMax)
+        cfgValue = cfgValue.coerceIn(info.cfgMin, info.cfgMax)
         serverInfo = info
         settings.serverInfo = info
         if (VoiceMode.Default.key !in info.modes && mode != VoiceMode.Clone) mode = VoiceMode.Clone
@@ -205,6 +210,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         emotion = if (serverInfo.emotionVector) emotion else "",
         emotionStrength = emotionStrength,
         durationFactor = if (serverInfo.duration) durationFactor else 1f,
+        expressiveness = if (serverInfo.expressiveness != null) expressiveness else 0.5f,
     )
 
     fun setReferenceFromUri(uri: Uri) {
@@ -625,6 +631,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun engineName(engine: String) = when (engine) {
         "indextts" -> "IndexTTS-2.5"
         "omnivoice" -> "OmniVoice"
+        "chatterbox" -> "Chatterbox"
         else -> "VoxCPM2"
     }
 
@@ -641,6 +648,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             emotion = o.emotion
             emotionStrength = o.emotionStrength
             durationFactor = o.durationFactor
+            expressiveness = o.expressiveness
         }
         when (item.mode) {
             VoiceMode.Design.label -> { mode = VoiceMode.Design; voiceDescription = item.control }

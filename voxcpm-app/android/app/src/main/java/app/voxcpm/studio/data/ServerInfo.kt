@@ -23,6 +23,12 @@ data class ServerInfo(
     val stepsMax: Int = 30,
     val stepsDefault: Int = 10,
     /** Voice design examples; the model only accepts this kind of description. Empty: free text. */
+    /** Guidance (CFG) slider range and default. */
+    val cfgMin: Float = 1f,
+    val cfgMax: Float = 3f,
+    val cfgDefault: Float = 2f,
+    /** Expressiveness slider (Chatterbox exaggeration) as min, max, default; null when unsupported. */
+    val expressiveness: List<Float>? = null,
     val designPresets: List<String> = emptyList(),
     val designHint: String = "",
     val textHint: String = "",
@@ -48,6 +54,8 @@ data class ServerInfo(
             .put("emotion_vector", emotionVector).put("emotion_text", emotionText)
             .put("emotions", JSONArray(emotions)).put("duration", duration)
             .put("steps_range", JSONArray(listOf(stepsMin, stepsMax, stepsDefault)))
+            .put("cfg_range", JSONArray(listOf(cfgMin.toDouble(), cfgMax.toDouble(), cfgDefault.toDouble())))
+            .put("expressiveness_range", expressiveness?.let { e -> JSONArray(e.map { it.toDouble() }) } ?: JSONObject.NULL)
             .put("design_presets", JSONArray(designPresets))
             .put("design_hint", designHint).put("text_hint", textHint))
 
@@ -69,6 +77,9 @@ data class ServerInfo(
                 )
             fun strings(key: String) = caps.optJSONArray(key)?.let { a -> (0 until a.length()).map { a.getString(it) } }.orEmpty()
             val range = caps.optJSONArray("steps_range")?.takeIf { it.length() == 3 }
+            fun floats(key: String) = caps.optJSONArray(key)?.takeIf { it.length() == 3 }
+                ?.let { a -> (0 until 3).map { a.getDouble(it).toFloat() } }
+            val cfgRange = floats("cfg_range")
             return ServerInfo(
                 engine = o.optString("engine", "voxcpm"),
                 model = o.optString("model"),
@@ -86,6 +97,10 @@ data class ServerInfo(
                 stepsMin = range?.getInt(0) ?: 4,
                 stepsMax = range?.getInt(1) ?: 30,
                 stepsDefault = range?.getInt(2) ?: 10,
+                cfgMin = cfgRange?.get(0) ?: 1f,
+                cfgMax = cfgRange?.get(1) ?: 3f,
+                cfgDefault = cfgRange?.get(2) ?: 2f,
+                expressiveness = floats("expressiveness_range"),
                 designPresets = strings("design_presets"),
                 designHint = caps.optString("design_hint"),
                 textHint = caps.optString("text_hint"),
