@@ -85,6 +85,12 @@ def green_boxes(sh, y_from=0.0, y_to=1.0, min_w=0.05):
 
 
 def hero():
+    """Photo 1 comes from the shared thumbnail system (productivity-bundle/build/hero_thumb.py)."""
+    import hero_thumb
+    hero_thumb.hero("pressure")
+
+
+def hero_legacy():
     img = canvas()
     y = head(img, "Pressure washing · pricing", "Quote any pressure washing job in two minutes.", max_w=1120, size=108)
     y = checks(img, ["Prices each surface: flatwork, house, roof, wood", "Counts chemicals, setup, height and stains",

@@ -85,6 +85,12 @@ def green_boxes(sh, y_from=0.0, y_to=1.0, min_w=0.05):
 
 
 def hero():
+    """Photo 1 comes from the shared thumbnail system (productivity-bundle/build/hero_thumb.py)."""
+    import hero_thumb
+    hero_thumb.hero("cake")
+
+
+def hero_legacy():
     img = canvas()
     y = head(img, "Cake pricing · home bakery", "Know what every cake really costs.", max_w=1100, size=112)
     y = checks(img, ["Costs every ingredient, recipe and tier", "Servings and price per serving for each cake",

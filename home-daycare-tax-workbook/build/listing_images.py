@@ -61,6 +61,12 @@ def save(img, name):
 
 
 def hero():
+    """Photo 1 comes from the shared thumbnail system (productivity-bundle/build/hero_thumb.py)."""
+    import hero_thumb
+    hero_thumb.hero("daycare")
+
+
+def hero_legacy():
     img = canvas()
     y = head(img, "Home daycare · tax records", "Your time-space percentage, calculated and documented.", max_w=1080, size=112)
     y = checks(img, ["Counts prep, cleaning and paperwork hours", "Applies the right share to every expense",

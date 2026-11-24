@@ -165,6 +165,11 @@ def save(img, prod, name):
 
 # ---------------------------------------------------------------- the seven images
 def img_hero(sp):
+    import hero_thumb                              # photo 1 uses the shared thumbnail system when the product has one
+    for key, h in hero_thumb.HEROES.items():
+        if h["out"].parent == ROOT / sp["prod"] / "images":
+            hero_thumb.hero(key)
+            return
     img = canvas()
     h = sp["hero"]
     y = head(img, h["kicker"], h["headline"], max_w=1120, size=132)

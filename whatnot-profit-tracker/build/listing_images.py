@@ -75,6 +75,12 @@ def save(img, name):
 
 # ---------------------------------------------------------------- 1 hero
 def hero():
+    """Photo 1 comes from the shared thumbnail system (productivity-bundle/build/hero_thumb.py)."""
+    import hero_thumb
+    hero_thumb.hero("whatnot")
+
+
+def hero_legacy():
     img = canvas()
     y = head(img, "Whatnot sellers · profit tracker", "See the real profit from every show.", max_w=1060, size=128)
     y = checks(img, ["Fees, item costs, giveaways and supplies taken off for you",

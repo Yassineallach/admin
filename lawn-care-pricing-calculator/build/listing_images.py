@@ -87,6 +87,12 @@ def tiles_box(sh):
 
 
 def hero():
+    """Photo 1 comes from the shared thumbnail system (productivity-bundle/build/hero_thumb.py)."""
+    import hero_thumb
+    hero_thumb.hero("lawn")
+
+
+def hero_legacy():
     img = canvas()
     y = head(img, "Lawn care · pricing", "Price every lawn for profit in two minutes.", max_w=1100, size=112)
     y = checks(img, ["Counts fuel, equipment wear, insurance and drive time", "Prices each visit, month and season",
