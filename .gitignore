@@ -37,3 +37,7 @@ pressure-washing-bid-calculator/dist/
 
 # Cake Pricing Calculator deliverables (sent directly, rebuilt by the build scripts)
 cake-pricing-calculator/dist/
+
+# Owner-Operator CPM Calculator deliverables (sent directly, rebuilt by the build scripts)
+owner-operator-cost-per-mile/dist/
+owner-operator-cost-per-mile/build/__pycache__/
