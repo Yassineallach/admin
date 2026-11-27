@@ -42,13 +42,15 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import app.voxcpm.studio.MainViewModel
 
+private const val REPO_PATH = "yassineallach/admin/blob/claude/android-voxcpm-voice-app-8pkl1u/voxcpm-app/server"
 private const val NOTEBOOK_BASE =
     "https://raw.githubusercontent.com/yassineallach/admin/claude/android-voxcpm-voice-app-8pkl1u/voxcpm-app/server"
-private const val COLAB_NOTEBOOK_URL =
-    "https://colab.research.google.com/github/yassineallach/admin/blob/claude/android-voxcpm-voice-app-8pkl1u/" +
-        "voxcpm-app/server/VoxCPM_Server_Colab.ipynb"
-private const val COLAB_NEW_NOTEBOOK_URL = "https://colab.research.google.com/#create=true"
 private const val KAGGLE_NEW_NOTEBOOK_URL = "https://www.kaggle.com/code/new"
+
+/** Notebooks with MODEL preset, written by server/make_notebooks.py. */
+private fun colabUrl(model: String) = "https://colab.research.google.com/github/$REPO_PATH/notebooks/Colab_$model.ipynb"
+private fun kaggleUrl(model: String) =
+    "https://www.kaggle.com/kernels/welcome?src=https://github.com/$REPO_PATH/notebooks/Kaggle_$model.ipynb"
 
 /** Models the notebooks can start, with what each is good at. */
 private val serverModels = linkedMapOf(
@@ -60,7 +62,8 @@ private val serverModels = linkedMapOf(
 )
 
 /**
- * The one cell to paste into a new Colab or Kaggle notebook: it fetches the latest server notebook
+ * Fallback for when Kaggle doesn't open a notebook from GitHub: the one cell to paste into an empty
+ * notebook. It fetches the latest server notebook
  * and runs its install, start and tunnel cells with [model].
  */
 private fun starterCell(model: String, notebook: String) = """
@@ -117,44 +120,46 @@ private fun ServerLaunchCard(vm: MainViewModel) {
                 style = MaterialTheme.typography.bodySmall,
             )
 
-            Text("2. Google Colab", style = MaterialTheme.typography.labelLarge)
+            Text("2. Open a notebook with $model ready", style = MaterialTheme.typography.labelLarge)
+            Button(
+                onClick = { open(colabUrl(model)) },
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF9AB00), contentColor = Color.Black),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Icon(Icons.Default.OpenInBrowser, null); Spacer(Modifier.width(8.dp)); Text("Open in Google Colab")
+            }
             Text(
-                "Copy the cell, open a new notebook, choose Runtime → Change runtime type → T4 GPU, " +
-                    "paste the cell and press ▶.",
+                "In Colab: Runtime → Change runtime type → T4 GPU, then Runtime → Run all.",
                 style = MaterialTheme.typography.bodySmall,
             )
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(onClick = { copyCell("Colab", "VoxCPM_Server_Colab.ipynb") }, modifier = Modifier.weight(1f)) {
-                    Icon(Icons.Default.ContentCopy, null); Spacer(Modifier.width(6.dp)); Text("Copy cell")
-                }
-                Button(
-                    onClick = { open(COLAB_NEW_NOTEBOOK_URL) },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF9AB00), contentColor = Color.Black),
-                    modifier = Modifier.weight(1f),
-                ) {
-                    Icon(Icons.Default.OpenInBrowser, null); Spacer(Modifier.width(6.dp)); Text("Open Colab")
-                }
+            Button(
+                onClick = { open(kaggleUrl(model)) },
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF20BEFF), contentColor = Color.Black),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Icon(Icons.Default.OpenInBrowser, null); Spacer(Modifier.width(8.dp)); Text("Open in Kaggle")
             }
-            TextButton(onClick = { open(COLAB_NOTEBOOK_URL) }) {
-                Text("Or open the full Colab notebook (pick the model in its first cell)")
-            }
-
-            Text("3. Or Kaggle (about 30 free GPU hours a week)", style = MaterialTheme.typography.labelLarge)
             Text(
-                "Copy the cell, open a new notebook, turn on GPU T4 x2 and Internet under Session options, " +
-                    "paste the cell and press Run All.",
+                "In Kaggle (about 30 free GPU hours a week): under Session options turn on GPU T4 x2 and " +
+                    "Internet, then Run All.",
                 style = MaterialTheme.typography.bodySmall,
             )
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(onClick = { copyCell("Kaggle", "VoxCPM_Server_Kaggle.ipynb") }, modifier = Modifier.weight(1f)) {
-                    Icon(Icons.Default.ContentCopy, null); Spacer(Modifier.width(6.dp)); Text("Copy cell")
-                }
-                Button(
-                    onClick = { open(KAGGLE_NEW_NOTEBOOK_URL) },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF20BEFF), contentColor = Color.Black),
-                    modifier = Modifier.weight(1f),
-                ) {
-                    Icon(Icons.Default.OpenInBrowser, null); Spacer(Modifier.width(6.dp)); Text("Open Kaggle")
+            var showFallback by rememberSaveable { mutableStateOf(false) }
+            TextButton(onClick = { showFallback = !showFallback }) {
+                Text(if (showFallback) "Hide" else "Kaggle didn't open the notebook?")
+            }
+            if (showFallback) {
+                Text(
+                    "Copy a starter cell for $model, open an empty Kaggle notebook, paste it into the cell and Run All.",
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(onClick = { copyCell("Kaggle", "VoxCPM_Server_Kaggle.ipynb") }, modifier = Modifier.weight(1f)) {
+                        Icon(Icons.Default.ContentCopy, null); Spacer(Modifier.width(6.dp)); Text("Copy cell")
+                    }
+                    OutlinedButton(onClick = { open(KAGGLE_NEW_NOTEBOOK_URL) }, modifier = Modifier.weight(1f)) {
+                        Icon(Icons.Default.OpenInBrowser, null); Spacer(Modifier.width(6.dp)); Text("Empty notebook")
+                    }
                 }
             }
             Text(

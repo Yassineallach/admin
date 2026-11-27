@@ -12,17 +12,35 @@ android {
         applicationId = "app.voxcpm.studio"
         minSdk = 26
         targetSdk = 35
-        versionCode = 16
-        versionName = "2.5"
+        versionCode = 17
+        versionName = "2.6"
     }
 
+    // The app's own signing key, kept out of git: VOXCPM_KEYSTORE, or app/voxcpm-studio.keystore.
+    // Android only installs an update signed with the same key as the installed app, so keep that file
+    // and use it for every build. Without it, builds fall back to this machine's debug key.
+    val studioKeystore = file(System.getenv("VOXCPM_KEYSTORE") ?: "voxcpm-studio.keystore")
+    signingConfigs {
+        if (studioKeystore.exists()) {
+            create("studio") {
+                storeFile = studioKeystore
+                storePassword = "voxcpm-studio"
+                keyAlias = "voxcpm-studio"
+                keyPassword = "voxcpm-studio"
+            }
+        }
+    }
+    val appSigning = signingConfigs.findByName("studio") ?: signingConfigs.getByName("debug")
+
     buildTypes {
+        debug {
+            signingConfig = appSigning
+        }
         release {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-            // Signed with the debug key so the release APK installs without extra setup.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = appSigning
         }
     }
     compileOptions {
